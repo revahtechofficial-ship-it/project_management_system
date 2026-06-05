@@ -1,0 +1,11 @@
+# Local environment
+.env
+
+# Compiled binaries
+/server
+/server.exe
+*.exe
+/bin/
+
+# Go build/test artifacts
+*.out

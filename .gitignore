@@ -1,0 +1,13 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+
+# Secrets
+**/.env
+
+# Docker bind-mount data (Postgres init runs once; Vikunja file uploads)
+/data/
+
+# See backend/.gitignore and frontend/.gitignore for per-project rules.

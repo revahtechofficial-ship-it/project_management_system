@@ -1,0 +1,70 @@
+# Nexax local stack: shared PostgreSQL + Vikunja (the task engine the Go BFF calls).
+#
+# The Go backend is the BFF. In dev it normally runs on the HOST
+# (`cd backend && go run ./cmd/server`) and connects to Postgres on localhost:5432.
+# To also run the backend in a container:  docker compose --profile app up -d
+#
+# Requirements: Docker Desktop for Windows (WSL2 backend).
+# NOTE: the Vikunja docs' `mkdir files db && chown 1000 files db` step is Linux-only
+# and is NOT needed here — Docker creates the volumes below for you.
+
+name: nexax
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432" # exposed so the host-run Go backend can connect
+    volumes:
+      - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    restart: unless-stopped
+
+  vikunja:
+    image: vikunja/vikunja:2.3.0
+    environment:
+      VIKUNJA_SERVICE_PUBLICURL: ${VIKUNJA_PUBLIC_URL:-http://localhost:3456/}
+      VIKUNJA_SERVICE_SECRET: ${VIKUNJA_SERVICE_SECRET:?set VIKUNJA_SERVICE_SECRET in .env (openssl rand -hex 32)}
+      VIKUNJA_DATABASE_TYPE: postgres
+      VIKUNJA_DATABASE_HOST: db
+      VIKUNJA_DATABASE_USER: vikunja
+      VIKUNJA_DATABASE_PASSWORD: vikunja # dev only — matches deploy/postgres/init/01-databases.sql
+      VIKUNJA_DATABASE_DATABASE: vikunja
+    ports:
+      - "3456:3456"
+    volumes:
+      - ./data/vikunja-files:/app/vikunja/files
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Optional: run the Go BFF in Docker too ->  docker compose --profile app up -d
+  backend:
+    profiles: ["app"]
+    build: ./backend
+    environment:
+      DATABASE_URL: postgres://nexax:nexax@db:5432/nexax?sslmode=disable # dev only
+      VIKUNJA_BASE_URL: http://vikunja:3456
+      PORT: "8080"
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      vikunja:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  pgdata:
