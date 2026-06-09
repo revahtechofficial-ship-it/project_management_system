@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/auth_page.dart';
 import '../../features/tasks/tasks_page.dart';
+import '../../features/vikunja/vikunja_projects_page.dart';
 import '../../providers/auth_provider.dart';
 
 /// Declarative router with an auth gate (AGENTS.md §9). Unauthenticated users
@@ -32,6 +33,10 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         builder: (context, state) => const TasksPage(),
+      ),
+      GoRoute(
+        path: '/vikunja',
+        builder: (context, state) => const VikunjaProjectsPage(),
       ),
       GoRoute(
         path: '/login',

@@ -44,6 +44,7 @@ func main() {
 
 	queries := db.New(pool)
 	vk := vikunja.NewClient(cfg.VikunjaBaseURL)
+	vkSessions := vikunja.NewSessionStore()
 
 	// OIDC token verifier. Non-fatal if the issuer is unreachable so the BFF
 	// still starts; protected routes then return 503 until auth is available.
@@ -78,16 +79,23 @@ func main() {
 	})
 
 	r.Mount("/api/v1/tasks", handler.NewTaskHandler(queries).Routes())
-	r.Mount("/api/v1/vikunja", handler.NewVikunjaHandler(vk).Routes())
 
-	// Protected: requires a valid Keycloak token. (Existing routes stay open
-	// until the Flutter login flow lands in Phase 3.)
+	// Protected routes — require a valid Keycloak token.
+	vkHandler := handler.NewVikunjaHandler(vk, vkSessions)
 	if verifier != nil {
 		r.With(verifier.Middleware).Get("/api/v1/me", handler.Me)
-	} else {
-		r.Get("/api/v1/me", func(w http.ResponseWriter, _ *http.Request) {
-			http.Error(w, "auth not configured", http.StatusServiceUnavailable)
+		r.Route("/api/v1/vikunja", func(sub chi.Router) {
+			sub.Use(verifier.Middleware)
+			sub.Post("/session", vkHandler.EstablishSession)
+			sub.Get("/projects", vkHandler.ListProjects)
+			sub.Handle("/proxy/*", vkHandler.Proxy())
 		})
+	} else {
+		unavailable := func(w http.ResponseWriter, _ *http.Request) {
+			http.Error(w, "auth not configured", http.StatusServiceUnavailable)
+		}
+		r.Get("/api/v1/me", unavailable)
+		r.Mount("/api/v1/vikunja", http.HandlerFunc(unavailable))
 	}
 
 	srv := &http.Server{

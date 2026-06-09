@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/models/task.dart';
 import '../../providers/auth_provider.dart';
@@ -20,6 +21,11 @@ class TasksPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Nexax · Tasks'),
         actions: <Widget>[
+          IconButton(
+            tooltip: 'Vikunja projects',
+            icon: const Icon(Icons.folder_open),
+            onPressed: () => context.go('/vikunja'),
+          ),
           if (username.isNotEmpty)
             Center(child: Text(username)),
           IconButton(

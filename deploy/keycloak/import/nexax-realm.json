@@ -35,10 +35,12 @@
       "standardFlowEnabled": true,
       "redirectUris": [
         "http://localhost:3456/auth/openid/keycloak",
-        "http://localhost:3456/*"
+        "http://localhost:3456/*",
+        "http://localhost:8090/*"
       ],
       "webOrigins": [
-        "http://localhost:3456"
+        "http://localhost:3456",
+        "http://localhost:8090"
       ]
     }
   ],
