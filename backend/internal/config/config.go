@@ -20,6 +20,8 @@ type Config struct {
 	// VikunjaBaseURL is the Vikunja instance this backend proxies/aggregates
 	// (BFF). No trailing slash required.
 	VikunjaBaseURL string
+	// OIDCIssuer is the Keycloak realm issuer URL used to verify bearer tokens.
+	OIDCIssuer string
 }
 
 // Load reads configuration from the environment. A .env file in the working
@@ -34,6 +36,7 @@ func Load() Config {
 		Port:           getenv("PORT", "8080"),
 		CORSOrigin:     getenv("CORS_ORIGIN", "*"),
 		VikunjaBaseURL: getenv("VIKUNJA_BASE_URL", "http://localhost:3456"),
+		OIDCIssuer:     getenv("OIDC_ISSUER", "http://localhost:8088/realms/nexax"),
 	}
 }
 

@@ -20,6 +20,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver for goose
 	"github.com/pressly/goose/v3"
 
+	"github.com/revah-tech/nexax/backend/internal/auth"
 	"github.com/revah-tech/nexax/backend/internal/config"
 	"github.com/revah-tech/nexax/backend/internal/db"
 	"github.com/revah-tech/nexax/backend/internal/handler"
@@ -43,6 +44,16 @@ func main() {
 
 	queries := db.New(pool)
 	vk := vikunja.NewClient(cfg.VikunjaBaseURL)
+
+	// OIDC token verifier. Non-fatal if the issuer is unreachable so the BFF
+	// still starts; protected routes then return 503 until auth is available.
+	var verifier *auth.Verifier
+	if v, err := auth.NewVerifier(ctx, cfg.OIDCIssuer); err != nil {
+		log.Printf("WARNING: OIDC auth disabled (issuer %s unreachable): %v", cfg.OIDCIssuer, err)
+	} else {
+		verifier = v
+		log.Printf("OIDC auth enabled (issuer %s)", cfg.OIDCIssuer)
+	}
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -68,6 +79,16 @@ func main() {
 
 	r.Mount("/api/v1/tasks", handler.NewTaskHandler(queries).Routes())
 	r.Mount("/api/v1/vikunja", handler.NewVikunjaHandler(vk).Routes())
+
+	// Protected: requires a valid Keycloak token. (Existing routes stay open
+	// until the Flutter login flow lands in Phase 3.)
+	if verifier != nil {
+		r.With(verifier.Middleware).Get("/api/v1/me", handler.Me)
+	} else {
+		r.Get("/api/v1/me", func(w http.ResponseWriter, _ *http.Request) {
+			http.Error(w, "auth not configured", http.StatusServiceUnavailable)
+		})
+	}
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

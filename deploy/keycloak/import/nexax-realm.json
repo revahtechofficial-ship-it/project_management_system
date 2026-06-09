@@ -1,0 +1,49 @@
+{
+  "realm": "nexax",
+  "enabled": true,
+  "displayName": "Nexax Workspace",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "sslRequired": "none",
+  "accessTokenLifespan": 900,
+  "clients": [
+    {
+      "clientId": "nexax-web",
+      "name": "Nexax Flutter Web",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "http://localhost:8090/*"
+      ],
+      "webOrigins": [
+        "http://localhost:8090"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8090/*"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "revah",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "revah.tech.official@gmail.com",
+      "firstName": "Revah",
+      "lastName": "Tech",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "nexax-dev",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-nexax"
+      ]
+    }
+  ]
+}

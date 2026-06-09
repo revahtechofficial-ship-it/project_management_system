@@ -51,6 +51,20 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HOSTNAME_STRICT: "false"
+    ports:
+      - "8088:8080" # admin console + OIDC at http://localhost:8088
+    volumes:
+      - ./deploy/keycloak/import:/opt/keycloak/data/import:ro
+      - kcdata:/opt/keycloak/data
+    restart: unless-stopped
+
   # Optional: run the Go BFF in Docker too ->  docker compose --profile app up -d
   backend:
     profiles: ["app"]
@@ -71,3 +85,4 @@ services:
 
 volumes:
   pgdata:
+  kcdata:
