@@ -1,0 +1,16 @@
+# Spider config: generates type-safe asset references (AGENTS.md §10).
+# Regenerate with:  dart run spider build
+generate_tests: false
+no_comments: false
+export: true
+use_part_of: false
+package: core/constants
+groups:
+  - path: assets/images
+    class_name: AppImages
+    types:
+      - .png
+      - .jpg
+      - .jpeg
+      - .gif
+      - .webp

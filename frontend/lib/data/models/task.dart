@@ -19,6 +19,7 @@ class Task {
     this.description = '',
   });
 
+  /// Builds a [Task] from a decoded JSON map with snake_case keys.
   factory Task.fromJson(Map<String, dynamic> json) => Task(
         id: json['id'] as int,
         title: json['title'] as String? ?? '',
@@ -28,6 +29,7 @@ class Task {
         updatedAt: DateTime.parse(json['updated_at'] as String),
       );
 
+  /// Serializes this task to a JSON map with snake_case keys.
   Map<String, dynamic> toJson() => <String, dynamic>{
         'id': id,
         'title': title,
