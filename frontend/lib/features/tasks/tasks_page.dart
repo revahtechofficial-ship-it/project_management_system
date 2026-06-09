@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/task.dart';
+import '../../providers/auth_provider.dart';
 import 'providers/tasks_providers.dart';
 
 /// Lists tasks from the backend, proving the
@@ -12,9 +13,24 @@ class TasksPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<Task>> tasks = ref.watch(tasksProvider);
+    final String username =
+        ref.watch(authControllerProvider).asData?.value.username ?? '';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nexax · Tasks')),
+      appBar: AppBar(
+        title: const Text('Nexax · Tasks'),
+        actions: <Widget>[
+          if (username.isNotEmpty)
+            Center(child: Text(username)),
+          IconButton(
+            tooltip: 'Sign out',
+            icon: const Icon(Icons.logout),
+            onPressed: () =>
+                ref.read(authControllerProvider.notifier).logout(),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: tasks.when(
         data: (List<Task> items) => items.isEmpty
             ? const Center(child: Text('No tasks yet.'))

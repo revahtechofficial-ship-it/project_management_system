@@ -2,22 +2,28 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:nexax_web/app.dart';
-import 'package:nexax_web/features/tasks/providers/tasks_providers.dart';
+import 'package:nexax_web/providers/auth_provider.dart';
+
+/// Auth controller that reports unauthenticated without touching plugins.
+class _UnauthController extends AuthController {
+  @override
+  Future<AuthState> build() async => const AuthState.unauthenticated();
+}
 
 void main() {
-  testWidgets('App renders the tasks screen', (WidgetTester tester) async {
+  testWidgets('shows the login screen when unauthenticated', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        // Override the network-backed provider so the test stays offline.
         overrides: [
-          tasksProvider.overrideWith((ref) async => []),
+          authControllerProvider.overrideWith(_UnauthController.new),
         ],
         child: const NexaxApp(),
       ),
     );
-    await tester.pump(); // let the overridden future resolve
+    // Let the async auth build + router redirect settle.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('Nexax · Tasks'), findsOneWidget);
-    expect(find.text('No tasks yet.'), findsOneWidget);
+    expect(find.text('Sign in with Keycloak'), findsOneWidget);
   });
 }

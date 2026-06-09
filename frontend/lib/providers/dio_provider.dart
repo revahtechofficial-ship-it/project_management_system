@@ -3,11 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_config.dart';
 import '../core/services/logger.dart';
+import 'auth_provider.dart';
 
-/// Shared Dio HTTP client, pointed at the backend base URL (AGENTS.md §1
-/// `providers` — global, not feature-scoped).
-///
-/// Attach the OIDC/JWT bearer token here once SSO lands.
+/// Shared Dio HTTP client for the Go BFF (AGENTS.md §1 `providers`). Attaches
+/// the current Keycloak access token to every request.
 final Provider<Dio> dioProvider = Provider<Dio>((ref) {
   final Dio dio = Dio(
     BaseOptions(
@@ -20,6 +19,15 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
 
   dio.interceptors.add(
     InterceptorsWrapper(
+      onRequest: (RequestOptions options, RequestInterceptorHandler handler) {
+        // Read lazily per request so the latest token is always used.
+        final String? token =
+            ref.read(authControllerProvider).asData?.value.accessToken;
+        if (token != null && token.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        handler.next(options);
+      },
       onError: (DioException e, ErrorInterceptorHandler handler) {
         logger.e(
           'HTTP ${e.requestOptions.method} '
