@@ -12,7 +12,7 @@ sql:
         emit_interface: false
         emit_empty_slices: true
         emit_pointers_for_null_types: true
-        json_tags_case_style: "camel"
+        json_tags_case_style: "snake"
         overrides:
           - db_type: "timestamptz"
             go_type: "time.Time"

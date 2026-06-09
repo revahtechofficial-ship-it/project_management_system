@@ -17,7 +17,10 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "5432:5432" # exposed so the host-run Go backend can connect
+      # Host 5433 -> container 5432. Host 5432 is often taken by a native
+      # PostgreSQL install; 5433 avoids that conflict. (Vikunja still uses 5432
+      # internally over the Docker network — unaffected.)
+      - "5433:5432"
     volumes:
       - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
       - pgdata:/var/lib/postgresql

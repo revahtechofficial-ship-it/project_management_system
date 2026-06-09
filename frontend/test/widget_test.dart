@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:nexax_web/src/app.dart';
-import 'package:nexax_web/src/tasks/tasks_providers.dart';
+import 'package:nexax_web/app.dart';
+import 'package:nexax_web/features/tasks/providers/tasks_providers.dart';
 
 void main() {
   testWidgets('App renders the tasks screen', (WidgetTester tester) async {

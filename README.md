@@ -52,12 +52,14 @@ management_system_nexax/
 │   ├── migrations/             # goose .sql migrations (embedded)
 │   ├── queries/                # sqlc query sources
 │   └── sqlc.yaml
-└── frontend/                   # Flutter web app
-    └── lib/src/
-        ├── api/                # Dio client provider
-        ├── models/             # JSON models (json_serializable)
-        ├── realtime/           # WebSocket starter
-        └── tasks/              # demo feature: repo + providers + page
+└── frontend/                   # Flutter web app (conventions in frontend/AGENTS.md)
+    └── lib/
+        ├── core/               # constants, extensions, routing, services
+        ├── data/               # models (manual JSON), repositories
+        ├── providers/          # global providers (dio_provider)
+        ├── features/           # feature folders, e.g. tasks/
+        ├── app.dart            # root MaterialApp + router
+        └── main.dart
 ```
 
 ## Prerequisites
@@ -118,7 +120,6 @@ Vikunja BFF (forwards your `Authorization` header to Vikunja):
 
 ```sh
 cd frontend
-dart run build_runner build     # generates *.g.dart
 flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8080
 ```
 
