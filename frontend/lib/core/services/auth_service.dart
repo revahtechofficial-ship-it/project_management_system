@@ -35,7 +35,7 @@ class InitResult {
 }
 
 /// Drives two OIDC flows against Keycloak on web (AGENTS.md §1 `core/services`):
-///   1. `nexax-web` (PKCE) -> a Keycloak token for the BFF.
+///   1. `revahms-web` (PKCE) -> a Keycloak token for the BFF.
 ///   2. `vikunja` -> a code the BFF swaps (server-side) for a Vikunja JWT.
 /// Uses its own bare Dio so it never carries the BFF bearer token to Keycloak.
 class AuthService {

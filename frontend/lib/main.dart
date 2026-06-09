@@ -12,5 +12,5 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   // ProviderScope is the root of the Riverpod graph.
-  runApp(const ProviderScope(child: NexaxApp()));
+  runApp(const ProviderScope(child: RevahApp()));
 }

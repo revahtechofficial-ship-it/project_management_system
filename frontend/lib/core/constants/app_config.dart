@@ -15,13 +15,13 @@ class AppConfig {
   /// identical for the browser and the Docker containers (Vikunja SSO).
   static const String oidcIssuer = String.fromEnvironment(
     'OIDC_ISSUER',
-    defaultValue: 'http://host.docker.internal:8088/realms/nexax',
+    defaultValue: 'http://host.docker.internal:8088/realms/revahms',
   );
 
   /// Public OIDC client id (PKCE).
   static const String oidcClientId = String.fromEnvironment(
     'OIDC_CLIENT_ID',
-    defaultValue: 'nexax-web',
+    defaultValue: 'revahms-web',
   );
 
   /// Redirect URI registered on the Keycloak client. The app must be served

@@ -5,8 +5,8 @@ import 'core/routing/app_router.dart';
 import 'providers/auth_provider.dart';
 
 /// Root widget: applies routing, theme, and global settings (AGENTS.md §1).
-class NexaxApp extends ConsumerWidget {
-  const NexaxApp({super.key});
+class RevahApp extends ConsumerWidget {
+  const RevahApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,7 +20,7 @@ class NexaxApp extends ConsumerWidget {
     });
 
     return MaterialApp.router(
-      title: 'Nexax Workspace',
+      title: 'Revah Management System',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorSchemeSeed: Colors.indigo,

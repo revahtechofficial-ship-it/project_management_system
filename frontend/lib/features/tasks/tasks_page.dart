@@ -19,7 +19,7 @@ class TasksPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nexax · Tasks'),
+        title: const Text('Revah · Tasks'),
         actions: <Widget>[
           IconButton(
             tooltip: 'Vikunja projects',

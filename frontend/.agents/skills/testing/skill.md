@@ -1,6 +1,6 @@
 # Skill: Testing
 
-> **Status: starter stub.** Extend with NexaX coverage targets and CI rules.
+> **Status: starter stub.** Extend with Revah Management System coverage targets and CI rules.
 
 ## Rules
 - Structure every test **Arrange-Act-Assert**.

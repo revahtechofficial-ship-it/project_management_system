@@ -32,11 +32,11 @@ func Load() Config {
 	_ = godotenv.Load()
 
 	return Config{
-		DatabaseURL:    getenv("DATABASE_URL", "postgres://nexax:nexax@localhost:5432/nexax?sslmode=disable"),
+		DatabaseURL:    getenv("DATABASE_URL", "postgres://revahms:revahms@localhost:5432/revahms?sslmode=disable"),
 		Port:           getenv("PORT", "8080"),
 		CORSOrigin:     getenv("CORS_ORIGIN", "*"),
 		VikunjaBaseURL: getenv("VIKUNJA_BASE_URL", "http://localhost:3456"),
-		OIDCIssuer:     getenv("OIDC_ISSUER", "http://host.docker.internal:8088/realms/nexax"),
+		OIDCIssuer:     getenv("OIDC_ISSUER", "http://host.docker.internal:8088/realms/revahms"),
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/revah-tech/nexax/backend/internal/db"
+	"github.com/revah-tech/revahms/backend/internal/db"
 )
 
 // TaskHandler serves the /api/v1/tasks resource.

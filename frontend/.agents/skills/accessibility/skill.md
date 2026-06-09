@@ -1,6 +1,6 @@
 # Skill: Accessibility (A11Y)
 
-> **Status: starter stub.** Extend with NexaX accessibility requirements.
+> **Status: starter stub.** Extend with Revah Management System accessibility requirements.
 
 ## Rules
 - **Contrast:** meet WCAG AA (4.5:1 for body text). Verify foreground/background

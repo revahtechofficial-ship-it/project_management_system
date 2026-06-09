@@ -32,7 +32,7 @@ class _SignIn extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Text(
-          'Nexax Workspace',
+          'Revah Management System',
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: 24),

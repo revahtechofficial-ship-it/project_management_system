@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/revah-tech/nexax/backend/internal/auth"
+	"github.com/revah-tech/revahms/backend/internal/auth"
 )
 
 // Me returns the authenticated caller's OIDC claims. It sits behind the auth

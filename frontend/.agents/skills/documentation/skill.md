@@ -1,6 +1,6 @@
 # Skill: Documentation
 
-> **Status: starter stub.** Extend with NexaX documentation conventions.
+> **Status: starter stub.** Extend with Revah Management System documentation conventions.
 
 ## Rules
 - Add `///` dartdoc comments to **all public APIs**: classes, constructors,

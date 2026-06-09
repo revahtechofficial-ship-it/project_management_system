@@ -1,4 +1,4 @@
-# Multi-stage build for the Nexax Go backend (BFF).
+# Multi-stage build for the Revah Management System Go backend (BFF).
 FROM golang:1.26 AS build
 WORKDIR /src
 

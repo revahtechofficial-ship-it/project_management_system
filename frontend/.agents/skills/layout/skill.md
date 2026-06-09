@@ -1,6 +1,6 @@
 # Skill: Layout
 
-> **Status: starter stub.** Extend with NexaX layout conventions.
+> **Status: starter stub.** Extend with Revah Management System layout conventions.
 
 ## Rules
 - Build **overflow-safe** layouts: wrap flexible children in `Expanded` /

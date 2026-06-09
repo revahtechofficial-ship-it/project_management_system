@@ -1,6 +1,6 @@
 # Skill: Visual Design & Theming
 
-> **Status: starter stub.** Extend with NexaX brand/theme decisions.
+> **Status: starter stub.** Extend with Revah Management System brand/theme decisions.
 
 ## Rules
 - Use **Material 3** (`useMaterial3: true`) with `ColorScheme.fromSeed`.

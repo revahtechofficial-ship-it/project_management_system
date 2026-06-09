@@ -1,11 +1,11 @@
 {
-    "name": "nexax_web",
-    "short_name": "nexax_web",
+    "name": "Revah Management System",
+    "short_name": "Revah MS",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Revah Tech management system",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

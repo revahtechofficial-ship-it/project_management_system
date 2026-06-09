@@ -1,4 +1,4 @@
-// Command server is the Nexax backend HTTP API: a Chi router over a pgx
+// Command server is the Revah Management System backend HTTP API: a Chi router over a pgx
 // connection pool, with schema migrations applied at startup via goose.
 package main
 
@@ -20,12 +20,12 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver for goose
 	"github.com/pressly/goose/v3"
 
-	"github.com/revah-tech/nexax/backend/internal/auth"
-	"github.com/revah-tech/nexax/backend/internal/config"
-	"github.com/revah-tech/nexax/backend/internal/db"
-	"github.com/revah-tech/nexax/backend/internal/handler"
-	"github.com/revah-tech/nexax/backend/internal/vikunja"
-	"github.com/revah-tech/nexax/backend/migrations"
+	"github.com/revah-tech/revahms/backend/internal/auth"
+	"github.com/revah-tech/revahms/backend/internal/config"
+	"github.com/revah-tech/revahms/backend/internal/db"
+	"github.com/revah-tech/revahms/backend/internal/handler"
+	"github.com/revah-tech/revahms/backend/internal/vikunja"
+	"github.com/revah-tech/revahms/backend/migrations"
 )
 
 func main() {
@@ -105,7 +105,7 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("nexax backend listening on :%s", cfg.Port)
+		log.Printf("revahms backend listening on :%s", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("server: %v", err)
 		}

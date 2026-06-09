@@ -1,6 +1,6 @@
 # Skill: Code Generation
 
-> **Status: starter stub.** Reflects current project reality; extend with NexaX
+> **Status: starter stub.** Reflects current project reality; extend with Revah Management System
 > team standards as needed.
 
 ## Current stance in this project

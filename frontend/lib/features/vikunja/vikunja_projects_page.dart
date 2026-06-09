@@ -16,7 +16,7 @@ class VikunjaProjectsPage extends ConsumerWidget {
         ref.watch(vikunjaProjectsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nexax · Vikunja Projects')),
+      appBar: AppBar(title: const Text('Revah · Vikunja Projects')),
       body: projects.when(
         data: (List<VikunjaProject> items) => items.isEmpty
             ? const Center(child: Text('No projects.'))

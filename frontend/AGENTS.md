@@ -1,6 +1,6 @@
 # Flutter Architecture & Engineering Standards Agent
 
-This document is the master context for building the NexaX Flutter application. It defines both the project's feature-based directory structure (section 1) and the engineering standards agents must follow: interaction guidelines, the Dart and Flutter style guide, package management, code quality, application architecture (Riverpod state management, data flow, routing, manual JSON serialization, enum conventions, and logging), and asset handling. Detailed code generation, theming, layout, documentation, accessibility, and testing guidance is offloaded to dedicated skill files, indexed in the Dynamic Skill Offloading section (section 11).
+This document is the master context for building the Revah Management System Flutter application. It defines both the project's feature-based directory structure (section 1) and the engineering standards agents must follow: interaction guidelines, the Dart and Flutter style guide, package management, code quality, application architecture (Riverpod state management, data flow, routing, manual JSON serialization, enum conventions, and logging), and asset handling. Detailed code generation, theming, layout, documentation, accessibility, and testing guidance is offloaded to dedicated skill files, indexed in the Dynamic Skill Offloading section (section 11).
 
 ## 1. Project Structure
 

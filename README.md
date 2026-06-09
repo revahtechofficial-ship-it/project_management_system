@@ -1,4 +1,4 @@
-# Nexax — Unified Collaborative Workspace
+# Revah Management System — Unified Collaborative Workspace
 
 A self-hosted workspace with a **Go** backend (acting as a **BFF**), a
 **PostgreSQL** database, a **Flutter web** frontend, and **Vikunja** as the
@@ -15,10 +15,10 @@ upstream task-management engine.
      │ own data                     ▼
      ▼                         Vikunja API (:3456)
   PostgreSQL  ◄───────────────────  │  (own `vikunja` DB)
-  (`nexax` DB)                       
+  (`revahms` DB)                       
 ```
 
-The Go backend owns its own data (`nexax` DB) **and** calls Vikunja on the
+The Go backend owns its own data (`revahms` DB) **and** calls Vikunja on the
 user's behalf, forwarding the user's `Authorization` header. Both apps share one
 PostgreSQL instance (separate databases).
 
@@ -37,10 +37,10 @@ PostgreSQL instance (separate databases).
 ## Layout
 
 ```
-management_system_nexax/
+management_system_revahms/
 ├── docker-compose.yml          # Postgres + Vikunja (+ optional backend profile)
 ├── .env.example                # compose secrets (copy to .env)
-├── deploy/postgres/init/       # one-time SQL: creates nexax + vikunja DBs/roles
+├── deploy/postgres/init/       # one-time SQL: creates revahms + vikunja DBs/roles
 ├── backend/                    # Go BFF
 │   ├── Dockerfile
 │   ├── cmd/server/             # main.go — entrypoint
@@ -79,7 +79,7 @@ docker compose up -d            # starts db + vikunja
 ```
 
 - Vikunja UI/API: http://localhost:3456  (create your first user there)
-- Postgres: localhost:5432 (databases `nexax` and `vikunja` are auto-created)
+- Postgres: localhost:5432 (databases `revahms` and `vikunja` are auto-created)
 
 > The Vikunja docs' `mkdir files db && chown 1000 files db` step is **Linux-only**
 > and **not** needed here — Compose creates the volumes for you.
@@ -125,7 +125,7 @@ flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8080
 
 ## Security notes (dev defaults — change for production)
 
-- DB role passwords (`nexax`, `vikunja`) are hardcoded in
+- DB role passwords (`revahms`, `vikunja`) are hardcoded in
   `deploy/postgres/init/01-databases.sql`. Change them there **and** in
   `docker-compose.yml` / `backend/.env`.
 - Set a strong `VIKUNJA_SERVICE_SECRET`; never commit `.env`.

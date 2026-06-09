@@ -7,8 +7,8 @@ import (
 	"net/http/httputil"
 	"net/url"
 
-	"github.com/revah-tech/nexax/backend/internal/auth"
-	"github.com/revah-tech/nexax/backend/internal/vikunja"
+	"github.com/revah-tech/revahms/backend/internal/auth"
+	"github.com/revah-tech/revahms/backend/internal/vikunja"
 )
 
 // vikunjaProvider is the Keycloak OIDC provider key configured in Vikunja.

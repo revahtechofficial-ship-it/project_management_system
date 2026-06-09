@@ -1,15 +1,15 @@
 {
-  "realm": "nexax",
+  "realm": "revahms",
   "enabled": true,
-  "displayName": "Nexax Workspace",
+  "displayName": "Revah Management System",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "sslRequired": "none",
   "accessTokenLifespan": 900,
   "clients": [
     {
-      "clientId": "nexax-web",
-      "name": "Nexax Flutter Web",
+      "clientId": "revahms-web",
+      "name": "Revah Management System Flutter Web",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,
@@ -55,12 +55,12 @@
       "credentials": [
         {
           "type": "password",
-          "value": "nexax-dev",
+          "value": "revahms-dev",
           "temporary": false
         }
       ],
       "realmRoles": [
-        "default-roles-nexax"
+        "default-roles-revahms"
       ]
     }
   ]

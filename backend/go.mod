@@ -1,4 +1,4 @@
-module github.com/revah-tech/nexax/backend
+module github.com/revah-tech/revahms/backend
 
 go 1.26.3
 

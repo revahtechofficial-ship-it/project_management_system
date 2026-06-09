@@ -6,9 +6,9 @@
 --   - Vikunja:     VIKUNJA_DATABASE_PASSWORD in docker-compose.yml
 --   - Go backend:  DATABASE_URL in backend/.env (and the `backend` service in compose)
 
--- Nexax Go backend (BFF) ----------------------------------------------------
-CREATE ROLE nexax WITH LOGIN PASSWORD 'nexax';
-CREATE DATABASE nexax OWNER nexax;
+-- Revah Management System Go backend (BFF) ----------------------------------------------------
+CREATE ROLE revahms WITH LOGIN PASSWORD 'revahms';
+CREATE DATABASE revahms OWNER revahms;
 
 -- Vikunja task engine -------------------------------------------------------
 CREATE ROLE vikunja WITH LOGIN PASSWORD 'vikunja';
