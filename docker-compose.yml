@@ -42,10 +42,19 @@ services:
       VIKUNJA_DATABASE_USER: vikunja
       VIKUNJA_DATABASE_PASSWORD: vikunja # dev only — matches deploy/postgres/init/01-databases.sql
       VIKUNJA_DATABASE_DATABASE: vikunja
+      # OIDC SSO via Keycloak (issuer reachable from the container via host.docker.internal).
+      VIKUNJA_AUTH_OPENID_ENABLED: "true"
+      VIKUNJA_AUTH_OPENID_PROVIDERS_KEYCLOAK_NAME: Keycloak
+      VIKUNJA_AUTH_OPENID_PROVIDERS_KEYCLOAK_AUTHURL: http://host.docker.internal:8088/realms/nexax
+      VIKUNJA_AUTH_OPENID_PROVIDERS_KEYCLOAK_CLIENTID: vikunja
+      VIKUNJA_AUTH_OPENID_PROVIDERS_KEYCLOAK_CLIENTSECRET: vikunja-oidc-dev-secret # dev only
+      VIKUNJA_AUTH_OPENID_PROVIDERS_KEYCLOAK_SCOPE: openid profile email
     ports:
       - "3456:3456"
     volumes:
       - ./data/vikunja-files:/app/vikunja/files
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
@@ -58,6 +67,10 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       KC_HOSTNAME_STRICT: "false"
+      # Canonical issuer URL — reachable identically from the host browser and
+      # from other containers (host.docker.internal). Keeps the token issuer
+      # consistent so Vikunja can validate Keycloak tokens server-side.
+      KC_HOSTNAME: http://host.docker.internal:8088
     ports:
       - "8088:8080" # admin console + OIDC at http://localhost:8088
     volumes:

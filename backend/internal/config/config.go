@@ -36,7 +36,7 @@ func Load() Config {
 		Port:           getenv("PORT", "8080"),
 		CORSOrigin:     getenv("CORS_ORIGIN", "*"),
 		VikunjaBaseURL: getenv("VIKUNJA_BASE_URL", "http://localhost:3456"),
-		OIDCIssuer:     getenv("OIDC_ISSUER", "http://localhost:8088/realms/nexax"),
+		OIDCIssuer:     getenv("OIDC_ISSUER", "http://host.docker.internal:8088/realms/nexax"),
 	}
 }
 

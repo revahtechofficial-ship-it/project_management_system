@@ -11,10 +11,11 @@ class AppConfig {
     defaultValue: 'http://localhost:8080',
   );
 
-  /// Keycloak realm issuer URL.
+  /// Keycloak realm issuer URL. Uses host.docker.internal so the issuer is
+  /// identical for the browser and the Docker containers (Vikunja SSO).
   static const String oidcIssuer = String.fromEnvironment(
     'OIDC_ISSUER',
-    defaultValue: 'http://localhost:8088/realms/nexax',
+    defaultValue: 'http://host.docker.internal:8088/realms/nexax',
   );
 
   /// Public OIDC client id (PKCE).
