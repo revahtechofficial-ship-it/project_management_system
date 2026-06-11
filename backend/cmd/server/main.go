@@ -85,8 +85,6 @@ func main() {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	r.Mount("/api/v1/tasks", handler.NewTaskHandler(queries).Routes())
-
 	// Custom email/password authentication (public endpoints + JWT-protected /me).
 	r.Route("/api/v1/auth", func(sub chi.Router) {
 		sub.Post("/register", accountHandler.Register)
@@ -96,6 +94,21 @@ func main() {
 		sub.Post("/reset-password", accountHandler.ResetPassword)
 		sub.Post("/resend-otp", accountHandler.ResendOTP)
 		sub.With(appTokens.Middleware).Get("/me", accountHandler.Me)
+		sub.With(appTokens.Middleware).Post("/change-password", accountHandler.ChangePassword)
+	})
+
+	// Workspace API — all behind the app's own JWT (the Flutter web app).
+	taskHandler := handler.NewTaskHandler(queries)
+	r.Group(func(api chi.Router) {
+		api.Use(appTokens.Middleware)
+		api.Mount("/api/v1/tasks", taskHandler.Routes())
+		api.Mount("/api/v1/projects", handler.NewProjectHandler(queries).Routes())
+		api.Mount("/api/v1/dependencies", handler.NewDependencyHandler(queries).Routes())
+		api.Mount("/api/v1/milestones", handler.NewMilestoneHandler(queries).Routes())
+		api.Mount("/api/v1/notifications", handler.NewNotificationHandler(queries).Routes())
+		api.Get("/api/v1/team", handler.NewTeamHandler(queries).List)
+		api.Post("/api/v1/baseline", taskHandler.SetBaseline)
+		api.Patch("/api/v1/profile", accountHandler.UpdateProfile)
 	})
 
 	// Protected routes — require a valid Keycloak token.

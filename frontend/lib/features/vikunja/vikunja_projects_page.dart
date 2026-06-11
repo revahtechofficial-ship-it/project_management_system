@@ -15,29 +15,51 @@ class VikunjaProjectsPage extends ConsumerWidget {
         ref.watch(vikunjaProjectsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Revah · Vikunja Projects')),
-      body: projects.when(
-        data: (List<VikunjaProject> items) => items.isEmpty
-            ? const Center(child: Text('No projects.'))
-            : ListView.builder(
-                itemCount: items.length,
-                itemBuilder: (BuildContext context, int i) {
-                  final VikunjaProject p = items[i];
-                  return ListTile(
-                    leading: const Icon(Icons.folder_outlined),
-                    title: Text(p.title),
-                    subtitle:
-                        p.description.isEmpty ? null : Text(p.description),
-                  );
-                },
+      backgroundColor: Colors.transparent,
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                const Text('Projects',
+                    style: TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.w800)),
+                const Spacer(),
+                IconButton(
+                  tooltip: 'Refresh',
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () =>
+                      ref.invalidate(vikunjaProjectsProvider),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: projects.when(
+                data: (List<VikunjaProject> items) => items.isEmpty
+                    ? const Center(child: Text('No projects.'))
+                    : ListView.builder(
+                        itemCount: items.length,
+                        itemBuilder: (BuildContext context, int i) {
+                          final VikunjaProject p = items[i];
+                          return ListTile(
+                            leading: const Icon(Icons.folder_outlined),
+                            title: Text(p.title),
+                            subtitle: p.description.isEmpty
+                                ? null
+                                : Text(p.description),
+                          );
+                        },
+                      ),
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (Object err, _) => _NotConnected(error: '$err'),
               ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object err, _) => _NotConnected(error: '$err'),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => ref.invalidate(vikunjaProjectsProvider),
-        tooltip: 'Refresh',
-        child: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
       ),
     );
   }

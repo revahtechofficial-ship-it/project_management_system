@@ -7,21 +7,41 @@ package db
 
 import (
 	"context"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createTask = `-- name: CreateTask :one
-INSERT INTO tasks (title, description)
-VALUES ($1, $2)
-RETURNING id, title, description, done, created_at, updated_at
+INSERT INTO tasks (title, description, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due
 `
 
 type CreateTaskParams struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	ProjectID   *int64             `json:"project_id"`
+	AssigneeID  *int64             `json:"assignee_id"`
+	StartDate   pgtype.Timestamptz `json:"start_date"`
+	DueDate     pgtype.Timestamptz `json:"due_date"`
+	Status      string             `json:"status"`
+	ParentID    *int64             `json:"parent_id"`
+	Recurrence  string             `json:"recurrence"`
 }
 
 func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
-	row := q.db.QueryRow(ctx, createTask, arg.Title, arg.Description)
+	row := q.db.QueryRow(ctx, createTask,
+		arg.Title,
+		arg.Description,
+		arg.ProjectID,
+		arg.AssigneeID,
+		arg.StartDate,
+		arg.DueDate,
+		arg.Status,
+		arg.ParentID,
+		arg.Recurrence,
+	)
 	var i Task
 	err := row.Scan(
 		&i.ID,
@@ -30,6 +50,15 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		&i.Done,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
+		&i.AssigneeID,
+		&i.StartDate,
+		&i.DueDate,
+		&i.Status,
+		&i.ParentID,
+		&i.Recurrence,
+		&i.BaselineStart,
+		&i.BaselineDue,
 	)
 	return i, err
 }
@@ -45,7 +74,7 @@ func (q *Queries) DeleteTask(ctx context.Context, id int64) error {
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, title, description, done, created_at, updated_at FROM tasks
+SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due FROM tasks
 WHERE id = $1
 `
 
@@ -59,17 +88,27 @@ func (q *Queries) GetTask(ctx context.Context, id int64) (Task, error) {
 		&i.Done,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
+		&i.AssigneeID,
+		&i.StartDate,
+		&i.DueDate,
+		&i.Status,
+		&i.ParentID,
+		&i.Recurrence,
+		&i.BaselineStart,
+		&i.BaselineDue,
 	)
 	return i, err
 }
 
-const listTasks = `-- name: ListTasks :many
-SELECT id, title, description, done, created_at, updated_at FROM tasks
-ORDER BY created_at DESC
+const listSubtasks = `-- name: ListSubtasks :many
+SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due FROM tasks
+WHERE parent_id = $1
+ORDER BY created_at ASC
 `
 
-func (q *Queries) ListTasks(ctx context.Context) ([]Task, error) {
-	rows, err := q.db.Query(ctx, listTasks)
+func (q *Queries) ListSubtasks(ctx context.Context, parentID *int64) ([]Task, error) {
+	rows, err := q.db.Query(ctx, listSubtasks, parentID)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +123,15 @@ func (q *Queries) ListTasks(ctx context.Context) ([]Task, error) {
 			&i.Done,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ProjectID,
+			&i.AssigneeID,
+			&i.StartDate,
+			&i.DueDate,
+			&i.Status,
+			&i.ParentID,
+			&i.Recurrence,
+			&i.BaselineStart,
+			&i.BaselineDue,
 		); err != nil {
 			return nil, err
 		}
@@ -95,12 +143,167 @@ func (q *Queries) ListTasks(ctx context.Context) ([]Task, error) {
 	return items, nil
 }
 
+const listTasks = `-- name: ListTasks :many
+SELECT t.id, t.title, t.description, t.done, t.created_at, t.updated_at, t.project_id, t.assignee_id, t.start_date, t.due_date, t.status, t.parent_id, t.recurrence, t.baseline_start, t.baseline_due,
+       p.name      AS project_name,
+       u.full_name AS assignee_name,
+       COALESCE(st.total, 0)::int AS subtask_count,
+       COALESCE(st.done, 0)::int  AS subtask_done_count
+FROM tasks t
+LEFT JOIN projects p ON p.id = t.project_id
+LEFT JOIN users u ON u.id = t.assignee_id
+LEFT JOIN (
+    SELECT parent_id,
+           COUNT(*)                     AS total,
+           COUNT(*) FILTER (WHERE done) AS done
+    FROM tasks
+    WHERE parent_id IS NOT NULL
+    GROUP BY parent_id
+) st ON st.parent_id = t.id
+WHERE t.parent_id IS NULL
+ORDER BY t.created_at DESC
+`
+
+type ListTasksRow struct {
+	ID               int64              `json:"id"`
+	Title            string             `json:"title"`
+	Description      string             `json:"description"`
+	Done             bool               `json:"done"`
+	CreatedAt        time.Time          `json:"created_at"`
+	UpdatedAt        time.Time          `json:"updated_at"`
+	ProjectID        *int64             `json:"project_id"`
+	AssigneeID       *int64             `json:"assignee_id"`
+	StartDate        pgtype.Timestamptz `json:"start_date"`
+	DueDate          pgtype.Timestamptz `json:"due_date"`
+	Status           string             `json:"status"`
+	ParentID         *int64             `json:"parent_id"`
+	Recurrence       string             `json:"recurrence"`
+	BaselineStart    pgtype.Timestamptz `json:"baseline_start"`
+	BaselineDue      pgtype.Timestamptz `json:"baseline_due"`
+	ProjectName      *string            `json:"project_name"`
+	AssigneeName     *string            `json:"assignee_name"`
+	SubtaskCount     int32              `json:"subtask_count"`
+	SubtaskDoneCount int32              `json:"subtask_done_count"`
+}
+
+func (q *Queries) ListTasks(ctx context.Context) ([]ListTasksRow, error) {
+	rows, err := q.db.Query(ctx, listTasks)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListTasksRow{}
+	for rows.Next() {
+		var i ListTasksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Done,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProjectID,
+			&i.AssigneeID,
+			&i.StartDate,
+			&i.DueDate,
+			&i.Status,
+			&i.ParentID,
+			&i.Recurrence,
+			&i.BaselineStart,
+			&i.BaselineDue,
+			&i.ProjectName,
+			&i.AssigneeName,
+			&i.SubtaskCount,
+			&i.SubtaskDoneCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTasksRaw = `-- name: ListTasksRaw :many
+SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due FROM tasks
+`
+
+func (q *Queries) ListTasksRaw(ctx context.Context) ([]Task, error) {
+	rows, err := q.db.Query(ctx, listTasksRaw)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Task{}
+	for rows.Next() {
+		var i Task
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Done,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProjectID,
+			&i.AssigneeID,
+			&i.StartDate,
+			&i.DueDate,
+			&i.Status,
+			&i.ParentID,
+			&i.Recurrence,
+			&i.BaselineStart,
+			&i.BaselineDue,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setBaseline = `-- name: SetBaseline :exec
+UPDATE tasks
+SET baseline_start = start_date,
+    baseline_due   = due_date,
+    updated_at     = now()
+`
+
+func (q *Queries) SetBaseline(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, setBaseline)
+	return err
+}
+
+const setTaskDates = `-- name: SetTaskDates :exec
+UPDATE tasks
+SET start_date = $2,
+    due_date   = $3,
+    updated_at = now()
+WHERE id = $1
+`
+
+type SetTaskDatesParams struct {
+	ID        int64              `json:"id"`
+	StartDate pgtype.Timestamptz `json:"start_date"`
+	DueDate   pgtype.Timestamptz `json:"due_date"`
+}
+
+func (q *Queries) SetTaskDates(ctx context.Context, arg SetTaskDatesParams) error {
+	_, err := q.db.Exec(ctx, setTaskDates, arg.ID, arg.StartDate, arg.DueDate)
+	return err
+}
+
 const setTaskDone = `-- name: SetTaskDone :one
 UPDATE tasks
 SET done = $2,
+    status = CASE WHEN $2 THEN 'done' ELSE 'todo' END,
     updated_at = now()
 WHERE id = $1
-RETURNING id, title, description, done, created_at, updated_at
+RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due
 `
 
 type SetTaskDoneParams struct {
@@ -118,6 +321,113 @@ func (q *Queries) SetTaskDone(ctx context.Context, arg SetTaskDoneParams) (Task,
 		&i.Done,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProjectID,
+		&i.AssigneeID,
+		&i.StartDate,
+		&i.DueDate,
+		&i.Status,
+		&i.ParentID,
+		&i.Recurrence,
+		&i.BaselineStart,
+		&i.BaselineDue,
+	)
+	return i, err
+}
+
+const setTaskStatus = `-- name: SetTaskStatus :one
+UPDATE tasks
+SET status = $2,
+    done   = ($2 = 'done'),
+    updated_at = now()
+WHERE id = $1
+RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due
+`
+
+type SetTaskStatusParams struct {
+	ID     int64  `json:"id"`
+	Status string `json:"status"`
+}
+
+func (q *Queries) SetTaskStatus(ctx context.Context, arg SetTaskStatusParams) (Task, error) {
+	row := q.db.QueryRow(ctx, setTaskStatus, arg.ID, arg.Status)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.Done,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProjectID,
+		&i.AssigneeID,
+		&i.StartDate,
+		&i.DueDate,
+		&i.Status,
+		&i.ParentID,
+		&i.Recurrence,
+		&i.BaselineStart,
+		&i.BaselineDue,
+	)
+	return i, err
+}
+
+const updateTask = `-- name: UpdateTask :one
+UPDATE tasks
+SET title       = $2,
+    description = $3,
+    project_id  = $4,
+    assignee_id = $5,
+    start_date  = $6,
+    due_date    = $7,
+    status      = $8,
+    recurrence  = $9,
+    done        = ($8 = 'done'),
+    updated_at  = now()
+WHERE id = $1
+RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due
+`
+
+type UpdateTaskParams struct {
+	ID          int64              `json:"id"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	ProjectID   *int64             `json:"project_id"`
+	AssigneeID  *int64             `json:"assignee_id"`
+	StartDate   pgtype.Timestamptz `json:"start_date"`
+	DueDate     pgtype.Timestamptz `json:"due_date"`
+	Status      string             `json:"status"`
+	Recurrence  string             `json:"recurrence"`
+}
+
+func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error) {
+	row := q.db.QueryRow(ctx, updateTask,
+		arg.ID,
+		arg.Title,
+		arg.Description,
+		arg.ProjectID,
+		arg.AssigneeID,
+		arg.StartDate,
+		arg.DueDate,
+		arg.Status,
+		arg.Recurrence,
+	)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.Done,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProjectID,
+		&i.AssigneeID,
+		&i.StartDate,
+		&i.DueDate,
+		&i.Status,
+		&i.ParentID,
+		&i.Recurrence,
+		&i.BaselineStart,
+		&i.BaselineDue,
 	)
 	return i, err
 }

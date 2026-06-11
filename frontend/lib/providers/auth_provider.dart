@@ -40,6 +40,30 @@ class AuthController extends AsyncNotifier<AuthState> {
     await ref.read(authServiceProvider).logout();
     state = const AsyncData<AuthState>(AuthState.signedOut());
   }
+
+  /// Updates the display name and refreshes the in-memory session.
+  Future<void> updateProfile({required String fullName}) async {
+    final AuthUser user = await ref
+        .read(authServiceProvider)
+        .updateProfile(fullName: fullName);
+    final AuthSession? current = state.asData?.value.session;
+    if (current != null) {
+      state = AsyncData<AuthState>(AuthState(
+        session: AuthSession(token: current.token, user: user),
+      ));
+    }
+  }
+
+  /// Changes the signed-in user's password (verifying the current one).
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await ref.read(authServiceProvider).changePassword(
+          currentPassword: currentPassword,
+          newPassword: newPassword,
+        );
+  }
 }
 
 final AsyncNotifierProvider<AuthController, AuthState> authControllerProvider =

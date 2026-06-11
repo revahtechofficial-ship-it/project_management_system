@@ -39,6 +39,8 @@ func (h *AccountHandler) accountError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusForbidden, err)
 	case errors.Is(err, account.ErrInvalidOTP):
 		writeError(w, http.StatusBadRequest, err)
+	case errors.Is(err, account.ErrWrongPassword):
+		writeError(w, http.StatusBadRequest, err)
 	default:
 		writeError(w, http.StatusInternalServerError, errors.New("something went wrong"))
 	}
@@ -185,5 +187,62 @@ func (h *AccountHandler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"id": claims.UserID, "email": claims.Email, "name": claims.Name,
+	})
+}
+
+type updateProfileReq struct {
+	FullName string `json:"full_name"`
+}
+
+// UpdateProfile changes the authenticated user's display name (JWT-protected).
+func (h *AccountHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	claims, ok := account.FromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, errors.New("not authenticated"))
+		return
+	}
+	var b updateProfileReq
+	if err := decode(r, &b); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	name := strings.TrimSpace(b.FullName)
+	if name == "" {
+		writeError(w, http.StatusBadRequest, errors.New("name is required"))
+		return
+	}
+	u, err := h.svc.UpdateProfile(r.Context(), claims.UserID, name)
+	if err != nil {
+		h.accountError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id": u.ID, "email": u.Email, "name": u.FullName,
+	})
+}
+
+type changePasswordReq struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+// ChangePassword updates the authenticated user's password (JWT-protected).
+func (h *AccountHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	claims, ok := account.FromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, errors.New("not authenticated"))
+		return
+	}
+	var b changePasswordReq
+	if err := decode(r, &b); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if err := h.svc.ChangePassword(r.Context(), claims.UserID, b.CurrentPassword, b.NewPassword); err != nil {
+		h.accountError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{
+		"message": "Password updated successfully.",
 	})
 }

@@ -113,11 +113,74 @@ class AuthService {
         <String, dynamic>{'email': email, 'purpose': purpose});
   }
 
+  /// Updates the signed-in user's display name and re-persists it.
+  Future<AuthUser> updateProfile({required String fullName}) async {
+    final String token = await _token();
+    final Map<String, dynamic> data = await _send(
+      'PATCH',
+      '/api/v1/profile',
+      <String, dynamic>{'full_name': fullName},
+      token,
+    );
+    final AuthUser user = AuthUser.fromJson(data);
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kUser, jsonEncode(user.toJson()));
+    return user;
+  }
+
+  /// Changes the signed-in user's password (verifying the current one).
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final String token = await _token();
+    await _send(
+      'POST',
+      '/api/v1/auth/change-password',
+      <String, dynamic>{
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      },
+      token,
+    );
+  }
+
   /// Clears the stored session.
   Future<void> logout() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kToken);
     await prefs.remove(_kUser);
+  }
+
+  Future<String> _token() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? token = prefs.getString(_kToken);
+    if (token == null || token.isEmpty) {
+      throw AuthException('Your session has expired. Please sign in again.');
+    }
+    return token;
+  }
+
+  Future<Map<String, dynamic>> _send(
+    String method,
+    String path,
+    Map<String, dynamic> body,
+    String token,
+  ) async {
+    try {
+      final Response<Map<String, dynamic>> res =
+          await _dio.request<Map<String, dynamic>>(
+        path,
+        data: body,
+        options: Options(
+          method: method,
+          headers: <String, dynamic>{'Authorization': 'Bearer $token'},
+        ),
+      );
+      return res.data ?? <String, dynamic>{};
+    } on DioException catch (e) {
+      throw AuthException(_messageFrom(e));
+    }
   }
 
   Future<Map<String, dynamic>> _post(

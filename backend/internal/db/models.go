@@ -6,7 +6,36 @@ package db
 
 import (
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type ChecklistItem struct {
+	ID        int64     `json:"id"`
+	TaskID    int64     `json:"task_id"`
+	Content   string    `json:"content"`
+	Done      bool      `json:"done"`
+	Position  int32     `json:"position"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Milestone struct {
+	ID        int64     `json:"id"`
+	ProjectID *int64    `json:"project_id"`
+	Name      string    `json:"name"`
+	DueDate   time.Time `json:"due_date"`
+	Done      bool      `json:"done"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Notification struct {
+	ID        int64     `json:"id"`
+	Type      string    `json:"type"`
+	Title     string    `json:"title"`
+	Body      string    `json:"body"`
+	Read      bool      `json:"read"`
+	CreatedAt time.Time `json:"created_at"`
+}
 
 type OtpCode struct {
 	ID        int64     `json:"id"`
@@ -18,13 +47,41 @@ type OtpCode struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Project struct {
+	ID          int64              `json:"id"`
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	Status      string             `json:"status"`
+	DueDate     pgtype.Timestamptz `json:"due_date"`
+	CreatedBy   *int64             `json:"created_by"`
+	CreatedAt   time.Time          `json:"created_at"`
+	UpdatedAt   time.Time          `json:"updated_at"`
+}
+
 type Task struct {
-	ID          int64     `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Done        bool      `json:"done"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID            int64              `json:"id"`
+	Title         string             `json:"title"`
+	Description   string             `json:"description"`
+	Done          bool               `json:"done"`
+	CreatedAt     time.Time          `json:"created_at"`
+	UpdatedAt     time.Time          `json:"updated_at"`
+	ProjectID     *int64             `json:"project_id"`
+	AssigneeID    *int64             `json:"assignee_id"`
+	StartDate     pgtype.Timestamptz `json:"start_date"`
+	DueDate       pgtype.Timestamptz `json:"due_date"`
+	Status        string             `json:"status"`
+	ParentID      *int64             `json:"parent_id"`
+	Recurrence    string             `json:"recurrence"`
+	BaselineStart pgtype.Timestamptz `json:"baseline_start"`
+	BaselineDue   pgtype.Timestamptz `json:"baseline_due"`
+}
+
+type TaskDependency struct {
+	ID            int64     `json:"id"`
+	PredecessorID int64     `json:"predecessor_id"`
+	SuccessorID   int64     `json:"successor_id"`
+	Type          string    `json:"type"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type User struct {
@@ -35,4 +92,5 @@ type User struct {
 	EmailVerified bool      `json:"email_verified"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	Role          string    `json:"role"`
 }

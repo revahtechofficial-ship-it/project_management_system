@@ -17,6 +17,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid email or password")
 	ErrEmailNotVerified   = errors.New("please verify your email before signing in")
 	ErrInvalidOTP         = errors.New("invalid or expired code")
+	ErrWrongPassword      = errors.New("current password is incorrect")
 )
 
 const (
@@ -61,12 +62,46 @@ func (s *Service) Register(ctx context.Context, em, password, fullName string) e
 	return s.issueOTP(ctx, em, "signup")
 }
 
-// VerifyEmail consumes a signup OTP and marks the account verified.
+// VerifyEmail consumes a signup OTP and marks the account verified, then posts
+// a workspace "member joined" notification (best-effort).
 func (s *Service) VerifyEmail(ctx context.Context, em, code string) error {
 	if err := s.checkOTP(ctx, em, "signup", code); err != nil {
 		return err
 	}
-	return s.q.MarkEmailVerified(ctx, em)
+	if err := s.q.MarkEmailVerified(ctx, em); err != nil {
+		return err
+	}
+	_, _ = s.q.CreateNotification(ctx, db.CreateNotificationParams{
+		Type:  "member",
+		Title: "New member joined",
+		Body:  em,
+	})
+	return nil
+}
+
+// UpdateProfile changes the user's display name and returns the updated row.
+func (s *Service) UpdateProfile(ctx context.Context, userID int64, fullName string) (db.User, error) {
+	return s.q.UpdateUserName(ctx, db.UpdateUserNameParams{ID: userID, FullName: fullName})
+}
+
+// ChangePassword verifies the current password, then sets a new (policy-checked)
+// one for the authenticated user.
+func (s *Service) ChangePassword(ctx context.Context, userID int64, current, newPassword string) error {
+	u, err := s.q.GetUserByID(ctx, userID)
+	if err != nil {
+		return ErrInvalidCredentials
+	}
+	if !CheckPassword(u.PasswordHash, current) {
+		return ErrWrongPassword
+	}
+	if err := ValidatePassword(newPassword); err != nil {
+		return err
+	}
+	hash, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+	return s.q.UpdatePassword(ctx, db.UpdatePasswordParams{Email: u.Email, PasswordHash: hash})
 }
 
 // Login validates credentials and returns a session JWT + claims.

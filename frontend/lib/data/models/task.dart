@@ -1,4 +1,8 @@
-/// A task, mirroring the backend `tasks` table.
+import '../enums/recurrence_type.dart';
+import '../enums/task_status.dart';
+
+/// A task, mirroring the backend `tasks` table (plus the joined project and
+/// assignee names from the list query).
 ///
 /// Manual JSON serialization per AGENTS.md §9 (no `json_serializable`).
 /// JSON keys are `snake_case` to match the API.
@@ -7,16 +11,42 @@ class Task {
   final String title;
   final String description;
   final bool done;
+  final TaskStatus status;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int? projectId;
+  final int? assigneeId;
+  final String? projectName;
+  final String? assigneeName;
+  final DateTime? startDate;
+  final DateTime? dueDate;
+  final int? parentId;
+  final RecurrenceType recurrence;
+  final int subtaskCount;
+  final int subtaskDoneCount;
+  final DateTime? baselineStart;
+  final DateTime? baselineDue;
 
   const Task({
     required this.id,
     required this.done,
     required this.createdAt,
     required this.updatedAt,
+    this.status = TaskStatus.todo,
     this.title = '',
     this.description = '',
+    this.projectId,
+    this.assigneeId,
+    this.projectName,
+    this.assigneeName,
+    this.startDate,
+    this.dueDate,
+    this.parentId,
+    this.recurrence = RecurrenceType.none,
+    this.subtaskCount = 0,
+    this.subtaskDoneCount = 0,
+    this.baselineStart,
+    this.baselineDue,
   });
 
   /// Builds a [Task] from a decoded JSON map with snake_case keys.
@@ -25,8 +55,30 @@ class Task {
         title: json['title'] as String? ?? '',
         description: json['description'] as String? ?? '',
         done: json['done'] as bool,
+        status: TaskStatus.fromJson(json['status'] as String? ?? 'todo'),
         createdAt: DateTime.parse(json['created_at'] as String),
         updatedAt: DateTime.parse(json['updated_at'] as String),
+        projectId: json['project_id'] as int?,
+        assigneeId: json['assignee_id'] as int?,
+        projectName: json['project_name'] as String?,
+        assigneeName: json['assignee_name'] as String?,
+        startDate: json['start_date'] == null
+            ? null
+            : DateTime.parse(json['start_date'] as String),
+        dueDate: json['due_date'] == null
+            ? null
+            : DateTime.parse(json['due_date'] as String),
+        parentId: json['parent_id'] as int?,
+        recurrence:
+            RecurrenceType.fromJson(json['recurrence'] as String? ?? 'none'),
+        subtaskCount: json['subtask_count'] as int? ?? 0,
+        subtaskDoneCount: json['subtask_done_count'] as int? ?? 0,
+        baselineStart: json['baseline_start'] == null
+            ? null
+            : DateTime.parse(json['baseline_start'] as String),
+        baselineDue: json['baseline_due'] == null
+            ? null
+            : DateTime.parse(json['baseline_due'] as String),
       );
 
   /// Serializes this task to a JSON map with snake_case keys.
@@ -35,8 +87,21 @@ class Task {
         'title': title,
         'description': description,
         'done': done,
+        'status': status.toJson(),
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
+        'project_id': projectId,
+        'assignee_id': assigneeId,
+        'project_name': projectName,
+        'assignee_name': assigneeName,
+        'start_date': startDate?.toIso8601String(),
+        'due_date': dueDate?.toIso8601String(),
+        'parent_id': parentId,
+        'recurrence': recurrence.toJson(),
+        'subtask_count': subtaskCount,
+        'subtask_done_count': subtaskDoneCount,
+        'baseline_start': baselineStart?.toIso8601String(),
+        'baseline_due': baselineDue?.toIso8601String(),
       };
 
   @override
@@ -46,7 +111,9 @@ class Task {
       'description: $description, '
       'done: $done, '
       'createdAt: $createdAt, '
-      'updatedAt: $updatedAt'
+      'updatedAt: $updatedAt, '
+      'projectId: $projectId, '
+      'assigneeId: $assigneeId'
       ')';
 
   @override
@@ -57,8 +124,21 @@ class Task {
           other.title == title &&
           other.description == description &&
           other.done == done &&
+          other.status == status &&
           other.createdAt == createdAt &&
-          other.updatedAt == updatedAt;
+          other.updatedAt == updatedAt &&
+          other.projectId == projectId &&
+          other.assigneeId == assigneeId &&
+          other.projectName == projectName &&
+          other.assigneeName == assigneeName &&
+          other.startDate == startDate &&
+          other.dueDate == dueDate &&
+          other.parentId == parentId &&
+          other.recurrence == recurrence &&
+          other.subtaskCount == subtaskCount &&
+          other.subtaskDoneCount == subtaskDoneCount &&
+          other.baselineStart == baselineStart &&
+          other.baselineDue == baselineDue;
 
   @override
   int get hashCode => Object.hash(
@@ -66,7 +146,20 @@ class Task {
         title,
         description,
         done,
+        status,
         createdAt,
         updatedAt,
+        projectId,
+        assigneeId,
+        projectName,
+        assigneeName,
+        startDate,
+        dueDate,
+        parentId,
+        recurrence,
+        subtaskCount,
+        subtaskDoneCount,
+        baselineStart,
+        baselineDue,
       );
 }

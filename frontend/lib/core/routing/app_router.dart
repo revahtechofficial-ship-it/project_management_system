@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,9 +7,16 @@ import '../../features/auth/login_page.dart';
 import '../../features/auth/reset_password_page.dart';
 import '../../features/auth/signup_page.dart';
 import '../../features/auth/verify_otp_page.dart';
+import '../../features/dashboard/dashboard_page.dart';
+import '../../features/notifications/notifications_page.dart';
+import '../../features/projects/projects_page.dart';
+import '../../features/reports/reports_page.dart';
+import '../../features/settings/settings_page.dart';
 import '../../features/tasks/tasks_page.dart';
+import '../../features/team/team_page.dart';
 import '../../features/vikunja/vikunja_projects_page.dart';
 import '../../providers/auth_provider.dart';
+import '../widgets/app_shell.dart';
 
 const Set<String> _authPaths = <String>{
   '/login',
@@ -40,8 +48,25 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: <RouteBase>[
-      GoRoute(path: '/', builder: (c, s) => const TasksPage()),
-      GoRoute(path: '/vikunja', builder: (c, s) => const VikunjaProjectsPage()),
+      ShellRoute(
+        builder: (c, s, Widget child) => AppShell(child: child),
+        routes: <RouteBase>[
+          GoRoute(path: '/', builder: (c, s) => const DashboardPage()),
+          GoRoute(path: '/tasks', builder: (c, s) => const TasksPage()),
+          GoRoute(path: '/projects', builder: (c, s) => const ProjectsPage()),
+          GoRoute(path: '/team', builder: (c, s) => const TeamPage()),
+          GoRoute(path: '/reports', builder: (c, s) => const ReportsPage()),
+          GoRoute(path: '/settings', builder: (c, s) => const SettingsPage()),
+          GoRoute(
+            path: '/notifications',
+            builder: (c, s) => const NotificationsPage(),
+          ),
+          GoRoute(
+            path: '/vikunja',
+            builder: (c, s) => const VikunjaProjectsPage(),
+          ),
+        ],
+      ),
       GoRoute(
         path: '/login',
         builder: (c, s) =>

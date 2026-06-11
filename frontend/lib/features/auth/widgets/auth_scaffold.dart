@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// A consistent, modern auth layout: a gradient backdrop with a centered,
-/// elevated card. Used by every auth page (AGENTS.md §1 feature widget).
+import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/glass.dart';
+
+/// A modern auth layout: an aurora backdrop with a centered frosted-glass card
+/// (AGENTS.md §1 feature widget).
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
     super.key,
@@ -20,14 +23,8 @@ class AuthScaffold extends StatelessWidget {
     final ColorScheme scheme = theme.colorScheme;
 
     return Scaffold(
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[scheme.primary, scheme.tertiary],
-          ),
-        ),
+      backgroundColor: Colors.transparent,
+      body: AppBackground(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -36,34 +33,45 @@ class AuthScaffold extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  CircleAvatar(
-                    radius: 32,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.dashboard_rounded,
-                        size: 34, color: scheme.primary),
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.brandGradient,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: <BoxShadow>[
+                        BoxShadow(
+                          color: AppColors.brand.withValues(alpha: 0.45),
+                          blurRadius: 22,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.dashboard_rounded,
+                        size: 32, color: Colors.white),
                   ),
-                  const SizedBox(height: 14),
-                  const Text(
+                  const SizedBox(height: 16),
+                  Text(
                     'Revah Management System',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(height: 22),
-                  Card(
-                    elevation: 10,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                  const SizedBox(height: 24),
+                  GlassSurface(
+                    borderRadius: 24,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          Text(title, style: theme.textTheme.headlineSmall),
+                          Text(title,
+                              style: theme.textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700)),
                           const SizedBox(height: 6),
                           Text(
                             subtitle,

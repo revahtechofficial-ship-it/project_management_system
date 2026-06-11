@@ -2,13 +2,16 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/revah-tech/revahms/backend/internal/db"
 )
@@ -29,27 +32,196 @@ func (h *TaskHandler) Routes() http.Handler {
 	r.Get("/", h.list)
 	r.Post("/", h.create)
 	r.Get("/{id}", h.get)
+	r.Put("/{id}", h.update)
 	r.Patch("/{id}", h.setDone)
+	r.Patch("/{id}/status", h.setStatus)
 	r.Delete("/{id}", h.delete)
+	r.Get("/{id}/subtasks", h.listSubtasks)
+	r.Get("/{id}/checklist", h.listChecklist)
+	r.Post("/{id}/checklist", h.createChecklist)
+	r.Patch("/checklist/{itemId}", h.setChecklistDone)
+	r.Delete("/checklist/{itemId}", h.deleteChecklistItem)
 	return r
 }
 
+// taskResponse is the clean JSON shape the frontend consumes — nullable dates
+// become RFC3339 (or null) instead of pgtype's verbose struct form.
+type taskResponse struct {
+	ID               int64      `json:"id"`
+	Title            string     `json:"title"`
+	Description      string     `json:"description"`
+	Done             bool       `json:"done"`
+	Status           string     `json:"status"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	ProjectID        *int64     `json:"project_id"`
+	AssigneeID       *int64     `json:"assignee_id"`
+	ProjectName      *string    `json:"project_name"`
+	AssigneeName     *string    `json:"assignee_name"`
+	StartDate        *time.Time `json:"start_date"`
+	DueDate          *time.Time `json:"due_date"`
+	ParentID         *int64     `json:"parent_id"`
+	Recurrence       string     `json:"recurrence"`
+	SubtaskCount     int32      `json:"subtask_count"`
+	SubtaskDoneCount int32      `json:"subtask_done_count"`
+	BaselineStart    *time.Time `json:"baseline_start"`
+	BaselineDue      *time.Time `json:"baseline_due"`
+}
+
+func taskFromModel(t db.Task) taskResponse {
+	return taskResponse{
+		ID:          t.ID,
+		Title:       t.Title,
+		Description: t.Description,
+		Done:        t.Done,
+		Status:      t.Status,
+		CreatedAt:   t.CreatedAt,
+		UpdatedAt:   t.UpdatedAt,
+		ProjectID:   t.ProjectID,
+		AssigneeID:  t.AssigneeID,
+		StartDate:     tsPtr(t.StartDate),
+		DueDate:       tsPtr(t.DueDate),
+		ParentID:      t.ParentID,
+		Recurrence:    t.Recurrence,
+		BaselineStart: tsPtr(t.BaselineStart),
+		BaselineDue:   tsPtr(t.BaselineDue),
+	}
+}
+
+func taskFromRow(r db.ListTasksRow) taskResponse {
+	return taskResponse{
+		ID:               r.ID,
+		Title:            r.Title,
+		Description:      r.Description,
+		Done:             r.Done,
+		Status:           r.Status,
+		CreatedAt:        r.CreatedAt,
+		UpdatedAt:        r.UpdatedAt,
+		ProjectID:        r.ProjectID,
+		AssigneeID:       r.AssigneeID,
+		ProjectName:      r.ProjectName,
+		AssigneeName:     r.AssigneeName,
+		StartDate:        tsPtr(r.StartDate),
+		DueDate:          tsPtr(r.DueDate),
+		ParentID:         r.ParentID,
+		Recurrence:       r.Recurrence,
+		SubtaskCount:     r.SubtaskCount,
+		SubtaskDoneCount: r.SubtaskDoneCount,
+		BaselineStart:    tsPtr(r.BaselineStart),
+		BaselineDue:      tsPtr(r.BaselineDue),
+	}
+}
+
+// SetBaseline snapshots every task's current start/due dates as its baseline,
+// so the timeline can later show planned-vs-actual drift.
+func (h *TaskHandler) SetBaseline(w http.ResponseWriter, r *http.Request) {
+	if err := h.q.SetBaseline(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func validStatus(s string) bool {
+	switch s {
+	case "backlog", "todo", "in_progress", "review", "done":
+		return true
+	default:
+		return false
+	}
+}
+
+func statusOrTodo(s string) string {
+	if s == "" {
+		return "todo"
+	}
+	return s
+}
+
+func validRecurrence(s string) bool {
+	switch s {
+	case "none", "daily", "weekly", "monthly":
+		return true
+	default:
+		return false
+	}
+}
+
+func recurrenceOrNone(s string) string {
+	if s == "" {
+		return "none"
+	}
+	return s
+}
+
+func addPeriod(t time.Time, rec string) time.Time {
+	switch rec {
+	case "daily":
+		return t.AddDate(0, 0, 1)
+	case "weekly":
+		return t.AddDate(0, 0, 7)
+	case "monthly":
+		return t.AddDate(0, 1, 0)
+	default:
+		return t
+	}
+}
+
+// spawnNext creates the next occurrence of a completed recurring (top-level)
+// task, shifting its dates by one period. Best-effort.
+func (h *TaskHandler) spawnNext(ctx context.Context, t db.Task) {
+	if !validRecurrence(t.Recurrence) || t.Recurrence == "none" {
+		return
+	}
+	if t.ParentID != nil {
+		return
+	}
+	shift := func(ts pgtype.Timestamptz) pgtype.Timestamptz {
+		if !ts.Valid {
+			return ts
+		}
+		return pgtype.Timestamptz{Time: addPeriod(ts.Time, t.Recurrence), Valid: true}
+	}
+	_, _ = h.q.CreateTask(ctx, db.CreateTaskParams{
+		Title:       t.Title,
+		Description: t.Description,
+		ProjectID:   t.ProjectID,
+		AssigneeID:  t.AssigneeID,
+		StartDate:   shift(t.StartDate),
+		DueDate:     shift(t.DueDate),
+		Status:      "todo",
+		Recurrence:  t.Recurrence,
+	})
+	notify(ctx, h.q, "task", "Recurring task scheduled", t.Title)
+}
+
 func (h *TaskHandler) list(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.q.ListTasks(r.Context())
+	rows, err := h.q.ListTasks(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, tasks)
+	out := make([]taskResponse, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, taskFromRow(row))
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
-type createTaskBody struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
+type taskBody struct {
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	ProjectID   *int64  `json:"project_id"`
+	AssigneeID  *int64  `json:"assignee_id"`
+	StartDate   *string `json:"start_date"`
+	DueDate     *string `json:"due_date"`
+	Status      string  `json:"status"`
+	ParentID    *int64  `json:"parent_id"`
+	Recurrence  string  `json:"recurrence"`
 }
 
 func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
-	var body createTaskBody
+	var body taskBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
@@ -58,15 +230,94 @@ func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, errors.New("title is required"))
 		return
 	}
+	start, due, err := parseSchedule(body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	status := statusOrTodo(body.Status)
+	if !validStatus(status) {
+		writeError(w, http.StatusBadRequest, errors.New("invalid status"))
+		return
+	}
+	recurrence := recurrenceOrNone(body.Recurrence)
+	if !validRecurrence(recurrence) {
+		writeError(w, http.StatusBadRequest, errors.New("invalid recurrence"))
+		return
+	}
 	task, err := h.q.CreateTask(r.Context(), db.CreateTaskParams{
 		Title:       body.Title,
 		Description: body.Description,
+		ProjectID:   body.ProjectID,
+		AssigneeID:  body.AssigneeID,
+		StartDate:   start,
+		DueDate:     due,
+		Status:      status,
+		ParentID:    body.ParentID,
+		Recurrence:  recurrence,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, task)
+	writeJSON(w, http.StatusCreated, taskFromModel(task))
+}
+
+func (h *TaskHandler) update(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	var body taskBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if body.Title == "" {
+		writeError(w, http.StatusBadRequest, errors.New("title is required"))
+		return
+	}
+	start, due, err := parseSchedule(body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	status := statusOrTodo(body.Status)
+	if !validStatus(status) {
+		writeError(w, http.StatusBadRequest, errors.New("invalid status"))
+		return
+	}
+	recurrence := recurrenceOrNone(body.Recurrence)
+	if !validRecurrence(recurrence) {
+		writeError(w, http.StatusBadRequest, errors.New("invalid recurrence"))
+		return
+	}
+	task, err := h.q.UpdateTask(r.Context(), db.UpdateTaskParams{
+		ID:          id,
+		Title:       body.Title,
+		Description: body.Description,
+		ProjectID:   body.ProjectID,
+		AssigneeID:  body.AssigneeID,
+		StartDate:   start,
+		DueDate:     due,
+		Status:      status,
+		Recurrence:  recurrence,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, errors.New("task not found"))
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	// A date change may ripple to dependent tasks; keep the schedule valid.
+	if err := rescheduleAll(r.Context(), h.q); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, taskFromModel(task))
 }
 
 func (h *TaskHandler) get(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +335,7 @@ func (h *TaskHandler) get(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, task)
+	writeJSON(w, http.StatusOK, taskFromModel(task))
 }
 
 type setDoneBody struct {
@@ -102,16 +353,71 @@ func (h *TaskHandler) setDone(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	task, err := h.q.SetTaskDone(r.Context(), db.SetTaskDoneParams{ID: id, Done: body.Done})
-	if errors.Is(err, pgx.ErrNoRows) {
+	prior, perr := h.q.GetTask(r.Context(), id)
+	if errors.Is(perr, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, errors.New("task not found"))
 		return
 	}
+	if perr != nil {
+		writeError(w, http.StatusInternalServerError, perr)
+		return
+	}
+	task, err := h.q.SetTaskDone(r.Context(), db.SetTaskDoneParams{ID: id, Done: body.Done})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, task)
+	if body.Done {
+		notify(r.Context(), h.q, "task", "Task completed", task.Title)
+	}
+	if body.Done && !prior.Done {
+		h.spawnNext(r.Context(), task)
+	}
+	writeJSON(w, http.StatusOK, taskFromModel(task))
+}
+
+type setStatusBody struct {
+	Status string `json:"status"`
+}
+
+func (h *TaskHandler) setStatus(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	var body setStatusBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if !validStatus(body.Status) {
+		writeError(w, http.StatusBadRequest, errors.New("invalid status"))
+		return
+	}
+	prior, perr := h.q.GetTask(r.Context(), id)
+	if errors.Is(perr, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, errors.New("task not found"))
+		return
+	}
+	if perr != nil {
+		writeError(w, http.StatusInternalServerError, perr)
+		return
+	}
+	task, err := h.q.SetTaskStatus(r.Context(), db.SetTaskStatusParams{
+		ID: id, Status: body.Status,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if body.Status == "done" {
+		notify(r.Context(), h.q, "task", "Task completed", task.Title)
+	}
+	if body.Status == "done" && !prior.Done {
+		h.spawnNext(r.Context(), task)
+	}
+	writeJSON(w, http.StatusOK, taskFromModel(task))
 }
 
 func (h *TaskHandler) delete(w http.ResponseWriter, r *http.Request) {
@@ -127,6 +433,134 @@ func (h *TaskHandler) delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// parseSchedule parses the optional start/due "YYYY-MM-DD" fields into nullable
+// timestamptz values (reusing parseDue from the projects handler).
+func parseSchedule(b taskBody) (start, due pgtype.Timestamptz, err error) {
+	start, err = parseDue(b.StartDate)
+	if err != nil {
+		return start, due, errors.New("invalid start_date, expected YYYY-MM-DD")
+	}
+	due, err = parseDue(b.DueDate)
+	if err != nil {
+		return start, due, errors.New("invalid due_date, expected YYYY-MM-DD")
+	}
+	return start, due, nil
+}
+
+func (h *TaskHandler) listSubtasks(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	rows, err := h.q.ListSubtasks(r.Context(), &id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	out := make([]taskResponse, 0, len(rows))
+	for _, t := range rows {
+		out = append(out, taskFromModel(t))
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+func (h *TaskHandler) listChecklist(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	items, err := h.q.ListChecklist(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+type checklistBody struct {
+	Content string `json:"content"`
+}
+
+func (h *TaskHandler) createChecklist(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	var b checklistBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if b.Content == "" {
+		writeError(w, http.StatusBadRequest, errors.New("content is required"))
+		return
+	}
+	pos, err := h.q.MaxChecklistPosition(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	item, err := h.q.CreateChecklistItem(r.Context(), db.CreateChecklistItemParams{
+		TaskID:   id,
+		Content:  b.Content,
+		Position: pos + 1,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, item)
+}
+
+type checklistDoneBody struct {
+	Done bool `json:"done"`
+}
+
+func (h *TaskHandler) setChecklistDone(w http.ResponseWriter, r *http.Request) {
+	id, err := itemParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	var b checklistDoneBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	item, err := h.q.SetChecklistItemDone(r.Context(), db.SetChecklistItemDoneParams{
+		ID: id, Done: b.Done,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, errors.New("item not found"))
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, item)
+}
+
+func (h *TaskHandler) deleteChecklistItem(w http.ResponseWriter, r *http.Request) {
+	id, err := itemParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	if err := h.q.DeleteChecklistItem(r.Context(), id); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func idParam(r *http.Request) (int64, error) {
 	return strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+}
+
+func itemParam(r *http.Request) (int64, error) {
+	return strconv.ParseInt(chi.URLParam(r, "itemId"), 10, 64)
 }
