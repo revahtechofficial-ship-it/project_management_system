@@ -51,5 +51,10 @@ func (s *Sender) SendOTP(to, code, purpose string) error {
 		s.from, to, subject, body,
 	))
 	auth := smtp.PlainAuth("", s.user, s.pass, s.host)
-	return smtp.SendMail(s.host+":"+s.port, auth, s.from, []string{to}, msg)
+	if err := smtp.SendMail(s.host+":"+s.port, auth, s.from, []string{to}, msg); err != nil {
+		log.Printf("[email] SMTP send to %s failed: %v", to, err)
+		return err
+	}
+	log.Printf("[email] sent %s code to %s", purpose, to)
+	return nil
 }
