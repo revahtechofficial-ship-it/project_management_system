@@ -20,9 +20,11 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver for goose
 	"github.com/pressly/goose/v3"
 
+	"github.com/revah-tech/revahms/backend/internal/account"
 	"github.com/revah-tech/revahms/backend/internal/auth"
 	"github.com/revah-tech/revahms/backend/internal/config"
 	"github.com/revah-tech/revahms/backend/internal/db"
+	"github.com/revah-tech/revahms/backend/internal/email"
 	"github.com/revah-tech/revahms/backend/internal/handler"
 	"github.com/revah-tech/revahms/backend/internal/vikunja"
 	"github.com/revah-tech/revahms/backend/migrations"
@@ -45,6 +47,11 @@ func main() {
 	queries := db.New(pool)
 	vk := vikunja.NewClient(cfg.VikunjaBaseURL)
 	vkSessions := vikunja.NewSessionStore()
+
+	// Custom email/password auth: users in Postgres, app-issued JWT, OTP email.
+	mailer := email.NewSender(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.AppName)
+	appTokens := account.NewTokens(cfg.JWTSecret)
+	accountHandler := handler.NewAccountHandler(account.NewService(queries, appTokens, mailer))
 
 	// OIDC token verifier. Non-fatal if the issuer is unreachable so the BFF
 	// still starts; protected routes then return 503 until auth is available.
@@ -79,6 +86,17 @@ func main() {
 	})
 
 	r.Mount("/api/v1/tasks", handler.NewTaskHandler(queries).Routes())
+
+	// Custom email/password authentication (public endpoints + JWT-protected /me).
+	r.Route("/api/v1/auth", func(sub chi.Router) {
+		sub.Post("/register", accountHandler.Register)
+		sub.Post("/verify-email", accountHandler.VerifyEmail)
+		sub.Post("/login", accountHandler.Login)
+		sub.Post("/forgot-password", accountHandler.ForgotPassword)
+		sub.Post("/reset-password", accountHandler.ResetPassword)
+		sub.Post("/resend-otp", accountHandler.ResendOTP)
+		sub.With(appTokens.Middleware).Get("/me", accountHandler.Me)
+	})
 
 	// Protected routes — require a valid Keycloak token.
 	vkHandler := handler.NewVikunjaHandler(vk, vkSessions)

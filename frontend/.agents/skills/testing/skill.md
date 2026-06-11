@@ -1,17 +1,31 @@
-# Skill: Testing
+# Flutter Testing Skill
 
-> **Status: starter stub.** Extend with Revah Management System coverage targets and CI rules.
+## Description
+Active reference for writing and structuring tests. Load this skill when adding
+or organizing unit, widget, or integration tests, choosing assertion/mocking
+strategies, or setting up the test toolchain.
 
-## Rules
-- Structure every test **Arrange-Act-Assert**.
-- **Unit tests** for pure logic (models, repositories, utils). Test
-  `Task.fromJson`/`toJson`/`==` round-trips.
-- **Widget tests** for UI. Keep them offline: override providers with
-  `ProviderScope(overrides: [...])` instead of hitting the network
-  (see `test/widget_test.dart`).
-- **Integration tests** for critical end-to-end flows.
-- Inject fakes via Riverpod overrides (fake `Dio`/repositories) — design code
-  for testability (`AGENTS.md` §5). Avoid real timers/network in widget tests
-  (causes "pending timer" failures).
-- Run: `flutter test` (add `--coverage` for coverage).
-- A test should fail for exactly one reason; assert on behavior, not internals.
+## Testing
+* **Running Tests:** To run tests, use the `run_tests` tool if it is available,
+  otherwise use `flutter test`.
+* **Unit Tests:** Use `package:test` for unit tests.
+* **Widget Tests:** Use `package:flutter_test` for widget tests.
+* **Integration Tests:** Use `package:integration_test` for integration tests.
+* **Assertions:** Prefer using `package:checks` for more expressive and readable
+  assertions over the default `matchers`.
+
+### Testing Best practices
+* **Convention:** Follow the Arrange-Act-Assert (or Given-When-Then) pattern.
+* **Unit Tests:** Write unit tests for domain logic, data layer, and state
+  management.
+* **Widget Tests:** Write widget tests for UI components.
+* **Integration Tests:** For broader application validation, use integration
+  tests to verify end-to-end user flows.
+* **integration_test package:** Use the `integration_test` package from the
+  Flutter SDK for integration tests. Add it as a `dev_dependency` in
+  `pubspec.yaml` by specifying `sdk: flutter`.
+* **Mocks:** Prefer fakes or stubs over mocks. If mocks are absolutely
+  necessary, use `mockito` or `mocktail` to create mocks for dependencies. While
+  code generation is common for state management (e.g., with `freezed`), try to
+  avoid it for mocks.
+* **Coverage:** Aim for high test coverage.

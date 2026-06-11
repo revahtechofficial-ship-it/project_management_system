@@ -8,6 +8,16 @@ import (
 	"time"
 )
 
+type OtpCode struct {
+	ID        int64     `json:"id"`
+	Email     string    `json:"email"`
+	CodeHash  string    `json:"code_hash"`
+	Purpose   string    `json:"purpose"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Consumed  bool      `json:"consumed"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Task struct {
 	ID          int64     `json:"id"`
 	Title       string    `json:"title"`
@@ -15,4 +25,14 @@ type Task struct {
 	Done        bool      `json:"done"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type User struct {
+	ID            int64     `json:"id"`
+	Email         string    `json:"email"`
+	PasswordHash  string    `json:"password_hash"`
+	FullName      string    `json:"full_name"`
+	EmailVerified bool      `json:"email_verified"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

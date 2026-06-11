@@ -22,6 +22,18 @@ type Config struct {
 	VikunjaBaseURL string
 	// OIDCIssuer is the Keycloak realm issuer URL used to verify bearer tokens.
 	OIDCIssuer string
+
+	// JWTSecret signs the app's own (custom-auth) session JWTs.
+	JWTSecret string
+	// AppName is used in OTP email subjects/bodies.
+	AppName string
+	// SMTP settings for sending OTP emails. If SMTPHost/SMTPFrom are empty, the
+	// email sender logs codes to stdout instead (dev mode).
+	SMTPHost string
+	SMTPPort string
+	SMTPUser string
+	SMTPPass string
+	SMTPFrom string
 }
 
 // Load reads configuration from the environment. A .env file in the working
@@ -37,6 +49,13 @@ func Load() Config {
 		CORSOrigin:     getenv("CORS_ORIGIN", "*"),
 		VikunjaBaseURL: getenv("VIKUNJA_BASE_URL", "http://localhost:3456"),
 		OIDCIssuer:     getenv("OIDC_ISSUER", "http://host.docker.internal:8088/realms/revahms"),
+		JWTSecret:      getenv("JWT_SECRET", "dev-insecure-change-me"),
+		AppName:        getenv("APP_NAME", "Revah Management System"),
+		SMTPHost:       getenv("SMTP_HOST", ""),
+		SMTPPort:       getenv("SMTP_PORT", "587"),
+		SMTPUser:       getenv("SMTP_USER", ""),
+		SMTPPass:       getenv("SMTP_PASS", ""),
+		SMTPFrom:       getenv("SMTP_FROM", ""),
 	}
 }
 

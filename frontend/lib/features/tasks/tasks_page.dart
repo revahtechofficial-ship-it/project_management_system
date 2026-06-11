@@ -15,7 +15,7 @@ class TasksPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<Task>> tasks = ref.watch(tasksProvider);
     final String username =
-        ref.watch(authControllerProvider).asData?.value.username ?? '';
+        ref.watch(authControllerProvider).asData?.value.user?.name ?? '';
 
     return Scaffold(
       appBar: AppBar(

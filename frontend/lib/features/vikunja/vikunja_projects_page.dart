@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/vikunja_project.dart';
-import '../../providers/auth_provider.dart';
 import 'providers/vikunja_providers.dart';
 
 /// Lists the user's Vikunja projects through the BFF — the end-to-end proof of
@@ -46,31 +45,33 @@ class VikunjaProjectsPage extends ConsumerWidget {
 
 /// Shown when the Vikunja session isn't established (e.g. the BFF returned 428);
 /// offers to re-run the silent handshake.
-class _NotConnected extends ConsumerWidget {
+class _NotConnected extends StatelessWidget {
   const _NotConnected({required this.error});
 
   final String error;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              'Could not load Vikunja projects.\n$error',
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.cloud_off, size: 40),
+            const SizedBox(height: 12),
+            const Text(
+              'Vikunja is being reconnected to the new sign-in system.',
               textAlign: TextAlign.center,
             ),
-          ),
-          FilledButton.icon(
-            onPressed: () =>
-                ref.read(authControllerProvider.notifier).connectVikunja(),
-            icon: const Icon(Icons.link),
-            label: const Text('Connect Vikunja'),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
       ),
     );
   }

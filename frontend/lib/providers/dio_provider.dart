@@ -22,7 +22,7 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
       onRequest: (RequestOptions options, RequestInterceptorHandler handler) {
         // Read lazily per request so the latest token is always used.
         final String? token =
-            ref.read(authControllerProvider).asData?.value.accessToken;
+            ref.read(authControllerProvider).asData?.value.token;
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
         }

@@ -1,0 +1,127 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../providers/auth_provider.dart';
+import 'widgets/auth_bits.dart';
+import 'widgets/auth_scaffold.dart';
+import 'widgets/password_field.dart';
+
+/// Email/password sign-in. On success the router redirects to the app.
+class LoginPage extends ConsumerStatefulWidget {
+  const LoginPage({super.key, this.notice});
+
+  /// Optional success notice (e.g. after verifying email / resetting password).
+  final String? notice;
+
+  @override
+  ConsumerState<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends ConsumerState<LoginPage> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _email = TextEditingController();
+  final TextEditingController _password = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(authControllerProvider.notifier).login(
+            email: _email.text.trim(),
+            password: _password.text,
+          );
+      // The router redirect navigates to the app once authenticated.
+    } catch (e) {
+      setState(() => _error = '$e');
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AuthScaffold(
+      title: 'Welcome back',
+      subtitle: 'Sign in to your Revah account',
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (widget.notice != null) AuthNotice(widget.notice!),
+            TextFormField(
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const <String>[AutofillHints.email],
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                prefixIcon: Icon(Icons.email_outlined),
+                border: OutlineInputBorder(),
+              ),
+              validator: validateEmail,
+            ),
+            const SizedBox(height: 16),
+            PasswordField(
+              controller: _password,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submit(),
+              validator: (String? v) =>
+                  (v == null || v.isEmpty) ? 'Enter your password' : null,
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => context.go('/forgot-password'),
+                child: const Text('Forgot password?'),
+              ),
+            ),
+            if (_error != null) AuthError(_error!),
+            const SizedBox(height: 8),
+            SubmitButton(label: 'Sign in', busy: _busy, onPressed: _submit),
+            const SizedBox(height: 14),
+            const OrDivider(),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: null,
+              icon: const Icon(Icons.g_mobiledata, size: 28),
+              label: const Text('Continue with Google (soon)'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                const Text("Don't have an account?"),
+                TextButton(
+                  onPressed: () => context.go('/signup'),
+                  child: const Text('Sign up'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

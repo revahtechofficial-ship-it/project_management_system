@@ -1,10 +1,22 @@
 # Flutter Architecture & Engineering Standards Agent
 
-This document is the master context for building the Revah Management System Flutter application. It defines both the project's feature-based directory structure (section 1) and the engineering standards agents must follow: interaction guidelines, the Dart and Flutter style guide, package management, code quality, application architecture (Riverpod state management, data flow, routing, manual JSON serialization, enum conventions, and logging), and asset handling. Detailed code generation, theming, layout, documentation, accessibility, and testing guidance is offloaded to dedicated skill files, indexed in the Dynamic Skill Offloading section (section 11).
+This document is the master context and engineering standard for building
+Flutter applications. It defines both a project's feature-based directory
+structure (section 1) and the engineering standards agents must follow:
+interaction guidelines, the Dart and Flutter style guide, package management,
+code quality, Dart and Flutter best practices, API design, and application
+architecture — covering Riverpod state management, data flow, routing, manual
+JSON serialization, enum conventions, and logging — plus asset handling.
+Detailed setup procedures and worked examples — code generation, routing, data
+modeling, assets, theming, layout, documentation, accessibility, and testing —
+are offloaded to dedicated skill files, indexed in the Dynamic Skill Offloading
+section (section 11).
 
 ## 1. Project Structure
 
-This project enforces a highly organized, feature-based directory and file structure, establishing clear boundaries between global (core) logic, data handling, and feature-specific UI/state.
+This project enforces a highly organized, feature-based directory and file
+structure, establishing clear boundaries between global (core) logic, data
+handling, and feature-specific UI/state.
 
 ### Directory Tree Map
 
@@ -34,43 +46,58 @@ lib/
 
 ### Core (`lib/core/`)
 
-The `core` directory contains the foundational elements of the app used globally.
+The `core` directory contains the foundational elements of the app used
+globally.
 
-- **`constants/`**: Variables set once and rarely changed (e.g., `app_colors.dart`). Downloaded custom icons belong here.
-- **`extensions/`**: Dart extension methods (String, num, DateTime). Built to be copy-pasted across projects.
+- **`constants/`**: Variables set once and rarely changed (e.g.,
+  `app_colors.dart`). Downloaded custom icons belong here.
+- **`extensions/`**: Dart extension methods (String, num, DateTime). Built to
+  be copy-pasted across projects.
 - **`routing/`**: Everything related to routing logic and navigation setup.
-- **`services/`**: Project-specific service classes (e.g., `storage_service.dart` handling SharedPreferences). Tied to business logic.
-- **`utils/`**: Reusable helper functions grouped by domain (e.g., `url_launcher_util.dart`).
-- **`widgets/`**: Custom UI widgets used in **more than one feature** (e.g., `loading_animation.dart`).
-  - *Promotion Rule:* Custom widgets start in a feature's `widgets/` folder. Once needed by a second feature, they MUST be moved to `core/widgets/`.
+- **`services/`**: Project-specific service classes (e.g.,
+  `storage_service.dart` handling SharedPreferences). Tied to business logic.
+- **`utils/`**: Reusable helper functions grouped by domain (e.g.,
+  `url_launcher_util.dart`).
+- **`widgets/`**: Custom UI widgets used in **more than one feature** (e.g.,
+  `loading_animation.dart`).
+  - *Promotion Rule:* Custom widgets start in a feature's `widgets/` folder.
+    Once needed by a second feature, they MUST be moved to `core/widgets/`.
 
 ### Data (`lib/data/`)
 
 The central hub for external communications and data definitions.
 
-- **`enums/`**: Single source of truth for **all** enums (models and UI components).
+- **`enums/`**: Single source of truth for **all** enums (models and UI
+  components).
 - **`models/`**: Data model classes and Data Transfer Objects (DTOs).
 - **`repositories/`**: Repositories used to fetch, send, and process data.
 
 ### Global Providers (`lib/providers/`)
 
-Global state management providers not tied to a specific feature (e.g., `dio_provider.dart`, `theme_provider.dart`).
+Global state management providers not tied to a specific feature (e.g.,
+`dio_provider.dart`, `theme_provider.dart`).
 
 ### Features (`lib/features/`)
 
-The core UI and logic modularized by feature. Each page/feature has its own sub-folder named in `snake_case` (`[feature_name]`).
+The core UI and logic modularized by feature. Each page/feature has its own
+sub-folder named in `snake_case` (`[feature_name]`).
 
 Inside `lib/features/[feature_name]/`:
 
 - **`providers/` (Optional):** Providers strictly scoped to this feature.
-- **`widgets/` (Optional):** Custom widgets used **only** within this specific feature.
-- **`[feature_name]_page.dart`**: Main entry point and primary UI file for the feature.
+- **`widgets/` (Optional):** Custom widgets used **only** within this specific
+  feature.
+- **`[feature_name]_page.dart`**: Main entry point and primary UI file for the
+  feature.
 
 ### Root Files (`lib/`)
 
-- **`firebase_options.dart`**: Auto-generated by the Firebase CLI. Do not modify manually.
-- **`main.dart`**: Entry point. Handles all pre-run initializations (Firebase, `.env`) before calling `runApp()`.
-- **`app.dart`**: Root widget (e.g., `MaterialApp`), applying routing, theme, and global settings.
+- **`firebase_options.dart`**: Auto-generated by the Firebase CLI. Do not
+  modify manually.
+- **`main.dart`**: Entry point. Handles all pre-run initializations (Firebase,
+  `.env`) before calling `runApp()`.
+- **`app.dart`**: Root widget (e.g., `MaterialApp`), applying routing, theme,
+  and global settings.
 
 ## 2. Interaction Guidelines
 * **User Persona:** Assume the user is familiar with programming concepts.
@@ -231,57 +258,12 @@ When building reusable APIs, such as a library, follow these principles.
   operations) using Repositories/Services to promote testability.
 
 ### Routing
-* **GoRouter:** Use the `go_router` package for declarative navigation, deep
-  linking, and web support.
-* **GoRouter Setup:** To use `go_router`, first add it to your `pubspec.yaml`
-  using the `pub` tool's `add` command.
-
-  ```dart
-  // 1. Add the dependency
-  // flutter pub add go_router
-
-  // 2. Configure the router
-  final GoRouter _router = GoRouter(
-    routes: <RouteBase>[
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const HomeScreen(),
-        routes: <RouteBase>[
-          GoRoute(
-            path: 'details/:id', // Route with a path parameter
-            builder: (context, state) {
-              final String id = state.pathParameters['id']!;
-              return DetailScreen(id: id);
-            },
-          ),
-        ],
-      ),
-    ],
-  );
-
-  // 3. Use it in your MaterialApp
-  MaterialApp.router(
-    routerConfig: _router,
-  );
-  ```
-* **Authentication Redirects:** Configure `go_router`'s `redirect` property to
-  handle authentication flows, ensuring users are redirected to the login screen
-  when unauthorized, and back to their intended destination after successful
-  login.
-
-* **Navigator:** Use the built-in `Navigator` for short-lived screens that do
-  not need to be deep-linkable, such as dialogs or temporary views.
-
-  ```dart
-  // Push a new screen onto the stack
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => const DetailsScreen()),
-  );
-
-  // Pop the current screen to go back
-  Navigator.pop(context);
-  ```
+* **GoRouter for app navigation:** Use the `go_router` package for declarative
+  routes, deep links, route parameters, and authentication redirects.
+* **Navigator for ephemeral screens:** Use the built-in `Navigator` for
+  short-lived, non-deep-linkable screens such as dialogs or temporary views.
+* **Setup & examples:** For `GoRouter` configuration, redirects, and `Navigator`
+  usage, load `.agents/skills/routing/skill.md` (see section 11).
 
 ### Data Handling & Serialization
 * **Manual JSON Serialization:** Do **not** use `json_serializable` or
@@ -306,93 +288,35 @@ When building reusable APIs, such as a library, follow these principles.
   this same `const` / `fromJson` / `toJson` pattern) and nest the typed object.
   Reserve `Map` (default `const {}`) only for genuinely dynamic, unstructured
   key-value payloads.
+* **Serializing Models & Lists (`toJson`):** A nested data class — or a list of
+  them — is not JSON-encodable on its own, so call `toJson()` on each element.
+  Writing the object/list directly emits useless `Instance of '...'` output.
+    * Nested model (non-nullable): `'key': model.toJson()`.
+    * Nested model (nullable): `'key': model?.toJson()`.
+    * List of models: `'key': items.map((e) => e.toJson()).toList()`. Never use
+      `'key': items` or `'key': items.toList()`.
+    * Primitive values, and lists of primitives, are written directly.
+* **Deserializing Models & Lists (`fromJson`):** Use the `jsonToObj` /
+  `jsonToList` helpers from `lib/core/extensions/dynamic_extension.dart`
+  (assumed always present) instead of handwritten casts:
+    * List of models:
+      `jsonToList<T>(data: json['key'], generator: (map) => T.fromJson(map))`.
+      It returns a non-null, correctly-typed `List<T>` (empty when the key is
+      missing or malformed), so a non-nullable list needs no fallback.
+    * Nested model (non-nullable): the same `jsonToObj<T>(...)` call plus a
+      `?? const T()` fallback, since `jsonToObj` returns `T?`.
+    * Nested model (nullable): the same `jsonToObj<T>(...)` call with no
+      fallback; it stays `null`.
 * **Key Naming:** Map Dart `camelCase` fields to `snake_case` JSON keys manually
   inside `fromJson`/`toJson`.
-
-  ```dart
-  import 'package:flutter/foundation.dart'; // listEquals, setEquals
-
-  class User {
-    final String id;
-    final bool isActive;
-    final String firstName;
-    final String lastName;
-    final int total;
-    final List<String> roles;
-    final Set<String> tags;
-
-    const User({
-      required this.id,
-      required this.isActive,
-      this.firstName = '',
-      this.lastName = '',
-      this.total = 0,
-      this.roles = const [],
-      this.tags = const {},
-    });
-
-    factory User.fromJson(Map<String, dynamic> json) => User(
-          id: json['id'] as String,
-          isActive: json['is_active'] as bool,
-          firstName: json['first_name'] as String? ?? '',
-          lastName: json['last_name'] as String? ?? '',
-          total: json['total'] as int? ?? 0,
-          roles:
-              (json['roles'] as List<dynamic>?)?.cast<String>() ?? const [],
-          tags: (json['tags'] as List<dynamic>?)?.cast<String>().toSet() ??
-              const {},
-        );
-
-    Map<String, dynamic> toJson() => {
-          'id': id,
-          'is_active': isActive,
-          'first_name': firstName,
-          'last_name': lastName,
-          'total': total,
-          'roles': roles,
-          'tags': tags.toList(),
-        };
-
-    @override
-    String toString() => 'User('
-        'id: $id, '
-        'isActive: $isActive, '
-        'firstName: $firstName, '
-        'lastName: $lastName, '
-        'total: $total, '
-        'roles: $roles, '
-        'tags: $tags'
-        ')';
-
-    @override
-    bool operator ==(Object other) =>
-        identical(this, other) ||
-        other is User &&
-            other.id == id &&
-            other.isActive == isActive &&
-            other.firstName == firstName &&
-            other.lastName == lastName &&
-            other.total == total &&
-            listEquals(other.roles, roles) &&
-            setEquals(other.tags, tags);
-
-    @override
-    int get hashCode => Object.hash(
-          id,
-          isActive,
-          firstName,
-          lastName,
-          total,
-          Object.hashAll(roles),
-          Object.hashAllUnordered(tags),
-        );
-  }
-  ```
+* **Worked Example:** For a complete reference model — `const` constructor, safe
+  defaults, nested-model and list `fromJson`/`toJson`, and `toString` / `==` /
+  `hashCode` — load `.agents/skills/data-modeling/skill.md` (see section 11).
 
 ### Enums
-All enums live in `lib/data/enums/` (one enum per `snake_case` file) and are the
-single source of truth for both model and UI enumerations. Use **enhanced enums**
-and write every mapping as an exhaustive `switch` expression.
+All enums live in `lib/data/enums/` (one enum per `snake_case` file) and are
+the single source of truth for both model and UI enumerations. Use **enhanced
+enums** and write every mapping as an exhaustive `switch` expression.
 
 * **Label:** Every enum exposes a `String get label` for display. Use the
   `inCaps` `String` extension (in `lib/core/extensions/`) when the label is just
@@ -407,87 +331,17 @@ and write every mapping as an exhaustive `switch` expression.
   models convert uniformly. Provide a `String toJson()` and a
   `factory X.fromJson(String value)`, both as `switch` expressions with
   `snake_case` API string values. Include a sentinel member (e.g. `other`,
-  `unknown`) and use it as the `fromJson` default (`_ => …`) to stay resilient to
-  unexpected or empty API values (the sentinel's `toJson` may map to `''` when
-  the API expects an empty value).
-
-  ```dart
-  // lib/data/enums/gender.dart
-  // `inCaps` is a String extension in lib/core/extensions/.
-  enum Gender {
-    male,
-    female,
-    other; // sentinel / fallback
-
-    String get label => name.inCaps;
-
-    String toJson() => switch (this) {
-          Gender.male => 'male',
-          Gender.female => 'female',
-          _ => 'other',
-        };
-
-    factory Gender.fromJson(String value) => switch (value) {
-          'male' => Gender.male,
-          'female' => Gender.female,
-          _ => Gender.other,
-        };
-  }
-  ```
-
+  `unknown`) and use it as the `fromJson` default (`_ => …`) to stay
+  resilient to unexpected or empty API values (the sentinel's `toJson` may
+  map to `''` when the API expects an empty value).
 * **Enums NOT tied to a data class — no `toJson` / `fromJson`:** Pure UI,
   navigation, or filtering enums must not carry JSON serialization; expose only
   the helpers they need. If such an enum must be built from a local (non-API)
-  string — e.g. for list filtering — provide a `factory X.fromString(String value)`
-  instead of `fromJson`.
-
-  ```dart
-  // lib/data/enums/nav_bar_item.dart — navigation only: icon + label + route, no JSON.
-  enum NavBarItems {
-    home,
-    transaction,
-    profile;
-
-    IconData get icon => switch (this) {
-          NavBarItems.home => Icons.home,
-          NavBarItems.transaction => Icons.wallet,
-          NavBarItems.profile => Icons.person,
-        };
-
-    String get label => name.inCaps;
-
-    String get route => switch (this) {
-          NavBarItems.home => HomePage.route,
-          NavBarItems.transaction => TransactionPage.route,
-          NavBarItems.profile => ProfilePage.route,
-        };
-  }
-  ```
-
-  ```dart
-  // lib/data/enums/category_type.dart — list filtering only: fromString, not fromJson.
-  enum CategoryType {
-    income,
-    expense;
-
-    String get label => name.inCaps;
-
-    Color get color => switch (this) {
-          CategoryType.income => AppColors.emerald700,
-          CategoryType.expense => AppColors.red700,
-        };
-
-    String get sign => switch (this) {
-          CategoryType.income => '+',
-          CategoryType.expense => '-',
-        };
-
-    factory CategoryType.fromString(String value) => switch (value) {
-          'income' => CategoryType.income,
-          _ => CategoryType.expense,
-        };
-  }
-  ```
+  string — e.g. for list filtering — provide a
+  `factory X.fromString(String value)` instead of `fromJson`.
+* **Worked Examples:** For data-enum (`toJson`/`fromJson`), navigation-only, and
+  filtering (`fromString`) enum templates, load
+  `.agents/skills/data-modeling/skill.md` (see section 11).
 
 ### Logging
 * **Use the `logger` package:** Use the `logger` package for all logging instead
@@ -510,48 +364,35 @@ and write every mapping as an exhaustive `switch` expression.
   ```
 
 ## 10. Assets and Images
-* **Image Guidelines:** If images are needed, make them relevant and meaningful,
-  with appropriate size, layout, and licensing (e.g., freely available). Provide
-  placeholder images if real ones are not available.
-* **Asset Declaration:** Declare all asset paths in your `pubspec.yaml` file.
-
-    ```yaml
-    flutter:
-      uses-material-design: true
-      assets:
-        - assets/images/
-    ```
-
-* **Local Images:** Use the `spider` package to generate type-safe asset
-  references. Run `spider` to generate the static `const` variables (this
-  project generates the `AppImages` class — see `spider.yaml`), then pass the
-  generated constant to `Image.asset` instead of an unreliable raw `String`
-  path.
-
-    ```dart
-    // Preferred: pass the spider-generated static const.
-    Image.asset(AppImages.placeholder)
-
-    // Avoid: hard-coded, error-prone string paths.
-    // Image.asset('assets/images/placeholder.png')
-    ```
-* **Network images:** Prefer caching network images using `CachedNetworkImage`
-  from the package `cached_network_image` instead of using `NetworkImage` to
-  load images from the network; always include `loadingBuilder` and
-  `errorBuilder` for a better user experience.
-* **Custom Icons:** Use the package `hugeicons` for custom icons instead of the
-  material icons available from the `Icons` class.
+* **Local Images:** Use the `spider` package and pass its generated static
+  `const` (this project generates `AppImages`) to `Image.asset`, never a raw
+  `String` path.
+* **Network Images:** Use `CachedNetworkImage` (`cached_network_image`) with
+  `loadingBuilder` and `errorBuilder`, not raw `NetworkImage`.
+* **Custom Icons:** Use the `hugeicons` package instead of the material `Icons`
+  class.
+* **Declaration & examples:** Declare asset paths in `pubspec.yaml`. For
+  guidelines, `spider` usage, and image-loading examples, load
+  `.agents/skills/assets-images/skill.md` (see section 11).
 
 ## 11. Dynamic Skill Offloading
-To keep this master context lean, detailed code generation, theming, layout,
-documentation, accessibility, and testing guidance lives in standalone skill
-files. Before working in one of the contexts below, dynamically load the
-referenced skill file and follow its rules.
+To keep this master context lean, detailed setup procedures and worked examples
+live in standalone skill files. Before working in one of the contexts below,
+dynamically load the referenced skill file and follow its rules.
 
 - **Code Generation** — Riverpod, Freezed, AutoRoute, and `build_runner`
   workflows (`pubspec.yaml` setup, part directives, running the generator,
   `.g.dart`/`.freezed.dart` handling): load
   `.agents/skills/code-generation/skill.md`.
+- **Routing** — `go_router` configuration, deep links, route params, auth
+  redirects, and `Navigator` usage examples: load
+  `.agents/skills/routing/skill.md`.
+- **Data Modeling** — reference implementations for the Data Handling &
+  Serialization and Enums rules (§9): a manual-serialization model plus enum
+  templates: load `.agents/skills/data-modeling/skill.md`.
+- **Assets & Images** — asset declaration, `spider` local images,
+  `cached_network_image`, and `hugeicons` usage and examples: load
+  `.agents/skills/assets-images/skill.md`.
 - **Visual Design & Theming** — `ThemeData`, Material 3, `ColorScheme.fromSeed`,
   component themes, `WidgetStateProperty` styling, color schemes, fonts, and
   typography: load `.agents/skills/theming/skill.md`.
