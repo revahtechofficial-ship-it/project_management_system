@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../data/models/milestone.dart';
+import '../../../providers/auth_provider.dart';
 import '../providers/milestones_providers.dart';
 
 /// Add / toggle / delete workspace milestones. Changes hit the API immediately
@@ -90,6 +91,8 @@ class _MilestonesDialogState extends ConsumerState<MilestonesDialog> {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final List<Milestone> items =
         ref.watch(milestonesProvider).asData?.value ?? const <Milestone>[];
+    final bool isAdmin =
+        ref.watch(authControllerProvider).asData?.value.isAdmin ?? false;
 
     return AlertDialog(
       title: const Text('Milestones'),
@@ -128,10 +131,11 @@ class _MilestonesDialogState extends ConsumerState<MilestonesDialog> {
                               value: m.done,
                               onChanged: (_) => _toggle(m),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.close, size: 18),
-                              onPressed: () => _remove(m.id),
-                            ),
+                            if (isAdmin)
+                              IconButton(
+                                icon: const Icon(Icons.close, size: 18),
+                                onPressed: () => _remove(m.id),
+                              ),
                           ],
                         ),
                       ),

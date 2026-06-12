@@ -127,7 +127,6 @@ func (h *ProjectHandler) create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	notify(r.Context(), h.q, "project", "New project created", p.Name)
 	writeJSON(w, http.StatusCreated, projectFromModel(p))
 }
 
@@ -171,6 +170,9 @@ func (h *ProjectHandler) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProjectHandler) delete(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
 	id, err := idParam(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, errors.New("invalid id"))

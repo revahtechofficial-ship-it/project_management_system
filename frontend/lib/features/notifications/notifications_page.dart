@@ -128,6 +128,10 @@ class _NotifTile extends ConsumerWidget {
   }
 
   (IconData, Color) _visual(String type) => switch (type) {
+        'assigned' => (Icons.assignment_ind_rounded, AppColors.brand),
+        'mention' => (Icons.alternate_email_rounded, AppColors.violet),
+        'comment' => (Icons.mode_comment_rounded, AppColors.sky),
+        'reminder' => (Icons.alarm_rounded, AppColors.amber),
         'task' => (Icons.check_circle_rounded, AppColors.green),
         'project' => (Icons.folder_rounded, AppColors.brand),
         'member' => (Icons.person_add_alt_1, AppColors.violet),

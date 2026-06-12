@@ -1,13 +1,18 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/chat/call/call_actions.dart';
+import '../../features/chat/providers/chat_providers.dart';
 import '../../features/notifications/providers/notifications_providers.dart';
+import '../../features/search/widgets/command_palette.dart';
 import '../../providers/auth_provider.dart';
 import '../constants/app_colors.dart';
 import 'glass.dart';
+import 'revah_logo.dart';
 import 'user_avatar.dart';
 
 /// A navigation item in the sidebar.
@@ -21,6 +26,7 @@ class _NavItem {
 const List<_NavItem> _navItems = <_NavItem>[
   _NavItem(Icons.dashboard_outlined, 'Dashboard', '/'),
   _NavItem(Icons.check_circle_outline, 'Tasks', '/tasks'),
+  _NavItem(Icons.chat_bubble_outline, 'Chat', '/chat'),
   _NavItem(Icons.folder_outlined, 'Projects', '/projects'),
   _NavItem(Icons.groups_outlined, 'Team', '/team'),
   _NavItem(Icons.bar_chart_outlined, 'Reports', '/reports'),
@@ -40,43 +46,73 @@ class AppShell extends ConsumerWidget {
     final String location = GoRouterState.of(context).matchedLocation;
     final bool wide = MediaQuery.sizeOf(context).width >= 900;
 
-    if (wide) {
-      return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: AppBackground(
-          child: Row(
-            children: <Widget>[
-              _Sidebar(location: location),
-              Expanded(
-                child: Column(
-                  children: <Widget>[
-                    const _TopBar(),
-                    Expanded(child: child),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    // Ring an incoming-call prompt anywhere in the app when another member
+    // starts a call.
+    ref.listen<AsyncValue<Map<String, dynamic>>>(chatEventsProvider,
+        (AsyncValue<Map<String, dynamic>>? prev,
+            AsyncValue<Map<String, dynamic>> next) {
+      next.whenData((Map<String, dynamic> e) {
+        if (e['type'] != 'call') {
+          return;
+        }
+        final int? myId =
+            ref.read(authControllerProvider).asData?.value.user?.id;
+        if (e['from_id'] != myId) {
+          showIncomingCall(context, ref, e);
+        }
+      });
+    });
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context)
-            .colorScheme
-            .surface
-            .withValues(alpha: 0.55),
-        title: const Text('Revah Management System'),
-        actions: const <Widget>[_NotificationsButton(), _AvatarMenu()],
-      ),
-      drawer: Drawer(
-        backgroundColor: Colors.transparent,
-        child: _Sidebar(location: location),
-      ),
-      body: AppBackground(child: child),
+    final Widget scaffold = wide
+        ? Scaffold(
+            backgroundColor: Colors.transparent,
+            body: AppBackground(
+              child: Row(
+                children: <Widget>[
+                  _Sidebar(location: location),
+                  Expanded(
+                    child: Column(
+                      children: <Widget>[
+                        const _TopBar(),
+                        Expanded(child: child),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : Scaffold(
+            backgroundColor: Colors.transparent,
+            extendBodyBehindAppBar: true,
+            appBar: AppBar(
+              backgroundColor: Theme.of(context)
+                  .colorScheme
+                  .surface
+                  .withValues(alpha: 0.55),
+              title: const Text('Revah Management System'),
+              actions: const <Widget>[
+                _SearchButton(iconOnly: true),
+                _NotificationsButton(),
+                _AvatarMenu(),
+              ],
+            ),
+            drawer: Drawer(
+              backgroundColor: Colors.transparent,
+              child: _Sidebar(location: location),
+            ),
+            body: AppBackground(child: child),
+          );
+
+    // Ctrl/Cmd+K opens the global search command palette anywhere in the app.
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+            () => showCommandPalette(context, ref),
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+            () => showCommandPalette(context, ref),
+      },
+      child: Focus(autofocus: true, child: scaffold),
     );
   }
 }
@@ -124,36 +160,11 @@ class _Sidebar extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-                child: Row(
-                  children: <Widget>[
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        gradient: AppColors.brandGradient,
-                        borderRadius: BorderRadius.circular(11),
-                        boxShadow: <BoxShadow>[
-                          BoxShadow(
-                            color: AppColors.brand.withValues(alpha: 0.4),
-                            blurRadius: 14,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.dashboard_rounded,
-                          color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text('Revah MS',
-                          style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.3)),
-                    ),
-                  ],
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 24, 20, 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: RevahLogo(height: 30),
                 ),
               ),
               Expanded(
@@ -263,6 +274,7 @@ class _TopBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: const <Widget>[
+              _SearchButton(),
               Spacer(),
               _NotificationsButton(),
               SizedBox(width: 8),
@@ -271,6 +283,72 @@ class _TopBar extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Opens the global search command palette. Renders as a search "pill" on wide
+/// layouts, or a plain icon button ([iconOnly]) in the mobile app bar.
+class _SearchButton extends ConsumerWidget {
+  const _SearchButton({this.iconOnly = false});
+  final bool iconOnly;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (iconOnly) {
+      return IconButton(
+        tooltip: 'Search',
+        icon: const Icon(Icons.search),
+        onPressed: () => showCommandPalette(context, ref),
+      );
+    }
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surface.withValues(alpha: 0.5),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => showCommandPalette(context, ref),
+        child: Container(
+          width: 260,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          child: Row(
+            children: <Widget>[
+              Icon(Icons.search, size: 18, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Text('Search…',
+                  style: TextStyle(color: scheme.onSurfaceVariant)),
+              const Spacer(),
+              _KbdHint(scheme: scheme),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _KbdHint extends StatelessWidget {
+  const _KbdHint({required this.scheme});
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text('Ctrl K',
+          style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant)),
     );
   }
 }

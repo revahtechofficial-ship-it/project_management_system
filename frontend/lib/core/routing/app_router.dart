@@ -7,7 +7,9 @@ import '../../features/auth/login_page.dart';
 import '../../features/auth/reset_password_page.dart';
 import '../../features/auth/signup_page.dart';
 import '../../features/auth/verify_otp_page.dart';
+import '../../features/chat/chat_page.dart';
 import '../../features/dashboard/dashboard_page.dart';
+import '../../features/landing/landing_page.dart';
 import '../../features/notifications/notifications_page.dart';
 import '../../features/projects/projects_page.dart';
 import '../../features/reports/reports_page.dart';
@@ -38,21 +40,27 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
               ?.value
               .isAuthenticated ??
           false;
-      final bool onAuthPage = _authPaths.contains(state.matchedLocation);
+      final String loc = state.matchedLocation;
+      final bool isPublic =
+          loc == '/welcome' || _authPaths.contains(loc);
       if (!authed) {
-        return onAuthPage ? null : '/login';
+        // Signed-out visitors get the landing page as the front door.
+        return isPublic ? null : '/welcome';
       }
-      if (onAuthPage) {
+      // Signed-in users never see the landing or auth pages.
+      if (isPublic) {
         return '/';
       }
       return null;
     },
     routes: <RouteBase>[
+      GoRoute(path: '/welcome', builder: (c, s) => const LandingPage()),
       ShellRoute(
         builder: (c, s, Widget child) => AppShell(child: child),
         routes: <RouteBase>[
           GoRoute(path: '/', builder: (c, s) => const DashboardPage()),
           GoRoute(path: '/tasks', builder: (c, s) => const TasksPage()),
+          GoRoute(path: '/chat', builder: (c, s) => const ChatPage()),
           GoRoute(path: '/projects', builder: (c, s) => const ProjectsPage()),
           GoRoute(path: '/team', builder: (c, s) => const TeamPage()),
           GoRoute(path: '/reports', builder: (c, s) => const ReportsPage()),

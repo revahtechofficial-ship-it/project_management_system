@@ -10,6 +10,7 @@ import '../../../data/enums/dependency_type.dart';
 import '../../../data/models/milestone.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_dependency.dart';
+import '../../../providers/auth_provider.dart';
 import '../providers/dependencies_providers.dart';
 import '../providers/milestones_providers.dart';
 import '../providers/tasks_providers.dart';
@@ -133,11 +134,13 @@ class _TaskGanttViewState extends ConsumerState<TaskGanttView> {
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
-              FilledButton.tonalIcon(
-                onPressed: () => _setBaseline(context),
-                icon: const Icon(Icons.flag_circle_outlined, size: 18),
-                label: const Text('Set baseline'),
-              ),
+              if (ref.watch(authControllerProvider).asData?.value.isAdmin ??
+                  false)
+                FilledButton.tonalIcon(
+                  onPressed: () => _setBaseline(context),
+                  icon: const Icon(Icons.flag_circle_outlined, size: 18),
+                  label: const Text('Set baseline'),
+                ),
               OutlinedButton.icon(
                 onPressed: () => _openMilestones(context),
                 icon: const Icon(Icons.flag_outlined, size: 18),
@@ -302,6 +305,8 @@ class _TaskGanttViewState extends ConsumerState<TaskGanttView> {
             dueDate: t.dueDate?.add(shift),
             status: t.status,
             recurrence: t.recurrence,
+            priority: t.priority,
+            tags: t.tags,
           );
       ref.invalidate(tasksProvider);
     } catch (e) {

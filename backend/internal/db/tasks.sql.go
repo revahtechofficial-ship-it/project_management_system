@@ -12,10 +12,91 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const bulkDeleteTasks = `-- name: BulkDeleteTasks :exec
+DELETE FROM tasks
+WHERE id = ANY($1::bigint[])
+`
+
+func (q *Queries) BulkDeleteTasks(ctx context.Context, ids []int64) error {
+	_, err := q.db.Exec(ctx, bulkDeleteTasks, ids)
+	return err
+}
+
+const bulkSetTaskAssignee = `-- name: BulkSetTaskAssignee :exec
+UPDATE tasks
+SET assignee_id = $1,
+    updated_at = now()
+WHERE id = ANY($2::bigint[])
+`
+
+type BulkSetTaskAssigneeParams struct {
+	Assignee *int64  `json:"assignee"`
+	Ids      []int64 `json:"ids"`
+}
+
+func (q *Queries) BulkSetTaskAssignee(ctx context.Context, arg BulkSetTaskAssigneeParams) error {
+	_, err := q.db.Exec(ctx, bulkSetTaskAssignee, arg.Assignee, arg.Ids)
+	return err
+}
+
+const bulkSetTaskDone = `-- name: BulkSetTaskDone :exec
+UPDATE tasks
+SET done = $1,
+    status = CASE WHEN $1 THEN 'done' ELSE 'todo' END,
+    reminder_sent = CASE WHEN $1 THEN reminder_sent ELSE FALSE END,
+    updated_at = now()
+WHERE id = ANY($2::bigint[])
+`
+
+type BulkSetTaskDoneParams struct {
+	Done bool    `json:"done"`
+	Ids  []int64 `json:"ids"`
+}
+
+func (q *Queries) BulkSetTaskDone(ctx context.Context, arg BulkSetTaskDoneParams) error {
+	_, err := q.db.Exec(ctx, bulkSetTaskDone, arg.Done, arg.Ids)
+	return err
+}
+
+const bulkSetTaskPriority = `-- name: BulkSetTaskPriority :exec
+UPDATE tasks
+SET priority = $1,
+    updated_at = now()
+WHERE id = ANY($2::bigint[])
+`
+
+type BulkSetTaskPriorityParams struct {
+	Priority string  `json:"priority"`
+	Ids      []int64 `json:"ids"`
+}
+
+func (q *Queries) BulkSetTaskPriority(ctx context.Context, arg BulkSetTaskPriorityParams) error {
+	_, err := q.db.Exec(ctx, bulkSetTaskPriority, arg.Priority, arg.Ids)
+	return err
+}
+
+const bulkSetTaskStatus = `-- name: BulkSetTaskStatus :exec
+UPDATE tasks
+SET status = $1,
+    done   = ($1 = 'done'),
+    updated_at = now()
+WHERE id = ANY($2::bigint[])
+`
+
+type BulkSetTaskStatusParams struct {
+	Status string  `json:"status"`
+	Ids    []int64 `json:"ids"`
+}
+
+func (q *Queries) BulkSetTaskStatus(ctx context.Context, arg BulkSetTaskStatusParams) error {
+	_, err := q.db.Exec(ctx, bulkSetTaskStatus, arg.Status, arg.Ids)
+	return err
+}
+
 const createTask = `-- name: CreateTask :one
-INSERT INTO tasks (title, description, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due
+INSERT INTO tasks (title, description, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, priority, tags)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent
 `
 
 type CreateTaskParams struct {
@@ -28,6 +109,8 @@ type CreateTaskParams struct {
 	Status      string             `json:"status"`
 	ParentID    *int64             `json:"parent_id"`
 	Recurrence  string             `json:"recurrence"`
+	Priority    string             `json:"priority"`
+	Tags        []string           `json:"tags"`
 }
 
 func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
@@ -41,6 +124,8 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		arg.Status,
 		arg.ParentID,
 		arg.Recurrence,
+		arg.Priority,
+		arg.Tags,
 	)
 	var i Task
 	err := row.Scan(
@@ -59,6 +144,9 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		&i.Recurrence,
 		&i.BaselineStart,
 		&i.BaselineDue,
+		&i.Priority,
+		&i.Tags,
+		&i.ReminderSent,
 	)
 	return i, err
 }
@@ -73,8 +161,49 @@ func (q *Queries) DeleteTask(ctx context.Context, id int64) error {
 	return err
 }
 
+const dueReminders = `-- name: DueReminders :many
+SELECT id, title, assignee_id, due_date FROM tasks
+WHERE NOT done
+  AND assignee_id IS NOT NULL
+  AND due_date IS NOT NULL
+  AND due_date <= now() + INTERVAL '24 hours'
+  AND NOT reminder_sent
+`
+
+type DueRemindersRow struct {
+	ID         int64              `json:"id"`
+	Title      string             `json:"title"`
+	AssigneeID *int64             `json:"assignee_id"`
+	DueDate    pgtype.Timestamptz `json:"due_date"`
+}
+
+func (q *Queries) DueReminders(ctx context.Context) ([]DueRemindersRow, error) {
+	rows, err := q.db.Query(ctx, dueReminders)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DueRemindersRow{}
+	for rows.Next() {
+		var i DueRemindersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.AssigneeID,
+			&i.DueDate,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTask = `-- name: GetTask :one
-SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due FROM tasks
+SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent FROM tasks
 WHERE id = $1
 `
 
@@ -97,12 +226,15 @@ func (q *Queries) GetTask(ctx context.Context, id int64) (Task, error) {
 		&i.Recurrence,
 		&i.BaselineStart,
 		&i.BaselineDue,
+		&i.Priority,
+		&i.Tags,
+		&i.ReminderSent,
 	)
 	return i, err
 }
 
 const listSubtasks = `-- name: ListSubtasks :many
-SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due FROM tasks
+SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent FROM tasks
 WHERE parent_id = $1
 ORDER BY created_at ASC
 `
@@ -132,6 +264,9 @@ func (q *Queries) ListSubtasks(ctx context.Context, parentID *int64) ([]Task, er
 			&i.Recurrence,
 			&i.BaselineStart,
 			&i.BaselineDue,
+			&i.Priority,
+			&i.Tags,
+			&i.ReminderSent,
 		); err != nil {
 			return nil, err
 		}
@@ -144,7 +279,7 @@ func (q *Queries) ListSubtasks(ctx context.Context, parentID *int64) ([]Task, er
 }
 
 const listTasks = `-- name: ListTasks :many
-SELECT t.id, t.title, t.description, t.done, t.created_at, t.updated_at, t.project_id, t.assignee_id, t.start_date, t.due_date, t.status, t.parent_id, t.recurrence, t.baseline_start, t.baseline_due,
+SELECT t.id, t.title, t.description, t.done, t.created_at, t.updated_at, t.project_id, t.assignee_id, t.start_date, t.due_date, t.status, t.parent_id, t.recurrence, t.baseline_start, t.baseline_due, t.priority, t.tags, t.reminder_sent,
        p.name      AS project_name,
        u.full_name AS assignee_name,
        COALESCE(st.total, 0)::int AS subtask_count,
@@ -180,6 +315,9 @@ type ListTasksRow struct {
 	Recurrence       string             `json:"recurrence"`
 	BaselineStart    pgtype.Timestamptz `json:"baseline_start"`
 	BaselineDue      pgtype.Timestamptz `json:"baseline_due"`
+	Priority         string             `json:"priority"`
+	Tags             []string           `json:"tags"`
+	ReminderSent     bool               `json:"reminder_sent"`
 	ProjectName      *string            `json:"project_name"`
 	AssigneeName     *string            `json:"assignee_name"`
 	SubtaskCount     int32              `json:"subtask_count"`
@@ -211,6 +349,9 @@ func (q *Queries) ListTasks(ctx context.Context) ([]ListTasksRow, error) {
 			&i.Recurrence,
 			&i.BaselineStart,
 			&i.BaselineDue,
+			&i.Priority,
+			&i.Tags,
+			&i.ReminderSent,
 			&i.ProjectName,
 			&i.AssigneeName,
 			&i.SubtaskCount,
@@ -227,7 +368,7 @@ func (q *Queries) ListTasks(ctx context.Context) ([]ListTasksRow, error) {
 }
 
 const listTasksRaw = `-- name: ListTasksRaw :many
-SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due FROM tasks
+SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent FROM tasks
 `
 
 func (q *Queries) ListTasksRaw(ctx context.Context) ([]Task, error) {
@@ -255,6 +396,9 @@ func (q *Queries) ListTasksRaw(ctx context.Context) ([]Task, error) {
 			&i.Recurrence,
 			&i.BaselineStart,
 			&i.BaselineDue,
+			&i.Priority,
+			&i.Tags,
+			&i.ReminderSent,
 		); err != nil {
 			return nil, err
 		}
@@ -264,6 +408,15 @@ func (q *Queries) ListTasksRaw(ctx context.Context) ([]Task, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const markReminded = `-- name: MarkReminded :exec
+UPDATE tasks SET reminder_sent = TRUE WHERE id = $1
+`
+
+func (q *Queries) MarkReminded(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markReminded, id)
+	return err
 }
 
 const setBaseline = `-- name: SetBaseline :exec
@@ -282,6 +435,7 @@ const setTaskDates = `-- name: SetTaskDates :exec
 UPDATE tasks
 SET start_date = $2,
     due_date   = $3,
+    reminder_sent = FALSE,
     updated_at = now()
 WHERE id = $1
 `
@@ -301,9 +455,10 @@ const setTaskDone = `-- name: SetTaskDone :one
 UPDATE tasks
 SET done = $2,
     status = CASE WHEN $2 THEN 'done' ELSE 'todo' END,
+    reminder_sent = CASE WHEN $2 THEN reminder_sent ELSE FALSE END,
     updated_at = now()
 WHERE id = $1
-RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due
+RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent
 `
 
 type SetTaskDoneParams struct {
@@ -330,6 +485,9 @@ func (q *Queries) SetTaskDone(ctx context.Context, arg SetTaskDoneParams) (Task,
 		&i.Recurrence,
 		&i.BaselineStart,
 		&i.BaselineDue,
+		&i.Priority,
+		&i.Tags,
+		&i.ReminderSent,
 	)
 	return i, err
 }
@@ -340,7 +498,7 @@ SET status = $2,
     done   = ($2 = 'done'),
     updated_at = now()
 WHERE id = $1
-RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due
+RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent
 `
 
 type SetTaskStatusParams struct {
@@ -367,6 +525,9 @@ func (q *Queries) SetTaskStatus(ctx context.Context, arg SetTaskStatusParams) (T
 		&i.Recurrence,
 		&i.BaselineStart,
 		&i.BaselineDue,
+		&i.Priority,
+		&i.Tags,
+		&i.ReminderSent,
 	)
 	return i, err
 }
@@ -381,10 +542,13 @@ SET title       = $2,
     due_date    = $7,
     status      = $8,
     recurrence  = $9,
+    priority    = $10,
+    tags        = $11,
     done        = ($8 = 'done'),
+    reminder_sent = FALSE,
     updated_at  = now()
 WHERE id = $1
-RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due
+RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent
 `
 
 type UpdateTaskParams struct {
@@ -397,6 +561,8 @@ type UpdateTaskParams struct {
 	DueDate     pgtype.Timestamptz `json:"due_date"`
 	Status      string             `json:"status"`
 	Recurrence  string             `json:"recurrence"`
+	Priority    string             `json:"priority"`
+	Tags        []string           `json:"tags"`
 }
 
 func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error) {
@@ -410,6 +576,8 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 		arg.DueDate,
 		arg.Status,
 		arg.Recurrence,
+		arg.Priority,
+		arg.Tags,
 	)
 	var i Task
 	err := row.Scan(
@@ -428,6 +596,9 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 		&i.Recurrence,
 		&i.BaselineStart,
 		&i.BaselineDue,
+		&i.Priority,
+		&i.Tags,
+		&i.ReminderSent,
 	)
 	return i, err
 }

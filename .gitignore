@@ -11,3 +11,6 @@ Thumbs.db
 /data/
 
 # See backend/.gitignore and frontend/.gitignore for per-project rules.
+
+# Uploaded task attachments (stored on disk, never committed)
+backend/uploads/

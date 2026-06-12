@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../core/utils/api_exception.dart';
 import '../../core/utils/date_format.dart';
 import '../enums/recurrence_type.dart';
+import '../enums/task_priority.dart';
 import '../enums/task_status.dart';
 import '../models/task.dart';
 
@@ -34,6 +35,8 @@ class TasksRepository {
     TaskStatus status = TaskStatus.todo,
     int? parentId,
     RecurrenceType recurrence = RecurrenceType.none,
+    TaskPriority priority = TaskPriority.none,
+    List<String> tags = const <String>[],
   }) async {
     final Response<Map<String, dynamic>> res =
         await _dio.post<Map<String, dynamic>>(
@@ -48,6 +51,8 @@ class TasksRepository {
         'status': status.toJson(),
         'parent_id': parentId,
         'recurrence': recurrence.toJson(),
+        'priority': priority.toJson(),
+        'tags': tags,
       },
     );
     return _taskFrom(res);
@@ -65,6 +70,8 @@ class TasksRepository {
     DateTime? dueDate,
     TaskStatus status = TaskStatus.todo,
     RecurrenceType recurrence = RecurrenceType.none,
+    TaskPriority priority = TaskPriority.none,
+    List<String> tags = const <String>[],
   }) async {
     final Response<Map<String, dynamic>> res =
         await _dio.put<Map<String, dynamic>>(
@@ -78,6 +85,8 @@ class TasksRepository {
         'due_date': dateParam(dueDate),
         'status': status.toJson(),
         'recurrence': recurrence.toJson(),
+        'priority': priority.toJson(),
+        'tags': tags,
       },
     );
     return _taskFrom(res);
@@ -116,6 +125,24 @@ class TasksRepository {
 
   /// Deletes the task identified by [id].
   Future<void> delete(int id) => _dio.delete<void>('/api/v1/tasks/$id');
+
+  /// Applies one [action] to every task in [ids] in a single request. [value]
+  /// is action-specific: a bool for `done`, a status/priority string, a user id
+  /// (or null) for `assignee`, and ignored for `delete`.
+  Future<void> bulk({
+    required List<int> ids,
+    required String action,
+    Object? value,
+  }) async {
+    await _dio.post<Map<String, dynamic>>(
+      '/api/v1/tasks/bulk',
+      data: <String, dynamic>{
+        'ids': ids,
+        'action': action,
+        'value': value,
+      },
+    );
+  }
 
   /// Snapshots every task's current start/due as its baseline (planned plan).
   Future<void> setBaseline() => _dio.post<void>('/api/v1/baseline');

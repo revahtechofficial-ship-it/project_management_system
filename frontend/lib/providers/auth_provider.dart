@@ -13,6 +13,7 @@ class AuthState {
   bool get isAuthenticated => session != null;
   String? get token => session?.token;
   AuthUser? get user => session?.user;
+  bool get isAdmin => session?.user.isAdmin ?? false;
 }
 
 /// The custom-auth API client.

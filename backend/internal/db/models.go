@@ -10,12 +10,77 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Activity struct {
+	ID        int64     `json:"id"`
+	TaskID    int64     `json:"task_id"`
+	ActorID   *int64    `json:"actor_id"`
+	Action    string    `json:"action"`
+	Detail    string    `json:"detail"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Attachment struct {
+	ID          int64     `json:"id"`
+	TaskID      int64     `json:"task_id"`
+	UploaderID  *int64    `json:"uploader_id"`
+	Filename    string    `json:"filename"`
+	StoredName  string    `json:"stored_name"`
+	ContentType string    `json:"content_type"`
+	Size        int64     `json:"size"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type ChecklistItem struct {
 	ID        int64     `json:"id"`
 	TaskID    int64     `json:"task_id"`
 	Content   string    `json:"content"`
 	Done      bool      `json:"done"`
 	Position  int32     `json:"position"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Comment struct {
+	ID        int64     `json:"id"`
+	TaskID    int64     `json:"task_id"`
+	AuthorID  *int64    `json:"author_id"`
+	Body      string    `json:"body"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Conversation struct {
+	ID        int64     `json:"id"`
+	Type      string    `json:"type"`
+	Name      string    `json:"name"`
+	CreatedBy *int64    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type ConversationMember struct {
+	ConversationID int64              `json:"conversation_id"`
+	UserID         int64              `json:"user_id"`
+	Role           string             `json:"role"`
+	LastReadAt     pgtype.Timestamptz `json:"last_read_at"`
+	JoinedAt       time.Time          `json:"joined_at"`
+}
+
+type Message struct {
+	ID               int64     `json:"id"`
+	ConversationID   int64     `json:"conversation_id"`
+	SenderID         *int64    `json:"sender_id"`
+	Kind             string    `json:"kind"`
+	Body             string    `json:"body"`
+	AttachmentName   string    `json:"attachment_name"`
+	AttachmentStored string    `json:"attachment_stored"`
+	AttachmentType   string    `json:"attachment_type"`
+	AttachmentSize   int64     `json:"attachment_size"`
+	CreatedAt        time.Time `json:"created_at"`
+	Edited           bool      `json:"edited"`
+}
+
+type MessageReaction struct {
+	MessageID int64     `json:"message_id"`
+	UserID    int64     `json:"user_id"`
+	Emoji     string    `json:"emoji"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -35,6 +100,7 @@ type Notification struct {
 	Body      string    `json:"body"`
 	Read      bool      `json:"read"`
 	CreatedAt time.Time `json:"created_at"`
+	UserID    *int64    `json:"user_id"`
 }
 
 type OtpCode struct {
@@ -74,6 +140,9 @@ type Task struct {
 	Recurrence    string             `json:"recurrence"`
 	BaselineStart pgtype.Timestamptz `json:"baseline_start"`
 	BaselineDue   pgtype.Timestamptz `json:"baseline_due"`
+	Priority      string             `json:"priority"`
+	Tags          []string           `json:"tags"`
+	ReminderSent  bool               `json:"reminder_sent"`
 }
 
 type TaskDependency struct {

@@ -11,7 +11,7 @@ class _SignedOutController extends AuthController {
 }
 
 void main() {
-  testWidgets('shows the login page when signed out', (tester) async {
+  testWidgets('shows the landing page when signed out', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -23,7 +23,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('Welcome back'), findsOneWidget);
-    expect(find.text('Sign in'), findsWidgets);
+    // Signed-out visitors land on the public marketing page first.
+    expect(find.text('Run every project'), findsOneWidget);
+    expect(find.text('Get started'), findsWidgets);
   });
 }

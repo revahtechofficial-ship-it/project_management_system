@@ -121,7 +121,7 @@ void main() {
       tester,
       TaskGanttView(tasks: _sampleTasks(), onTapTask: (_) {}),
     );
-    expect(find.text('Set baseline'), findsOneWidget);
+    // 'Set baseline' is admin-only; 'Milestones' is always shown.
     expect(find.text('Milestones'), findsOneWidget);
   });
 

@@ -78,6 +78,18 @@ services:
       - kcdata:/opt/keycloak/data
     restart: unless-stopped
 
+  # LiveKit WebRTC media server (SFU) powering 1:1 + group voice/video calls.
+  # Runs in dev mode with the well-known dev credentials (API key "devkey",
+  # secret "secret") that the backend's LIVEKIT_* defaults match.
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --dev --bind 0.0.0.0
+    ports:
+      - "7880:7880"      # signaling (WebSocket) + HTTP
+      - "7881:7881"      # TCP fallback for media
+      - "7882:7882/udp"  # primary RTC media
+    restart: unless-stopped
+
   # Optional: run the Go BFF in Docker too ->  docker compose --profile app up -d
   backend:
     profiles: ["app"]

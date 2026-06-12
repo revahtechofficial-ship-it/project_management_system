@@ -1,8 +1,9 @@
 import 'package:dio/dio.dart';
 
+import '../enums/member_role.dart';
 import '../models/team_member.dart';
 
-/// Talks to the backend's /api/v1/team endpoint (AGENTS.md §1
+/// Talks to the backend's /api/v1/team endpoints (AGENTS.md §1
 /// `data/repositories`).
 class TeamRepository {
   const TeamRepository(this._dio);
@@ -18,4 +19,11 @@ class TeamRepository {
         .map((dynamic e) => TeamMember.fromJson(e as Map<String, dynamic>))
         .toList(growable: false);
   }
+
+  /// Changes a member's [role] (admin-only on the server).
+  Future<void> setRole(int id, MemberRole role) =>
+      _dio.patch<Map<String, dynamic>>(
+        '/api/v1/team/$id/role',
+        data: <String, dynamic>{'role': role.toJson()},
+      );
 }

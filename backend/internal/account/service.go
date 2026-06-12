@@ -54,29 +54,25 @@ func (s *Service) Register(ctx context.Context, em, password, fullName string) e
 	if err != nil {
 		return err
 	}
-	if _, err := s.q.CreateUser(ctx, db.CreateUserParams{
+	u, err := s.q.CreateUser(ctx, db.CreateUserParams{
 		Email: em, PasswordHash: hash, FullName: fullName,
-	}); err != nil {
+	})
+	if err != nil {
 		return err
+	}
+	// The very first account to register owns the workspace.
+	if n, err := s.q.CountUsers(ctx); err == nil && n == 1 {
+		_, _ = s.q.SetUserRole(ctx, db.SetUserRoleParams{ID: u.ID, Role: "owner"})
 	}
 	return s.issueOTP(ctx, em, "signup")
 }
 
-// VerifyEmail consumes a signup OTP and marks the account verified, then posts
-// a workspace "member joined" notification (best-effort).
+// VerifyEmail consumes a signup OTP and marks the account verified.
 func (s *Service) VerifyEmail(ctx context.Context, em, code string) error {
 	if err := s.checkOTP(ctx, em, "signup", code); err != nil {
 		return err
 	}
-	if err := s.q.MarkEmailVerified(ctx, em); err != nil {
-		return err
-	}
-	_, _ = s.q.CreateNotification(ctx, db.CreateNotificationParams{
-		Type:  "member",
-		Title: "New member joined",
-		Body:  em,
-	})
-	return nil
+	return s.q.MarkEmailVerified(ctx, em)
 }
 
 // UpdateProfile changes the user's display name and returns the updated row.
@@ -119,7 +115,7 @@ func (s *Service) Login(ctx context.Context, em, password string) (string, Claim
 	if !u.EmailVerified {
 		return "", Claims{}, ErrEmailNotVerified
 	}
-	c := Claims{UserID: u.ID, Email: u.Email, Name: u.FullName}
+	c := Claims{UserID: u.ID, Email: u.Email, Name: u.FullName, Role: u.Role}
 	tok, err := s.tokens.Issue(c, sessionTTL)
 	if err != nil {
 		return "", Claims{}, err

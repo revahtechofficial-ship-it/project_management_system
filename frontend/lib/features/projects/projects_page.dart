@@ -11,6 +11,7 @@ import '../../core/widgets/status_pill.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../data/enums/project_status.dart';
 import '../../data/models/project.dart';
+import '../../providers/auth_provider.dart';
 import 'providers/projects_providers.dart';
 import 'widgets/project_form_dialog.dart';
 
@@ -157,13 +158,16 @@ class _ProjectCard extends ConsumerWidget {
                 padding: EdgeInsets.zero,
                 icon: Icon(Icons.more_horiz,
                     size: 20, color: scheme.onSurfaceVariant),
-                onSelected: (String v) =>
-                    _onAction(context, ref, v),
+                onSelected: (String v) => _onAction(context, ref, v),
                 itemBuilder: (BuildContext context) =>
-                    const <PopupMenuEntry<String>>[
-                  PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
-                  PopupMenuItem<String>(
-                      value: 'delete', child: Text('Delete')),
+                    <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                      value: 'edit', child: Text('Edit')),
+                  if (ref.watch(authControllerProvider).asData?.value
+                          .isAdmin ??
+                      false)
+                    const PopupMenuItem<String>(
+                        value: 'delete', child: Text('Delete')),
                 ],
               ),
             ],

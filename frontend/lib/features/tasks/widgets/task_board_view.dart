@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/status_pill.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../data/enums/task_status.dart';
 import '../../../data/models/task.dart';
 import '../providers/tasks_providers.dart';
@@ -221,12 +223,19 @@ class _CardBody extends StatelessWidget {
                           task.assigneeName != null ||
                           task.dueDate != null ||
                           task.subtaskCount > 0 ||
-                          task.recurrence.repeats) ...<Widget>[
+                          task.recurrence.repeats ||
+                          task.priority.isSet ||
+                          task.tags.isNotEmpty) ...<Widget>[
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 6,
                           runSpacing: 4,
                           children: <Widget>[
+                            if (task.priority.isSet)
+                              _MiniChip(
+                                  icon: Icons.flag_rounded,
+                                  label: task.priority.label,
+                                  color: task.priority.color),
                             if (task.projectName != null)
                               _MiniChip(
                                   icon: Icons.folder_outlined,
@@ -255,6 +264,9 @@ class _CardBody extends StatelessWidget {
                                   icon: Icons.repeat,
                                   label: task.recurrence.label,
                                   color: AppColors.slate),
+                            for (final String tag in task.tags.take(3))
+                              StatusPill(
+                                  label: tag, color: avatarColor(tag)),
                           ],
                         ),
                       ],

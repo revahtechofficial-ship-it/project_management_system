@@ -34,6 +34,16 @@ type Config struct {
 	SMTPUser string
 	SMTPPass string
 	SMTPFrom string
+
+	// UploadDir is where task file attachments are stored on disk.
+	UploadDir string
+
+	// LiveKit powers voice/video calls. LiveKitURL is the ws(s) URL the browser
+	// connects to; the key/secret sign join tokens. When the key or secret is
+	// empty, the call endpoints report that calling is disabled.
+	LiveKitURL       string
+	LiveKitAPIKey    string
+	LiveKitAPISecret string
 }
 
 // Load reads configuration from the environment. A .env file in the working
@@ -56,6 +66,11 @@ func Load() Config {
 		SMTPUser:       getenv("SMTP_USER", ""),
 		SMTPPass:       getenv("SMTP_PASS", ""),
 		SMTPFrom:       getenv("SMTP_FROM", ""),
+		UploadDir:      getenv("UPLOAD_DIR", "./uploads"),
+		// Defaults match `livekit-server --dev` (devkey/secret on :7880).
+		LiveKitURL:       getenv("LIVEKIT_URL", "ws://localhost:7880"),
+		LiveKitAPIKey:    getenv("LIVEKIT_API_KEY", "devkey"),
+		LiveKitAPISecret: getenv("LIVEKIT_API_SECRET", "secret"),
 	}
 }
 

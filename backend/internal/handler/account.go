@@ -117,6 +117,7 @@ func (h *AccountHandler) Login(w http.ResponseWriter, r *http.Request) {
 			"id":    claims.UserID,
 			"email": claims.Email,
 			"name":  claims.Name,
+			"role":  claims.Role,
 		},
 	})
 }
@@ -187,6 +188,7 @@ func (h *AccountHandler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"id": claims.UserID, "email": claims.Email, "name": claims.Name,
+		"role": claims.Role,
 	})
 }
 
@@ -217,7 +219,7 @@ func (h *AccountHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"id": u.ID, "email": u.Email, "name": u.FullName,
+		"id": u.ID, "email": u.Email, "name": u.FullName, "role": u.Role,
 	})
 }
 

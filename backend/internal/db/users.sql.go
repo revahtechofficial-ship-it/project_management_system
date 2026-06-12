@@ -9,6 +9,17 @@ import (
 	"context"
 )
 
+const countUsers = `-- name: CountUsers :one
+SELECT COUNT(*) FROM users
+`
+
+func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, password_hash, full_name)
 VALUES ($1, $2, $3)
@@ -99,6 +110,34 @@ WHERE email = $1
 func (q *Queries) MarkEmailVerified(ctx context.Context, email string) error {
 	_, err := q.db.Exec(ctx, markEmailVerified, email)
 	return err
+}
+
+const setUserRole = `-- name: SetUserRole :one
+UPDATE users
+SET role = $2, updated_at = now()
+WHERE id = $1
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role
+`
+
+type SetUserRoleParams struct {
+	ID   int64  `json:"id"`
+	Role string `json:"role"`
+}
+
+func (q *Queries) SetUserRole(ctx context.Context, arg SetUserRoleParams) (User, error) {
+	row := q.db.QueryRow(ctx, setUserRole, arg.ID, arg.Role)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FullName,
+		&i.EmailVerified,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Role,
+	)
+	return i, err
 }
 
 const updatePassword = `-- name: UpdatePassword :exec

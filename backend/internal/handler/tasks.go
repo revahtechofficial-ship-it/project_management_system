@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -18,12 +19,14 @@ import (
 
 // TaskHandler serves the /api/v1/tasks resource.
 type TaskHandler struct {
-	q *db.Queries
+	q   *db.Queries
+	dir string
 }
 
-// NewTaskHandler wires the handler to the generated query layer.
-func NewTaskHandler(q *db.Queries) *TaskHandler {
-	return &TaskHandler{q: q}
+// NewTaskHandler wires the handler to the generated query layer. dir is the
+// directory where file attachments are stored.
+func NewTaskHandler(q *db.Queries, dir string) *TaskHandler {
+	return &TaskHandler{q: q, dir: dir}
 }
 
 // Routes builds a sub-router intended to be mounted under /api/v1/tasks.
@@ -31,6 +34,7 @@ func (h *TaskHandler) Routes() http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", h.list)
 	r.Post("/", h.create)
+	r.Post("/bulk", h.bulk)
 	r.Get("/{id}", h.get)
 	r.Put("/{id}", h.update)
 	r.Patch("/{id}", h.setDone)
@@ -41,6 +45,12 @@ func (h *TaskHandler) Routes() http.Handler {
 	r.Post("/{id}/checklist", h.createChecklist)
 	r.Patch("/checklist/{itemId}", h.setChecklistDone)
 	r.Delete("/checklist/{itemId}", h.deleteChecklistItem)
+	r.Get("/{id}/comments", h.listComments)
+	r.Post("/{id}/comments", h.createComment)
+	r.Delete("/comments/{commentId}", h.deleteComment)
+	r.Get("/{id}/activity", h.listActivity)
+	r.Get("/{id}/attachments", h.listAttachments)
+	r.Post("/{id}/attachments", h.uploadAttachment)
 	return r
 }
 
@@ -66,6 +76,8 @@ type taskResponse struct {
 	SubtaskDoneCount int32      `json:"subtask_done_count"`
 	BaselineStart    *time.Time `json:"baseline_start"`
 	BaselineDue      *time.Time `json:"baseline_due"`
+	Priority         string     `json:"priority"`
+	Tags             []string   `json:"tags"`
 }
 
 func taskFromModel(t db.Task) taskResponse {
@@ -85,6 +97,8 @@ func taskFromModel(t db.Task) taskResponse {
 		Recurrence:    t.Recurrence,
 		BaselineStart: tsPtr(t.BaselineStart),
 		BaselineDue:   tsPtr(t.BaselineDue),
+		Priority:      t.Priority,
+		Tags:          t.Tags,
 	}
 }
 
@@ -109,12 +123,55 @@ func taskFromRow(r db.ListTasksRow) taskResponse {
 		SubtaskDoneCount: r.SubtaskDoneCount,
 		BaselineStart:    tsPtr(r.BaselineStart),
 		BaselineDue:      tsPtr(r.BaselineDue),
+		Priority:         r.Priority,
+		Tags:             r.Tags,
 	}
+}
+
+func validPriority(s string) bool {
+	switch s {
+	case "none", "low", "normal", "high", "urgent":
+		return true
+	default:
+		return false
+	}
+}
+
+func priorityOrNone(s string) string {
+	if s == "" {
+		return "none"
+	}
+	return s
+}
+
+// sanitizeTags trims, drops blanks, de-duplicates, and caps tags so the column
+// stays clean. Always returns a non-nil slice.
+func sanitizeTags(in []string) []string {
+	out := make([]string, 0, len(in))
+	seen := make(map[string]bool)
+	for _, t := range in {
+		t = strings.TrimSpace(t)
+		if t == "" || seen[strings.ToLower(t)] {
+			continue
+		}
+		if len(t) > 30 {
+			t = t[:30]
+		}
+		seen[strings.ToLower(t)] = true
+		out = append(out, t)
+		if len(out) >= 20 {
+			break
+		}
+	}
+	return out
 }
 
 // SetBaseline snapshots every task's current start/due dates as its baseline,
 // so the timeline can later show planned-vs-actual drift.
 func (h *TaskHandler) SetBaseline(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
 	if err := h.q.SetBaseline(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -182,7 +239,7 @@ func (h *TaskHandler) spawnNext(ctx context.Context, t db.Task) {
 		}
 		return pgtype.Timestamptz{Time: addPeriod(ts.Time, t.Recurrence), Valid: true}
 	}
-	_, _ = h.q.CreateTask(ctx, db.CreateTaskParams{
+	next, err := h.q.CreateTask(ctx, db.CreateTaskParams{
 		Title:       t.Title,
 		Description: t.Description,
 		ProjectID:   t.ProjectID,
@@ -191,8 +248,21 @@ func (h *TaskHandler) spawnNext(ctx context.Context, t db.Task) {
 		DueDate:     shift(t.DueDate),
 		Status:      "todo",
 		Recurrence:  t.Recurrence,
+		Priority:    t.Priority,
+		Tags:        t.Tags,
 	})
-	notify(ctx, h.q, "task", "Recurring task scheduled", t.Title)
+	if err == nil && next.AssigneeID != nil {
+		notifyUser(ctx, h.q, *next.AssigneeID, "assigned",
+			"Recurring task scheduled", next.Title)
+	}
+}
+
+// assigneeChanged reports whether a task was (re)assigned to a real user.
+func assigneeChanged(prior, next *int64) bool {
+	if next == nil {
+		return false
+	}
+	return prior == nil || *prior != *next
 }
 
 func (h *TaskHandler) list(w http.ResponseWriter, r *http.Request) {
@@ -216,8 +286,10 @@ type taskBody struct {
 	StartDate   *string `json:"start_date"`
 	DueDate     *string `json:"due_date"`
 	Status      string  `json:"status"`
-	ParentID    *int64  `json:"parent_id"`
-	Recurrence  string  `json:"recurrence"`
+	ParentID    *int64   `json:"parent_id"`
+	Recurrence  string   `json:"recurrence"`
+	Priority    string   `json:"priority"`
+	Tags        []string `json:"tags"`
 }
 
 func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
@@ -245,6 +317,11 @@ func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, errors.New("invalid recurrence"))
 		return
 	}
+	priority := priorityOrNone(body.Priority)
+	if !validPriority(priority) {
+		writeError(w, http.StatusBadRequest, errors.New("invalid priority"))
+		return
+	}
 	task, err := h.q.CreateTask(r.Context(), db.CreateTaskParams{
 		Title:       body.Title,
 		Description: body.Description,
@@ -255,11 +332,17 @@ func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
 		Status:      status,
 		ParentID:    body.ParentID,
 		Recurrence:  recurrence,
+		Priority:    priority,
+		Tags:        sanitizeTags(body.Tags),
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	if task.ParentID == nil {
+		logActivity(r.Context(), h.q, task.ID, "created", "")
+	}
+	notifyAssigned(r.Context(), h.q, task.AssigneeID, task.Title)
 	writeJSON(w, http.StatusCreated, taskFromModel(task))
 }
 
@@ -293,6 +376,12 @@ func (h *TaskHandler) update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, errors.New("invalid recurrence"))
 		return
 	}
+	priority := priorityOrNone(body.Priority)
+	if !validPriority(priority) {
+		writeError(w, http.StatusBadRequest, errors.New("invalid priority"))
+		return
+	}
+	prior, _ := h.q.GetTask(r.Context(), id)
 	task, err := h.q.UpdateTask(r.Context(), db.UpdateTaskParams{
 		ID:          id,
 		Title:       body.Title,
@@ -303,6 +392,8 @@ func (h *TaskHandler) update(w http.ResponseWriter, r *http.Request) {
 		DueDate:     due,
 		Status:      status,
 		Recurrence:  recurrence,
+		Priority:    priority,
+		Tags:        sanitizeTags(body.Tags),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, errors.New("task not found"))
@@ -316,6 +407,10 @@ func (h *TaskHandler) update(w http.ResponseWriter, r *http.Request) {
 	if err := rescheduleAll(r.Context(), h.q); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
+	}
+	logActivity(r.Context(), h.q, id, "updated", "")
+	if assigneeChanged(prior.AssigneeID, task.AssigneeID) {
+		notifyAssigned(r.Context(), h.q, task.AssigneeID, task.Title)
 	}
 	writeJSON(w, http.StatusOK, taskFromModel(task))
 }
@@ -367,11 +462,15 @@ func (h *TaskHandler) setDone(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	if body.Done {
-		notify(r.Context(), h.q, "task", "Task completed", task.Title)
-	}
 	if body.Done && !prior.Done {
 		h.spawnNext(r.Context(), task)
+	}
+	if body.Done != prior.Done {
+		if body.Done {
+			logActivity(r.Context(), h.q, id, "completed", "")
+		} else {
+			logActivity(r.Context(), h.q, id, "reopened", "")
+		}
 	}
 	writeJSON(w, http.StatusOK, taskFromModel(task))
 }
@@ -411,11 +510,13 @@ func (h *TaskHandler) setStatus(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	if body.Status == "done" {
-		notify(r.Context(), h.q, "task", "Task completed", task.Title)
-	}
 	if body.Status == "done" && !prior.Done {
 		h.spawnNext(r.Context(), task)
+	}
+	if body.Status == "done" {
+		logActivity(r.Context(), h.q, id, "completed", "")
+	} else {
+		logActivity(r.Context(), h.q, id, "status", body.Status)
 	}
 	writeJSON(w, http.StatusOK, taskFromModel(task))
 }

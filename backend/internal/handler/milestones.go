@@ -74,7 +74,6 @@ func (h *MilestoneHandler) create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	notify(r.Context(), h.q, "milestone", "Milestone created", name)
 	writeJSON(w, http.StatusCreated, m)
 }
 
@@ -118,6 +117,9 @@ func (h *MilestoneHandler) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MilestoneHandler) delete(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
 	id, err := idParam(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, errors.New("invalid id"))

@@ -17,6 +17,15 @@ SET full_name = $2, updated_at = now()
 WHERE id = $1
 RETURNING *;
 
+-- name: CountUsers :one
+SELECT COUNT(*) FROM users;
+
+-- name: SetUserRole :one
+UPDATE users
+SET role = $2, updated_at = now()
+WHERE id = $1
+RETURNING *;
+
 -- name: EmailExists :one
 SELECT EXISTS (SELECT 1 FROM users WHERE email = $1);
 

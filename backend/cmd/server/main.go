@@ -26,6 +26,7 @@ import (
 	"github.com/revah-tech/revahms/backend/internal/db"
 	"github.com/revah-tech/revahms/backend/internal/email"
 	"github.com/revah-tech/revahms/backend/internal/handler"
+	"github.com/revah-tech/revahms/backend/internal/reminder"
 	"github.com/revah-tech/revahms/backend/internal/vikunja"
 	"github.com/revah-tech/revahms/backend/migrations"
 )
@@ -47,6 +48,11 @@ func main() {
 	queries := db.New(pool)
 	vk := vikunja.NewClient(cfg.VikunjaBaseURL)
 	vkSessions := vikunja.NewSessionStore()
+
+	// Background sweep: deliver in-app due-soon / overdue reminders to assignees.
+	remCtx, remCancel := context.WithCancel(ctx)
+	defer remCancel()
+	reminder.Start(remCtx, queries, 30*time.Minute)
 
 	// Custom email/password auth: users in Postgres, app-issued JWT, OTP email.
 	mailer := email.NewSender(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.AppName)
@@ -98,18 +104,43 @@ func main() {
 	})
 
 	// Workspace API — all behind the app's own JWT (the Flutter web app).
-	taskHandler := handler.NewTaskHandler(queries)
+	if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
+		log.Printf("WARNING: could not create upload dir %s: %v", cfg.UploadDir, err)
+	}
+	taskHandler := handler.NewTaskHandler(queries, cfg.UploadDir)
+	chatHub := handler.NewHub()
+	chatHandler := handler.NewChatHandler(queries, cfg.UploadDir, chatHub, handler.LiveKitConfig{
+		URL:       cfg.LiveKitURL,
+		APIKey:    cfg.LiveKitAPIKey,
+		APISecret: cfg.LiveKitAPISecret,
+	})
 	r.Group(func(api chi.Router) {
 		api.Use(appTokens.Middleware)
 		api.Mount("/api/v1/tasks", taskHandler.Routes())
+		api.Mount("/api/v1/chat", chatHandler.Routes())
 		api.Mount("/api/v1/projects", handler.NewProjectHandler(queries).Routes())
 		api.Mount("/api/v1/dependencies", handler.NewDependencyHandler(queries).Routes())
 		api.Mount("/api/v1/milestones", handler.NewMilestoneHandler(queries).Routes())
 		api.Mount("/api/v1/notifications", handler.NewNotificationHandler(queries).Routes())
-		api.Get("/api/v1/team", handler.NewTeamHandler(queries).List)
+		api.Get("/api/v1/search", handler.NewSearchHandler(queries).Search)
+		teamHandler := handler.NewTeamHandler(queries)
+		api.Get("/api/v1/team", teamHandler.List)
+		api.Patch("/api/v1/team/{id}/role", teamHandler.SetRole)
 		api.Post("/api/v1/baseline", taskHandler.SetBaseline)
+		api.Delete("/api/v1/attachments/{id}", taskHandler.DeleteAttachment)
 		api.Patch("/api/v1/profile", accountHandler.UpdateProfile)
 	})
+
+	// File downloads accept the token via query param (browser navigation).
+	r.With(appTokens.MiddlewareWithQuery).
+		Get("/api/v1/attachments/{id}/download", taskHandler.DownloadAttachment)
+
+	// Chat real-time socket + media downloads also take the token via query
+	// param (the browser cannot set an Authorization header on either).
+	r.With(appTokens.MiddlewareWithQuery).
+		Get("/api/v1/chat/ws", chatHandler.WS)
+	r.With(appTokens.MiddlewareWithQuery).
+		Get("/api/v1/chat/messages/{id}/download", chatHandler.Download)
 
 	// Protected routes — require a valid Keycloak token.
 	vkHandler := handler.NewVikunjaHandler(vk, vkSessions)

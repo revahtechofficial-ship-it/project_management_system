@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart';
+
 import '../enums/recurrence_type.dart';
+import '../enums/task_priority.dart';
 import '../enums/task_status.dart';
 
 /// A task, mirroring the backend `tasks` table (plus the joined project and
@@ -26,6 +29,8 @@ class Task {
   final int subtaskDoneCount;
   final DateTime? baselineStart;
   final DateTime? baselineDue;
+  final TaskPriority priority;
+  final List<String> tags;
 
   const Task({
     required this.id,
@@ -47,6 +52,8 @@ class Task {
     this.subtaskDoneCount = 0,
     this.baselineStart,
     this.baselineDue,
+    this.priority = TaskPriority.none,
+    this.tags = const <String>[],
   });
 
   /// Builds a [Task] from a decoded JSON map with snake_case keys.
@@ -79,6 +86,12 @@ class Task {
         baselineDue: json['baseline_due'] == null
             ? null
             : DateTime.parse(json['baseline_due'] as String),
+        priority:
+            TaskPriority.fromJson(json['priority'] as String? ?? 'none'),
+        tags: (json['tags'] as List<dynamic>?)
+                ?.map((dynamic e) => e as String)
+                .toList(growable: false) ??
+            const <String>[],
       );
 
   /// Serializes this task to a JSON map with snake_case keys.
@@ -102,6 +115,8 @@ class Task {
         'subtask_done_count': subtaskDoneCount,
         'baseline_start': baselineStart?.toIso8601String(),
         'baseline_due': baselineDue?.toIso8601String(),
+        'priority': priority.toJson(),
+        'tags': tags,
       };
 
   @override
@@ -138,10 +153,12 @@ class Task {
           other.subtaskCount == subtaskCount &&
           other.subtaskDoneCount == subtaskDoneCount &&
           other.baselineStart == baselineStart &&
-          other.baselineDue == baselineDue;
+          other.baselineDue == baselineDue &&
+          other.priority == priority &&
+          listEquals(other.tags, tags);
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll(<Object?>[
         id,
         title,
         description,
@@ -161,5 +178,7 @@ class Task {
         subtaskDoneCount,
         baselineStart,
         baselineDue,
-      );
+        priority,
+        Object.hashAll(tags),
+      ]);
 }

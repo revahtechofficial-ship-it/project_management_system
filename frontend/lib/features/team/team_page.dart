@@ -10,7 +10,9 @@ import '../../core/widgets/page_header.dart';
 import '../../core/widgets/stat_card.dart';
 import '../../core/widgets/status_pill.dart';
 import '../../core/widgets/user_avatar.dart';
+import '../../data/enums/member_role.dart';
 import '../../data/models/team_member.dart';
+import '../../providers/auth_provider.dart';
 import 'providers/team_providers.dart';
 
 /// The team directory: workspace members (registered users) with role and
@@ -129,13 +131,31 @@ class TeamPage extends ConsumerWidget {
   }
 }
 
-class _MemberCard extends StatelessWidget {
+class _MemberCard extends ConsumerWidget {
   const _MemberCard({required this.member});
   final TeamMember member;
 
+  Future<void> _setRole(
+      BuildContext context, WidgetRef ref, MemberRole role) async {
+    try {
+      await ref.read(teamRepositoryProvider).setRole(member.id, role);
+      ref.invalidate(teamMembersProvider);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not change role: $e')),
+        );
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final bool canManage =
+        (ref.watch(authControllerProvider).asData?.value.isAdmin ?? false) &&
+            member.role != MemberRole.owner;
+
     return DashboardCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,6 +183,22 @@ class _MemberCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (canManage)
+                PopupMenuButton<MemberRole>(
+                  tooltip: 'Change role',
+                  icon: Icon(Icons.more_vert,
+                      size: 20, color: scheme.onSurfaceVariant),
+                  onSelected: (MemberRole r) => _setRole(context, ref, r),
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<MemberRole>>[
+                    for (final MemberRole r in MemberRole.assignable)
+                      if (r != member.role)
+                        PopupMenuItem<MemberRole>(
+                          value: r,
+                          child: Text('Make ${r.label.toLowerCase()}'),
+                        ),
+                  ],
+                ),
             ],
           ),
           const SizedBox(height: 14),

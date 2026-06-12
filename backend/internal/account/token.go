@@ -19,6 +19,7 @@ type Claims struct {
 	UserID int64
 	Email  string
 	Name   string
+	Role   string
 }
 
 // Tokens issues and verifies the app's own HS256 JWT sessions.
@@ -36,6 +37,7 @@ func (t *Tokens) Issue(c Claims, ttl time.Duration) (string, error) {
 		"uid":   c.UserID,
 		"email": c.Email,
 		"name":  c.Name,
+		"role":  c.Role,
 		"iat":   now.Unix(),
 		"exp":   now.Add(ttl).Unix(),
 	})
@@ -59,7 +61,8 @@ func (t *Tokens) parse(raw string) (Claims, error) {
 	uid, _ := mc["uid"].(float64)
 	email, _ := mc["email"].(string)
 	name, _ := mc["name"].(string)
-	return Claims{UserID: int64(uid), Email: email, Name: name}, nil
+	role, _ := mc["role"].(string)
+	return Claims{UserID: int64(uid), Email: email, Name: name, Role: role}, nil
 }
 
 // Middleware verifies the Bearer JWT and injects Claims into the context.
@@ -71,6 +74,29 @@ func (t *Tokens) Middleware(next http.Handler) http.Handler {
 			return
 		}
 		claims, err := t.parse(parts[1])
+		if err != nil {
+			unauthorized(w)
+			return
+		}
+		ctx := context.WithValue(r.Context(), claimsKey, claims)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// MiddlewareWithQuery verifies the Bearer JWT from the Authorization header or,
+// failing that, a `token` query parameter. Used for browser file downloads,
+// where a plain navigation can't set an Authorization header.
+func (t *Tokens) MiddlewareWithQuery(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw := ""
+		parts := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+		if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+			raw = parts[1]
+		}
+		if raw == "" {
+			raw = r.URL.Query().Get("token")
+		}
+		claims, err := t.parse(raw)
 		if err != nil {
 			unauthorized(w)
 			return

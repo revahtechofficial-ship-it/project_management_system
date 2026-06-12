@@ -34,8 +34,20 @@ SELECT * FROM tasks;
 UPDATE tasks
 SET start_date = $2,
     due_date   = $3,
+    reminder_sent = FALSE,
     updated_at = now()
 WHERE id = $1;
+
+-- name: DueReminders :many
+SELECT id, title, assignee_id, due_date FROM tasks
+WHERE NOT done
+  AND assignee_id IS NOT NULL
+  AND due_date IS NOT NULL
+  AND due_date <= now() + INTERVAL '24 hours'
+  AND NOT reminder_sent;
+
+-- name: MarkReminded :exec
+UPDATE tasks SET reminder_sent = TRUE WHERE id = $1;
 
 -- name: SetBaseline :exec
 UPDATE tasks
@@ -44,8 +56,8 @@ SET baseline_start = start_date,
     updated_at     = now();
 
 -- name: CreateTask :one
-INSERT INTO tasks (title, description, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO tasks (title, description, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, priority, tags)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
 -- name: UpdateTask :one
@@ -58,7 +70,10 @@ SET title       = $2,
     due_date    = $7,
     status      = $8,
     recurrence  = $9,
+    priority    = $10,
+    tags        = $11,
     done        = ($8 = 'done'),
+    reminder_sent = FALSE,
     updated_at  = now()
 WHERE id = $1
 RETURNING *;
@@ -75,6 +90,7 @@ RETURNING *;
 UPDATE tasks
 SET done = $2,
     status = CASE WHEN $2 THEN 'done' ELSE 'todo' END,
+    reminder_sent = CASE WHEN $2 THEN reminder_sent ELSE FALSE END,
     updated_at = now()
 WHERE id = $1
 RETURNING *;
@@ -82,3 +98,34 @@ RETURNING *;
 -- name: DeleteTask :exec
 DELETE FROM tasks
 WHERE id = $1;
+
+-- name: BulkSetTaskDone :exec
+UPDATE tasks
+SET done = sqlc.arg(done),
+    status = CASE WHEN sqlc.arg(done) THEN 'done' ELSE 'todo' END,
+    reminder_sent = CASE WHEN sqlc.arg(done) THEN reminder_sent ELSE FALSE END,
+    updated_at = now()
+WHERE id = ANY(sqlc.arg(ids)::bigint[]);
+
+-- name: BulkSetTaskStatus :exec
+UPDATE tasks
+SET status = sqlc.arg(status),
+    done   = (sqlc.arg(status) = 'done'),
+    updated_at = now()
+WHERE id = ANY(sqlc.arg(ids)::bigint[]);
+
+-- name: BulkSetTaskPriority :exec
+UPDATE tasks
+SET priority = sqlc.arg(priority),
+    updated_at = now()
+WHERE id = ANY(sqlc.arg(ids)::bigint[]);
+
+-- name: BulkSetTaskAssignee :exec
+UPDATE tasks
+SET assignee_id = sqlc.narg(assignee),
+    updated_at = now()
+WHERE id = ANY(sqlc.arg(ids)::bigint[]);
+
+-- name: BulkDeleteTasks :exec
+DELETE FROM tasks
+WHERE id = ANY(sqlc.arg(ids)::bigint[]);

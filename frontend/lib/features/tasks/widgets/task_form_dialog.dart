@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../data/enums/dependency_type.dart';
 import '../../../data/enums/recurrence_type.dart';
+import '../../../data/enums/task_priority.dart';
 import '../../../data/enums/task_status.dart';
 import '../../../data/models/checklist_item.dart';
 import '../../../data/models/project.dart';
@@ -16,6 +18,8 @@ import '../../team/providers/team_providers.dart';
 import '../providers/dependencies_providers.dart';
 import '../providers/subtask_providers.dart';
 import '../providers/tasks_providers.dart';
+import 'task_attachments.dart';
+import 'task_comments.dart';
 
 /// Create/edit dialog for a task, with project, assignee and schedule pickers
 /// fed by the live providers. Pops `true` on a successful save.
@@ -38,6 +42,9 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
   DateTime? _due;
   TaskStatus _status = TaskStatus.todo;
   RecurrenceType _recurrence = RecurrenceType.none;
+  TaskPriority _priority = TaskPriority.none;
+  final TextEditingController _tagInput = TextEditingController();
+  late List<String> _tags;
   bool _saving = false;
   String? _error;
 
@@ -59,13 +66,27 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
     _recurrence = t == null || t.recurrence == RecurrenceType.other
         ? RecurrenceType.none
         : t.recurrence;
+    _priority = t?.priority ?? TaskPriority.none;
+    _tags = List<String>.of(t?.tags ?? const <String>[]);
   }
 
   @override
   void dispose() {
     _title.dispose();
     _description.dispose();
+    _tagInput.dispose();
     super.dispose();
+  }
+
+  void _addTag(String raw) {
+    final String tag = raw.trim();
+    if (tag.isEmpty ||
+        _tags.any((String t) => t.toLowerCase() == tag.toLowerCase())) {
+      _tagInput.clear();
+      return;
+    }
+    setState(() => _tags.add(tag));
+    _tagInput.clear();
   }
 
   Future<void> _save() async {
@@ -93,6 +114,8 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           dueDate: _due,
           status: _status,
           recurrence: _recurrence,
+          priority: _priority,
+          tags: _tags,
         );
       } else {
         await repo.create(
@@ -104,6 +127,8 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           dueDate: _due,
           status: _status,
           recurrence: _recurrence,
+          priority: _priority,
+          tags: _tags,
         );
       }
       if (mounted) {
@@ -179,6 +204,32 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                       setState(() => _status = v ?? TaskStatus.todo),
                 ),
                 const SizedBox(height: 12),
+                DropdownButtonFormField<TaskPriority>(
+                  initialValue: _priority,
+                  decoration: const InputDecoration(labelText: 'Priority'),
+                  items: <DropdownMenuItem<TaskPriority>>[
+                    for (final TaskPriority p in TaskPriority.values)
+                      DropdownMenuItem<TaskPriority>(
+                        value: p,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(
+                                p.isSet
+                                    ? Icons.flag_rounded
+                                    : Icons.outlined_flag,
+                                size: 16,
+                                color: p.color),
+                            const SizedBox(width: 8),
+                            Text(p.label),
+                          ],
+                        ),
+                      ),
+                  ],
+                  onChanged: (TaskPriority? v) =>
+                      setState(() => _priority = v ?? TaskPriority.none),
+                ),
+                const SizedBox(height: 12),
                 DropdownButtonFormField<RecurrenceType>(
                   initialValue: _recurrence,
                   decoration: const InputDecoration(
@@ -246,6 +297,39 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Tags',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurfaceVariant)),
+                ),
+                const SizedBox(height: 8),
+                if (_tags.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: <Widget>[
+                        for (final String tag in _tags)
+                          _TagChip(
+                            tag: tag,
+                            onRemove: () => setState(() => _tags.remove(tag)),
+                          ),
+                      ],
+                    ),
+                  ),
+                TextField(
+                  controller: _tagInput,
+                  decoration: const InputDecoration(
+                    hintText: 'Add a tag and press enter',
+                    isDense: true,
+                    prefixIcon: Icon(Icons.sell_outlined, size: 18),
+                  ),
+                  onSubmitted: _addTag,
+                ),
                 if (_isEdit) ...<Widget>[
                   const SizedBox(height: 8),
                   const Divider(height: 1),
@@ -254,6 +338,16 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                         .copyWith(dividerColor: Colors.transparent),
                     child: Column(
                       children: <Widget>[
+                        _Expander(
+                          title: 'Comments',
+                          child:
+                              TaskCommentsSection(taskId: widget.task!.id),
+                        ),
+                        _Expander(
+                          title: 'Attachments',
+                          child: TaskAttachmentsSection(
+                              taskId: widget.task!.id),
+                        ),
                         _Expander(
                           title: 'Subtasks',
                           child: _SubtaskSection(taskId: widget.task!.id),
@@ -266,6 +360,11 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                           title: 'Dependencies',
                           child:
                               _DependencySection(taskId: widget.task!.id),
+                        ),
+                        _Expander(
+                          title: 'Activity',
+                          child:
+                              TaskActivitySection(taskId: widget.task!.id),
                         ),
                       ],
                     ),
@@ -332,6 +431,38 @@ class _DateField extends StatelessWidget {
                 ),
         ),
         child: Text(value == null ? 'None' : shortDate(value!)),
+      ),
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  const _TagChip({required this.tag, required this.onRemove});
+  final String tag;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = avatarColor(tag);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 5, 6, 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(tag,
+              style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+          const SizedBox(width: 4),
+          InkWell(
+            onTap: onRemove,
+            borderRadius: BorderRadius.circular(20),
+            child: Icon(Icons.close, size: 14, color: color),
+          ),
+        ],
       ),
     );
   }
