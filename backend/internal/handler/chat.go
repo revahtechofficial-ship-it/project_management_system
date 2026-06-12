@@ -82,6 +82,7 @@ type conversationResponse struct {
 	Type         string    `json:"type"`
 	Name         string    `json:"name"`
 	OtherUserID  *int64    `json:"other_user_id"`
+	OtherAvatar  *string   `json:"other_avatar_url"`
 	UnreadCount  int32     `json:"unread_count"`
 	LastBody     string    `json:"last_body"`
 	LastKind     string    `json:"last_kind"`
@@ -91,24 +92,26 @@ type conversationResponse struct {
 }
 
 type messageResponse struct {
-	ID             int64     `json:"id"`
-	ConversationID int64     `json:"conversation_id"`
-	SenderID       *int64    `json:"sender_id"`
-	SenderName     *string   `json:"sender_name"`
-	Kind           string    `json:"kind"`
-	Body           string    `json:"body"`
-	Edited         bool      `json:"edited"`
-	AttachmentName string    `json:"attachment_name"`
-	AttachmentType string    `json:"attachment_type"`
-	AttachmentSize int64     `json:"attachment_size"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID              int64     `json:"id"`
+	ConversationID  int64     `json:"conversation_id"`
+	SenderID        *int64    `json:"sender_id"`
+	SenderName      *string   `json:"sender_name"`
+	SenderAvatarURL *string   `json:"sender_avatar_url"`
+	Kind            string    `json:"kind"`
+	Body            string    `json:"body"`
+	Edited          bool      `json:"edited"`
+	AttachmentName  string    `json:"attachment_name"`
+	AttachmentType  string    `json:"attachment_type"`
+	AttachmentSize  int64     `json:"attachment_size"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type memberResponse struct {
-	UserID   int64  `json:"user_id"`
-	Role     string `json:"role"`
-	FullName string `json:"full_name"`
-	Email    string `json:"email"`
+	UserID    int64   `json:"user_id"`
+	Role      string  `json:"role"`
+	FullName  string  `json:"full_name"`
+	Email     string  `json:"email"`
+	AvatarURL *string `json:"avatar_url"`
 }
 
 func conversationFromRow(r db.ListConversationsForUserRow) conversationResponse {
@@ -121,11 +124,16 @@ func conversationFromRow(r db.ListConversationsForUserRow) conversationResponse 
 			otherID = &id
 		}
 	}
+	var otherAvatar *string
+	if r.Type == "dm" {
+		otherAvatar = avatarURLPtr(r.OtherUserAvatar)
+	}
 	return conversationResponse{
 		ID:           r.ID,
 		Type:         r.Type,
 		Name:         title,
 		OtherUserID:  otherID,
+		OtherAvatar:  otherAvatar,
 		UnreadCount:  r.UnreadCount,
 		LastBody:     r.LastBody,
 		LastKind:     r.LastKind,
@@ -135,35 +143,45 @@ func conversationFromRow(r db.ListConversationsForUserRow) conversationResponse 
 	}
 }
 
+// avatarPtrFrom maps a nullable stored avatar name (from a LEFT JOIN) to a URL.
+func avatarPtrFrom(stored *string) *string {
+	if stored == nil || *stored == "" {
+		return nil
+	}
+	return avatarURLPtr(*stored)
+}
+
 func messageFromGet(r db.GetMessageWithSenderRow) messageResponse {
 	return messageResponse{
-		ID:             r.ID,
-		ConversationID: r.ConversationID,
-		SenderID:       r.SenderID,
-		SenderName:     r.SenderName,
-		Kind:           r.Kind,
-		Body:           r.Body,
-		Edited:         r.Edited,
-		AttachmentName: r.AttachmentName,
-		AttachmentType: r.AttachmentType,
-		AttachmentSize: r.AttachmentSize,
-		CreatedAt:      r.CreatedAt,
+		ID:              r.ID,
+		ConversationID:  r.ConversationID,
+		SenderID:        r.SenderID,
+		SenderName:      r.SenderName,
+		SenderAvatarURL: avatarPtrFrom(r.SenderAvatar),
+		Kind:            r.Kind,
+		Body:            r.Body,
+		Edited:          r.Edited,
+		AttachmentName:  r.AttachmentName,
+		AttachmentType:  r.AttachmentType,
+		AttachmentSize:  r.AttachmentSize,
+		CreatedAt:       r.CreatedAt,
 	}
 }
 
 func messageFromList(r db.ListMessagesRow) messageResponse {
 	return messageResponse{
-		ID:             r.ID,
-		ConversationID: r.ConversationID,
-		SenderID:       r.SenderID,
-		SenderName:     r.SenderName,
-		Kind:           r.Kind,
-		Body:           r.Body,
-		Edited:         r.Edited,
-		AttachmentName: r.AttachmentName,
-		AttachmentType: r.AttachmentType,
-		AttachmentSize: r.AttachmentSize,
-		CreatedAt:      r.CreatedAt,
+		ID:              r.ID,
+		ConversationID:  r.ConversationID,
+		SenderID:        r.SenderID,
+		SenderName:      r.SenderName,
+		SenderAvatarURL: avatarPtrFrom(r.SenderAvatar),
+		Kind:            r.Kind,
+		Body:            r.Body,
+		Edited:          r.Edited,
+		AttachmentName:  r.AttachmentName,
+		AttachmentType:  r.AttachmentType,
+		AttachmentSize:  r.AttachmentSize,
+		CreatedAt:       r.CreatedAt,
 	}
 }
 
@@ -480,10 +498,11 @@ func (h *ChatHandler) listMembers(w http.ResponseWriter, r *http.Request) {
 	out := make([]memberResponse, 0, len(rows))
 	for _, m := range rows {
 		out = append(out, memberResponse{
-			UserID:   m.UserID,
-			Role:     m.Role,
-			FullName: m.FullName,
-			Email:    m.Email,
+			UserID:    m.UserID,
+			Role:      m.Role,
+			FullName:  m.FullName,
+			Email:     m.Email,
+			AvatarURL: avatarURLPtr(m.Avatar),
 		})
 	}
 	writeJSON(w, http.StatusOK, out)

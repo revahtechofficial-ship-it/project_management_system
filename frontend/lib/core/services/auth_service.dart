@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -126,6 +127,29 @@ class AuthService {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kUser, jsonEncode(user.toJson()));
     return user;
+  }
+
+  /// Uploads a new profile photo and re-persists the updated user.
+  Future<AuthUser> uploadAvatar(Uint8List bytes, String filename) async {
+    final String token = await _token();
+    final FormData form = FormData.fromMap(<String, dynamic>{
+      'file': MultipartFile.fromBytes(bytes, filename: filename),
+    });
+    try {
+      final Response<Map<String, dynamic>> res =
+          await _dio.post<Map<String, dynamic>>(
+        '/api/v1/profile/avatar',
+        data: form,
+        options: Options(
+            headers: <String, dynamic>{'Authorization': 'Bearer $token'}),
+      );
+      final AuthUser user = AuthUser.fromJson(res.data ?? <String, dynamic>{});
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kUser, jsonEncode(user.toJson()));
+      return user;
+    } on DioException catch (e) {
+      throw AuthException(_messageFrom(e));
+    }
   }
 
   /// Changes the signed-in user's password (verifying the current one).

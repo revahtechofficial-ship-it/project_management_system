@@ -186,7 +186,7 @@ class _Contributors extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: <Widget>[
-                UserAvatar(name: m.name, radius: 16),
+                UserAvatar(name: m.name, radius: 16, imageUrl: m.avatarUrl),
                 const SizedBox(width: 12),
                 SizedBox(
                   width: 130,

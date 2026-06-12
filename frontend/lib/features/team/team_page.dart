@@ -162,7 +162,8 @@ class _MemberCard extends ConsumerWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              UserAvatar(name: member.name, radius: 24),
+              UserAvatar(
+                  name: member.name, radius: 24, imageUrl: member.avatarUrl),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

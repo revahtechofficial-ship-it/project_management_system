@@ -108,6 +108,7 @@ func main() {
 		log.Printf("WARNING: could not create upload dir %s: %v", cfg.UploadDir, err)
 	}
 	taskHandler := handler.NewTaskHandler(queries, cfg.UploadDir)
+	avatarHandler := handler.NewAvatarHandler(queries, cfg.UploadDir)
 	chatHub := handler.NewHub()
 	chatHandler := handler.NewChatHandler(queries, cfg.UploadDir, chatHub, handler.LiveKitConfig{
 		URL:       cfg.LiveKitURL,
@@ -129,7 +130,11 @@ func main() {
 		api.Post("/api/v1/baseline", taskHandler.SetBaseline)
 		api.Delete("/api/v1/attachments/{id}", taskHandler.DeleteAttachment)
 		api.Patch("/api/v1/profile", accountHandler.UpdateProfile)
+		api.Post("/api/v1/profile/avatar", avatarHandler.Upload)
 	})
+
+	// Profile photos are public (random, content-addressed names).
+	r.Get("/api/v1/avatars/{name}", avatarHandler.Serve)
 
 	// File downloads accept the token via query param (browser navigation).
 	r.With(appTokens.MiddlewareWithQuery).

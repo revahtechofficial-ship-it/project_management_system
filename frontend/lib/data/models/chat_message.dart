@@ -5,6 +5,7 @@ class ChatMessage {
   final int conversationId;
   final int? senderId;
   final String? senderName;
+  final String? senderAvatarUrl;
   final String kind;
   final String body;
   final bool edited;
@@ -19,6 +20,7 @@ class ChatMessage {
     required this.createdAt,
     this.senderId,
     this.senderName,
+    this.senderAvatarUrl,
     this.kind = 'text',
     this.body = '',
     this.edited = false,
@@ -46,6 +48,7 @@ class ChatMessage {
         conversationId: json['conversation_id'] as int,
         senderId: json['sender_id'] as int?,
         senderName: json['sender_name'] as String?,
+        senderAvatarUrl: json['sender_avatar_url'] as String?,
         kind: json['kind'] as String? ?? 'text',
         body: json['body'] as String? ?? '',
         edited: json['edited'] as bool? ?? false,
@@ -60,6 +63,7 @@ class ChatMessage {
         'conversation_id': conversationId,
         'sender_id': senderId,
         'sender_name': senderName,
+        'sender_avatar_url': senderAvatarUrl,
         'kind': kind,
         'body': body,
         'edited': edited,

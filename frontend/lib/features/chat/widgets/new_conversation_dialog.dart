@@ -48,7 +48,8 @@ class _DirectMessageDialog extends ConsumerWidget {
                 children: <Widget>[
                   for (final TeamMember m in members)
                     ListTile(
-                      leading: UserAvatar(name: m.name, radius: 18),
+                      leading: UserAvatar(
+                          name: m.name, radius: 18, imageUrl: m.avatarUrl),
                       title: Text(m.name),
                       subtitle: Text(m.email,
                           maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -157,7 +158,8 @@ class _GroupDialogState extends ConsumerState<_GroupDialog> {
                           CheckboxListTile(
                             value: _selected.contains(m.id),
                             title: Text(m.name),
-                            secondary: UserAvatar(name: m.name, radius: 16),
+                            secondary: UserAvatar(
+                                name: m.name, radius: 16, imageUrl: m.avatarUrl),
                             onChanged: (bool? v) => setState(() {
                               if (v ?? false) {
                                 _selected.add(m.id);

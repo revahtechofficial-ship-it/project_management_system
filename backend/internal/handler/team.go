@@ -3,11 +3,23 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/revah-tech/revahms/backend/internal/db"
 )
+
+type teamMemberResponse struct {
+	ID             int64     `json:"id"`
+	Email          string    `json:"email"`
+	FullName       string    `json:"full_name"`
+	Role           string    `json:"role"`
+	AvatarURL      *string   `json:"avatar_url"`
+	OpenTasks      int32     `json:"open_tasks"`
+	CompletedTasks int32     `json:"completed_tasks"`
+	CreatedAt      time.Time `json:"created_at"`
+}
 
 // TeamHandler serves the /api/v1/team resource: the workspace's registered
 // users with their aggregated task workload.
@@ -27,7 +39,20 @@ func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, members)
+	out := make([]teamMemberResponse, 0, len(members))
+	for _, m := range members {
+		out = append(out, teamMemberResponse{
+			ID:             m.ID,
+			Email:          m.Email,
+			FullName:       m.FullName,
+			Role:           m.Role,
+			AvatarURL:      avatarURLPtr(m.Avatar),
+			OpenTasks:      m.OpenTasks,
+			CompletedTasks: m.CompletedTasks,
+			CreatedAt:      m.CreatedAt,
+		})
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 type roleBody struct {

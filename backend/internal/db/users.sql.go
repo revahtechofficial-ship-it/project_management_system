@@ -23,7 +23,7 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, password_hash, full_name)
 VALUES ($1, $2, $3)
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar
 `
 
 type CreateUserParams struct {
@@ -44,6 +44,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Role,
+		&i.Avatar,
 	)
 	return i, err
 }
@@ -60,7 +61,7 @@ func (q *Queries) EmailExists(ctx context.Context, email string) (bool, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role FROM users
+SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar FROM users
 WHERE email = $1
 `
 
@@ -76,12 +77,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Role,
+		&i.Avatar,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role FROM users
+SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar FROM users
 WHERE id = $1
 `
 
@@ -97,6 +99,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Role,
+		&i.Avatar,
 	)
 	return i, err
 }
@@ -112,11 +115,40 @@ func (q *Queries) MarkEmailVerified(ctx context.Context, email string) error {
 	return err
 }
 
+const setUserAvatar = `-- name: SetUserAvatar :one
+UPDATE users
+SET avatar = $2, updated_at = now()
+WHERE id = $1
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar
+`
+
+type SetUserAvatarParams struct {
+	ID     int64  `json:"id"`
+	Avatar string `json:"avatar"`
+}
+
+func (q *Queries) SetUserAvatar(ctx context.Context, arg SetUserAvatarParams) (User, error) {
+	row := q.db.QueryRow(ctx, setUserAvatar, arg.ID, arg.Avatar)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FullName,
+		&i.EmailVerified,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Role,
+		&i.Avatar,
+	)
+	return i, err
+}
+
 const setUserRole = `-- name: SetUserRole :one
 UPDATE users
 SET role = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar
 `
 
 type SetUserRoleParams struct {
@@ -136,6 +168,7 @@ func (q *Queries) SetUserRole(ctx context.Context, arg SetUserRoleParams) (User,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Role,
+		&i.Avatar,
 	)
 	return i, err
 }
@@ -160,7 +193,7 @@ const updateUserName = `-- name: UpdateUserName :one
 UPDATE users
 SET full_name = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar
 `
 
 type UpdateUserNameParams struct {
@@ -180,6 +213,7 @@ func (q *Queries) UpdateUserName(ctx context.Context, arg UpdateUserNameParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Role,
+		&i.Avatar,
 	)
 	return i, err
 }

@@ -198,7 +198,7 @@ func (q *Queries) GetConversationMemberRole(ctx context.Context, arg GetConversa
 }
 
 const getMessageWithSender = `-- name: GetMessageWithSender :one
-SELECT m.id, m.conversation_id, m.sender_id, m.kind, m.body, m.attachment_name, m.attachment_stored, m.attachment_type, m.attachment_size, m.created_at, m.edited, u.full_name AS sender_name
+SELECT m.id, m.conversation_id, m.sender_id, m.kind, m.body, m.attachment_name, m.attachment_stored, m.attachment_type, m.attachment_size, m.created_at, m.edited, u.full_name AS sender_name, u.avatar AS sender_avatar
 FROM messages m
 LEFT JOIN users u ON u.id = m.sender_id
 WHERE m.id = $1
@@ -217,6 +217,7 @@ type GetMessageWithSenderRow struct {
 	CreatedAt        time.Time `json:"created_at"`
 	Edited           bool      `json:"edited"`
 	SenderName       *string   `json:"sender_name"`
+	SenderAvatar     *string   `json:"sender_avatar"`
 }
 
 func (q *Queries) GetMessageWithSender(ctx context.Context, id int64) (GetMessageWithSenderRow, error) {
@@ -235,6 +236,7 @@ func (q *Queries) GetMessageWithSender(ctx context.Context, id int64) (GetMessag
 		&i.CreatedAt,
 		&i.Edited,
 		&i.SenderName,
+		&i.SenderAvatar,
 	)
 	return i, err
 }
@@ -260,7 +262,7 @@ func (q *Queries) HasReaction(ctx context.Context, arg HasReactionParams) (bool,
 }
 
 const listConversationMembers = `-- name: ListConversationMembers :many
-SELECT cm.user_id, cm.role, cm.joined_at, u.full_name, u.email
+SELECT cm.user_id, cm.role, cm.joined_at, u.full_name, u.email, u.avatar
 FROM conversation_members cm
 JOIN users u ON u.id = cm.user_id
 WHERE cm.conversation_id = $1
@@ -273,6 +275,7 @@ type ListConversationMembersRow struct {
 	JoinedAt time.Time `json:"joined_at"`
 	FullName string    `json:"full_name"`
 	Email    string    `json:"email"`
+	Avatar   string    `json:"avatar"`
 }
 
 func (q *Queries) ListConversationMembers(ctx context.Context, conversationID int64) ([]ListConversationMembersRow, error) {
@@ -290,6 +293,7 @@ func (q *Queries) ListConversationMembers(ctx context.Context, conversationID in
 			&i.JoinedAt,
 			&i.FullName,
 			&i.Email,
+			&i.Avatar,
 		); err != nil {
 			return nil, err
 		}
@@ -332,7 +336,13 @@ SELECT
         WHERE cm2.conversation_id = c.id
           AND cm2.user_id <> $1
           AND c.type = 'dm'
-        LIMIT 1), '')::text AS other_user_name
+        LIMIT 1), '')::text AS other_user_name,
+    COALESCE((SELECT u.avatar FROM conversation_members cm2
+        JOIN users u ON u.id = cm2.user_id
+        WHERE cm2.conversation_id = c.id
+          AND cm2.user_id <> $1
+          AND c.type = 'dm'
+        LIMIT 1), '')::text AS other_user_avatar
 FROM conversation_members cm
 JOIN conversations c ON c.id = cm.conversation_id
 WHERE cm.user_id = $1
@@ -340,18 +350,19 @@ ORDER BY last_at DESC, c.created_at DESC
 `
 
 type ListConversationsForUserRow struct {
-	ID            int64              `json:"id"`
-	Type          string             `json:"type"`
-	Name          string             `json:"name"`
-	CreatedAt     time.Time          `json:"created_at"`
-	LastReadAt    pgtype.Timestamptz `json:"last_read_at"`
-	LastBody      string             `json:"last_body"`
-	LastKind      string             `json:"last_kind"`
-	LastAt        time.Time          `json:"last_at"`
-	LastSenderID  *int64             `json:"last_sender_id"`
-	UnreadCount   int32              `json:"unread_count"`
-	OtherUserID   int64              `json:"other_user_id"`
-	OtherUserName string             `json:"other_user_name"`
+	ID              int64              `json:"id"`
+	Type            string             `json:"type"`
+	Name            string             `json:"name"`
+	CreatedAt       time.Time          `json:"created_at"`
+	LastReadAt      pgtype.Timestamptz `json:"last_read_at"`
+	LastBody        string             `json:"last_body"`
+	LastKind        string             `json:"last_kind"`
+	LastAt          time.Time          `json:"last_at"`
+	LastSenderID    *int64             `json:"last_sender_id"`
+	UnreadCount     int32              `json:"unread_count"`
+	OtherUserID     int64              `json:"other_user_id"`
+	OtherUserName   string             `json:"other_user_name"`
+	OtherUserAvatar string             `json:"other_user_avatar"`
 }
 
 func (q *Queries) ListConversationsForUser(ctx context.Context, userID *int64) ([]ListConversationsForUserRow, error) {
@@ -376,6 +387,7 @@ func (q *Queries) ListConversationsForUser(ctx context.Context, userID *int64) (
 			&i.UnreadCount,
 			&i.OtherUserID,
 			&i.OtherUserName,
+			&i.OtherUserAvatar,
 		); err != nil {
 			return nil, err
 		}
@@ -388,7 +400,7 @@ func (q *Queries) ListConversationsForUser(ctx context.Context, userID *int64) (
 }
 
 const listMessages = `-- name: ListMessages :many
-SELECT m.id, m.conversation_id, m.sender_id, m.kind, m.body, m.attachment_name, m.attachment_stored, m.attachment_type, m.attachment_size, m.created_at, m.edited, u.full_name AS sender_name
+SELECT m.id, m.conversation_id, m.sender_id, m.kind, m.body, m.attachment_name, m.attachment_stored, m.attachment_type, m.attachment_size, m.created_at, m.edited, u.full_name AS sender_name, u.avatar AS sender_avatar
 FROM messages m
 LEFT JOIN users u ON u.id = m.sender_id
 WHERE m.conversation_id = $1
@@ -415,6 +427,7 @@ type ListMessagesRow struct {
 	CreatedAt        time.Time `json:"created_at"`
 	Edited           bool      `json:"edited"`
 	SenderName       *string   `json:"sender_name"`
+	SenderAvatar     *string   `json:"sender_avatar"`
 }
 
 func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]ListMessagesRow, error) {
@@ -439,6 +452,7 @@ func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]L
 			&i.CreatedAt,
 			&i.Edited,
 			&i.SenderName,
+			&i.SenderAvatar,
 		); err != nil {
 			return nil, err
 		}

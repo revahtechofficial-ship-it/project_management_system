@@ -80,6 +80,12 @@ func (s *Service) UpdateProfile(ctx context.Context, userID int64, fullName stri
 	return s.q.UpdateUserName(ctx, db.UpdateUserNameParams{ID: userID, FullName: fullName})
 }
 
+// GetUser returns a user by id (used to surface fields not carried in the JWT,
+// such as the avatar).
+func (s *Service) GetUser(ctx context.Context, userID int64) (db.User, error) {
+	return s.q.GetUserByID(ctx, userID)
+}
+
 // ChangePassword verifies the current password, then sets a new (policy-checked)
 // one for the authenticated user.
 func (s *Service) ChangePassword(ctx context.Context, userID int64, current, newPassword string) error {

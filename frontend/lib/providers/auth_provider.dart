@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/services/auth_service.dart';
@@ -47,6 +49,19 @@ class AuthController extends AsyncNotifier<AuthState> {
     final AuthUser user = await ref
         .read(authServiceProvider)
         .updateProfile(fullName: fullName);
+    final AuthSession? current = state.asData?.value.session;
+    if (current != null) {
+      state = AsyncData<AuthState>(AuthState(
+        session: AuthSession(token: current.token, user: user),
+      ));
+    }
+  }
+
+  /// Uploads a new profile photo and refreshes the in-memory session so the
+  /// avatar updates everywhere immediately.
+  Future<void> updateAvatar(Uint8List bytes, String filename) async {
+    final AuthUser user =
+        await ref.read(authServiceProvider).uploadAvatar(bytes, filename);
     final AuthSession? current = state.asData?.value.session;
     if (current != null) {
       state = AsyncData<AuthState>(AuthState(

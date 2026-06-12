@@ -642,7 +642,10 @@ class _ConversationTile extends StatelessWidget {
             ? CircleAvatar(
                 backgroundColor: AppColors.brand.withValues(alpha: 0.15),
                 child: const Icon(Icons.groups, color: AppColors.brand))
-            : UserAvatar(name: conversation.name, radius: 20),
+            : UserAvatar(
+                name: conversation.name,
+                radius: 20,
+                imageUrl: conversation.otherAvatarUrl),
       ),
       title: Text(
         conversation.name.isEmpty ? 'Conversation' : conversation.name,
@@ -803,7 +806,10 @@ class _ThreadHeader extends StatelessWidget {
                 ? const CircleAvatar(
                     backgroundColor: AppColors.brand,
                     child: Icon(Icons.groups, color: Colors.white, size: 20))
-                : UserAvatar(name: conversation.name, radius: 18),
+                : UserAvatar(
+                    name: conversation.name,
+                    radius: 18,
+                    imageUrl: conversation.otherAvatarUrl),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -940,9 +946,8 @@ class _MessageBubble extends StatelessWidget {
         .entries
         .where((MapEntry<String, Set<int>> e) => e.value.isNotEmpty)
         .toList();
-    return Align(
-      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Column(
+    final bool showAvatar = isGroup && !isMine;
+    final Widget content = Column(
         crossAxisAlignment:
             isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: <Widget>[
@@ -1024,6 +1029,26 @@ class _MessageBubble extends StatelessWidget {
                 ],
               ),
             ),
+        ],
+      );
+
+    if (!showAvatar) {
+      return Align(alignment: Alignment.centerLeft, child: content);
+    }
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.only(right: 6, bottom: 4),
+            child: UserAvatar(
+                name: message.senderName ?? '',
+                radius: 13,
+                imageUrl: message.senderAvatarUrl),
+          ),
+          Flexible(child: content),
         ],
       ),
     );

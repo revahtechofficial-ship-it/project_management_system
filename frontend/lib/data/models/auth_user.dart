@@ -8,12 +8,14 @@ class AuthUser {
   final String email;
   final String name;
   final MemberRole role;
+  final String? avatarUrl;
 
   const AuthUser({
     required this.id,
     this.email = '',
     this.name = '',
     this.role = MemberRole.member,
+    this.avatarUrl,
   });
 
   /// Whether this user may perform admin-only actions.
@@ -24,6 +26,7 @@ class AuthUser {
         email: json['email'] as String? ?? '',
         name: json['name'] as String? ?? '',
         role: MemberRole.fromJson(json['role'] as String? ?? 'member'),
+        avatarUrl: json['avatar_url'] as String?,
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -31,6 +34,7 @@ class AuthUser {
         'email': email,
         'name': name,
         'role': role.toJson(),
+        'avatar_url': avatarUrl,
       };
 
   @override
@@ -44,8 +48,9 @@ class AuthUser {
           other.id == id &&
           other.email == email &&
           other.name == name &&
-          other.role == role;
+          other.role == role &&
+          other.avatarUrl == avatarUrl;
 
   @override
-  int get hashCode => Object.hash(id, email, name, role);
+  int get hashCode => Object.hash(id, email, name, role, avatarUrl);
 }

@@ -3,6 +3,7 @@ SELECT u.id,
        u.email,
        u.full_name,
        u.role,
+       u.avatar,
        u.created_at,
        COALESCE(o.open, 0)::int AS open_tasks,
        COALESCE(d.done, 0)::int AS completed_tasks

@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -77,7 +78,26 @@ class _ProfileCard extends ConsumerWidget {
     return DashboardCard(
       child: Row(
         children: <Widget>[
-          UserAvatar(name: name, radius: 28),
+          InkWell(
+            onTap: () => _uploadPhoto(context, ref),
+            borderRadius: BorderRadius.circular(28),
+            child: Stack(
+              children: <Widget>[
+                UserAvatar(
+                    name: name, radius: 28, imageUrl: user?.avatarUrl),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: CircleAvatar(
+                    radius: 10,
+                    backgroundColor: AppColors.brand,
+                    child: const Icon(Icons.camera_alt,
+                        size: 11, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -104,6 +124,31 @@ class _ProfileCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _uploadPhoto(BuildContext context, WidgetRef ref) async {
+    final FilePickerResult? result = await FilePicker.pickFiles(
+        type: FileType.image, withData: true);
+    final bytes = result?.files.first.bytes;
+    if (result == null || bytes == null) {
+      return;
+    }
+    try {
+      await ref
+          .read(authControllerProvider.notifier)
+          .updateAvatar(bytes, result.files.first.name);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo updated')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _editProfile(BuildContext context, String name) async {

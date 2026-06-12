@@ -7,6 +7,7 @@ class TeamMember {
   final String name;
   final String email;
   final MemberRole role;
+  final String? avatarUrl;
   final int openTasks;
   final int completedTasks;
   final DateTime createdAt;
@@ -17,6 +18,7 @@ class TeamMember {
     required this.createdAt,
     this.name = '',
     this.email = '',
+    this.avatarUrl,
     this.openTasks = 0,
     this.completedTasks = 0,
   });
@@ -31,6 +33,7 @@ class TeamMember {
         name: json['full_name'] as String? ?? '',
         email: json['email'] as String? ?? '',
         role: MemberRole.fromJson(json['role'] as String? ?? ''),
+        avatarUrl: json['avatar_url'] as String?,
         openTasks: json['open_tasks'] as int? ?? 0,
         completedTasks: json['completed_tasks'] as int? ?? 0,
         createdAt: DateTime.parse(json['created_at'] as String),
@@ -41,6 +44,7 @@ class TeamMember {
         'full_name': name,
         'email': email,
         'role': role.toJson(),
+        'avatar_url': avatarUrl,
         'open_tasks': openTasks,
         'completed_tasks': completedTasks,
         'created_at': createdAt.toIso8601String(),

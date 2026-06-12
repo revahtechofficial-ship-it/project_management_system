@@ -111,13 +111,18 @@ func (h *AccountHandler) Login(w http.ResponseWriter, r *http.Request) {
 		h.accountError(w, err)
 		return
 	}
+	var avatar *string
+	if u, uerr := h.svc.GetUser(r.Context(), claims.UserID); uerr == nil {
+		avatar = avatarURLPtr(u.Avatar)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"token": token,
 		"user": map[string]any{
-			"id":    claims.UserID,
-			"email": claims.Email,
-			"name":  claims.Name,
-			"role":  claims.Role,
+			"id":         claims.UserID,
+			"email":      claims.Email,
+			"name":       claims.Name,
+			"role":       claims.Role,
+			"avatar_url": avatar,
 		},
 	})
 }
@@ -186,9 +191,13 @@ func (h *AccountHandler) Me(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, errors.New("not authenticated"))
 		return
 	}
+	var avatar *string
+	if u, uerr := h.svc.GetUser(r.Context(), claims.UserID); uerr == nil {
+		avatar = avatarURLPtr(u.Avatar)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"id": claims.UserID, "email": claims.Email, "name": claims.Name,
-		"role": claims.Role,
+		"role": claims.Role, "avatar_url": avatar,
 	})
 }
 
@@ -220,6 +229,7 @@ func (h *AccountHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"id": u.ID, "email": u.Email, "name": u.FullName, "role": u.Role,
+		"avatar_url": avatarURLPtr(u.Avatar),
 	})
 }
 

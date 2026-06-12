@@ -179,7 +179,10 @@ class _Sidebar extends ConsumerWidget {
               ),
               Divider(color: scheme.outlineVariant.withValues(alpha: 0.6)),
               ListTile(
-                leading: UserAvatar(name: user?.name ?? '', radius: 18),
+                leading: UserAvatar(
+                    name: user?.name ?? '',
+                    radius: 18,
+                    imageUrl: user?.avatarUrl),
                 title: Text(user?.name ?? 'User',
                     maxLines: 1, overflow: TextOverflow.ellipsis),
                 subtitle: Text(user?.email ?? '',
@@ -395,7 +398,8 @@ class _AvatarMenu extends ConsumerWidget {
       ],
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: UserAvatar(name: user?.name ?? '', radius: 17),
+        child: UserAvatar(
+            name: user?.name ?? '', radius: 17, imageUrl: user?.avatarUrl),
       ),
     );
   }

@@ -26,7 +26,7 @@ SELECT user_id FROM conversation_members
 WHERE conversation_id = $1;
 
 -- name: ListConversationMembers :many
-SELECT cm.user_id, cm.role, cm.joined_at, u.full_name, u.email
+SELECT cm.user_id, cm.role, cm.joined_at, u.full_name, u.email, u.avatar
 FROM conversation_members cm
 JOIN users u ON u.id = cm.user_id
 WHERE cm.conversation_id = $1
@@ -55,13 +55,13 @@ VALUES (
 RETURNING *;
 
 -- name: GetMessageWithSender :one
-SELECT m.*, u.full_name AS sender_name
+SELECT m.*, u.full_name AS sender_name, u.avatar AS sender_avatar
 FROM messages m
 LEFT JOIN users u ON u.id = m.sender_id
 WHERE m.id = $1;
 
 -- name: ListMessages :many
-SELECT m.*, u.full_name AS sender_name
+SELECT m.*, u.full_name AS sender_name, u.avatar AS sender_avatar
 FROM messages m
 LEFT JOIN users u ON u.id = m.sender_id
 WHERE m.conversation_id = sqlc.arg(conversation_id)
@@ -132,7 +132,13 @@ SELECT
         WHERE cm2.conversation_id = c.id
           AND cm2.user_id <> sqlc.arg(user_id)
           AND c.type = 'dm'
-        LIMIT 1), '')::text AS other_user_name
+        LIMIT 1), '')::text AS other_user_name,
+    COALESCE((SELECT u.avatar FROM conversation_members cm2
+        JOIN users u ON u.id = cm2.user_id
+        WHERE cm2.conversation_id = c.id
+          AND cm2.user_id <> sqlc.arg(user_id)
+          AND c.type = 'dm'
+        LIMIT 1), '')::text AS other_user_avatar
 FROM conversation_members cm
 JOIN conversations c ON c.id = cm.conversation_id
 WHERE cm.user_id = sqlc.arg(user_id)

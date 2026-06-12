@@ -5,12 +5,14 @@ class ChatMember {
   final String role;
   final String fullName;
   final String email;
+  final String? avatarUrl;
 
   const ChatMember({
     required this.userId,
     this.role = 'member',
     this.fullName = '',
     this.email = '',
+    this.avatarUrl,
   });
 
   bool get isAdmin => role == 'admin';
@@ -20,6 +22,7 @@ class ChatMember {
         role: json['role'] as String? ?? 'member',
         fullName: json['full_name'] as String? ?? '',
         email: json['email'] as String? ?? '',
+        avatarUrl: json['avatar_url'] as String?,
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -27,6 +30,7 @@ class ChatMember {
         'role': role,
         'full_name': fullName,
         'email': email,
+        'avatar_url': avatarUrl,
       };
 
   @override
@@ -39,8 +43,9 @@ class ChatMember {
           other.userId == userId &&
           other.role == role &&
           other.fullName == fullName &&
-          other.email == email;
+          other.email == email &&
+          other.avatarUrl == avatarUrl;
 
   @override
-  int get hashCode => Object.hash(userId, role, fullName, email);
+  int get hashCode => Object.hash(userId, role, fullName, email, avatarUrl);
 }
