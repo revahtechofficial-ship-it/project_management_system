@@ -63,6 +63,7 @@ func (h *ChatHandler) Routes() http.Handler {
 	r.Post("/conversations/{id}/upload", h.uploadMessage)
 	r.Post("/conversations/{id}/read", h.markRead)
 	r.Patch("/conversations/{id}", h.rename)
+	r.Post("/conversations/{id}/avatar", h.uploadConversationAvatar)
 	r.Get("/conversations/{id}/members", h.listMembers)
 	r.Post("/conversations/{id}/members", h.addMembers)
 	r.Delete("/conversations/{id}/members/{userId}", h.removeMember)
@@ -71,18 +72,24 @@ func (h *ChatHandler) Routes() http.Handler {
 	r.Patch("/messages/{messageId}", h.editMessage)
 	r.Post("/messages/{messageId}/reactions", h.toggleReaction)
 	r.Get("/conversations/{id}/reactions", h.listReactions)
+	r.Post("/messages/{messageId}/pin", h.setPin)
+	r.Post("/messages/{messageId}/forward", h.forwardMessage)
+	r.Get("/conversations/{id}/pinned", h.listPinned)
 	r.Get("/presence", h.presence)
+	r.Post("/status", h.setMyStatus)
 	return r
 }
 
 // --- response shapes -------------------------------------------------------
 
 type conversationResponse struct {
-	ID           int64     `json:"id"`
-	Type         string    `json:"type"`
-	Name         string    `json:"name"`
-	OtherUserID  *int64    `json:"other_user_id"`
-	OtherAvatar  *string   `json:"other_avatar_url"`
+	ID          int64   `json:"id"`
+	Type        string  `json:"type"`
+	Name        string  `json:"name"`
+	OtherUserID *int64  `json:"other_user_id"`
+	OtherAvatar *string `json:"other_avatar_url"`
+	// GroupAvatar is the uploaded photo for a group conversation.
+	GroupAvatar  *string   `json:"group_avatar_url"`
 	UnreadCount  int32     `json:"unread_count"`
 	LastBody     string    `json:"last_body"`
 	LastKind     string    `json:"last_kind"`
@@ -100,6 +107,12 @@ type messageResponse struct {
 	Kind            string    `json:"kind"`
 	Body            string    `json:"body"`
 	Edited          bool      `json:"edited"`
+	Pinned          bool      `json:"pinned"`
+	Forwarded       bool      `json:"forwarded"`
+	ReplyToID       *int64    `json:"reply_to_id"`
+	ReplyBody       *string   `json:"reply_body"`
+	ReplyKind       *string   `json:"reply_kind"`
+	ReplySenderName *string   `json:"reply_sender_name"`
 	AttachmentName  string    `json:"attachment_name"`
 	AttachmentType  string    `json:"attachment_type"`
 	AttachmentSize  int64     `json:"attachment_size"`
@@ -107,11 +120,12 @@ type messageResponse struct {
 }
 
 type memberResponse struct {
-	UserID    int64   `json:"user_id"`
-	Role      string  `json:"role"`
-	FullName  string  `json:"full_name"`
-	Email     string  `json:"email"`
-	AvatarURL *string `json:"avatar_url"`
+	UserID     int64      `json:"user_id"`
+	Role       string     `json:"role"`
+	FullName   string     `json:"full_name"`
+	Email      string     `json:"email"`
+	AvatarURL  *string    `json:"avatar_url"`
+	LastReadAt *time.Time `json:"last_read_at"`
 }
 
 func conversationFromRow(r db.ListConversationsForUserRow) conversationResponse {
@@ -124,9 +138,11 @@ func conversationFromRow(r db.ListConversationsForUserRow) conversationResponse 
 			otherID = &id
 		}
 	}
-	var otherAvatar *string
+	var otherAvatar, groupAvatar *string
 	if r.Type == "dm" {
 		otherAvatar = avatarURLPtr(r.OtherUserAvatar)
+	} else {
+		groupAvatar = avatarURLPtr(r.Avatar)
 	}
 	return conversationResponse{
 		ID:           r.ID,
@@ -134,6 +150,7 @@ func conversationFromRow(r db.ListConversationsForUserRow) conversationResponse 
 		Name:         title,
 		OtherUserID:  otherID,
 		OtherAvatar:  otherAvatar,
+		GroupAvatar:  groupAvatar,
 		UnreadCount:  r.UnreadCount,
 		LastBody:     r.LastBody,
 		LastKind:     r.LastKind,
@@ -161,6 +178,12 @@ func messageFromGet(r db.GetMessageWithSenderRow) messageResponse {
 		Kind:            r.Kind,
 		Body:            r.Body,
 		Edited:          r.Edited,
+		Pinned:          r.Pinned,
+		Forwarded:       r.Forwarded,
+		ReplyToID:       r.ReplyToID,
+		ReplyBody:       r.ReplyBody,
+		ReplyKind:       r.ReplyKind,
+		ReplySenderName: r.ReplySenderName,
 		AttachmentName:  r.AttachmentName,
 		AttachmentType:  r.AttachmentType,
 		AttachmentSize:  r.AttachmentSize,
@@ -178,6 +201,35 @@ func messageFromList(r db.ListMessagesRow) messageResponse {
 		Kind:            r.Kind,
 		Body:            r.Body,
 		Edited:          r.Edited,
+		Pinned:          r.Pinned,
+		Forwarded:       r.Forwarded,
+		ReplyToID:       r.ReplyToID,
+		ReplyBody:       r.ReplyBody,
+		ReplyKind:       r.ReplyKind,
+		ReplySenderName: r.ReplySenderName,
+		AttachmentName:  r.AttachmentName,
+		AttachmentType:  r.AttachmentType,
+		AttachmentSize:  r.AttachmentSize,
+		CreatedAt:       r.CreatedAt,
+	}
+}
+
+func messageFromPinned(r db.ListPinnedMessagesRow) messageResponse {
+	return messageResponse{
+		ID:              r.ID,
+		ConversationID:  r.ConversationID,
+		SenderID:        r.SenderID,
+		SenderName:      r.SenderName,
+		SenderAvatarURL: avatarPtrFrom(r.SenderAvatar),
+		Kind:            r.Kind,
+		Body:            r.Body,
+		Edited:          r.Edited,
+		Pinned:          r.Pinned,
+		Forwarded:       r.Forwarded,
+		ReplyToID:       r.ReplyToID,
+		ReplyBody:       r.ReplyBody,
+		ReplyKind:       r.ReplyKind,
+		ReplySenderName: r.ReplySenderName,
 		AttachmentName:  r.AttachmentName,
 		AttachmentType:  r.AttachmentType,
 		AttachmentSize:  r.AttachmentSize,
@@ -376,7 +428,8 @@ func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var b struct {
-		Body string `json:"body"`
+		Body    string `json:"body"`
+		ReplyTo *int64 `json:"reply_to"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 		writeError(w, http.StatusBadRequest, err)
@@ -392,6 +445,7 @@ func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 		SenderID:       &actor,
 		Kind:           "text",
 		Body:           body,
+		ReplyToID:      b.ReplyTo,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -406,8 +460,8 @@ func (h *ChatHandler) uploadMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
-	if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
-		writeError(w, http.StatusBadRequest, errors.New("file too large (max 25MB)"))
+	if err := r.ParseMultipartForm(maxUploadMemory); err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("file too large (max 100MB)"))
 		return
 	}
 	file, header, err := r.FormFile("file")
@@ -480,6 +534,17 @@ func (h *ChatHandler) markRead(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	// Tell the other members that this user has caught up (read receipts).
+	if ids, e := h.q.ConversationMemberIDs(r.Context(), convID); e == nil {
+		if payload, me := json.Marshal(map[string]any{
+			"type":            "read",
+			"conversation_id": convID,
+			"user_id":         actor,
+			"read_at":         time.Now().UTC().Format(time.RFC3339Nano),
+		}); me == nil {
+			h.hub.SendToUsers(ids, payload)
+		}
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -498,11 +563,12 @@ func (h *ChatHandler) listMembers(w http.ResponseWriter, r *http.Request) {
 	out := make([]memberResponse, 0, len(rows))
 	for _, m := range rows {
 		out = append(out, memberResponse{
-			UserID:    m.UserID,
-			Role:      m.Role,
-			FullName:  m.FullName,
-			Email:     m.Email,
-			AvatarURL: avatarURLPtr(m.Avatar),
+			UserID:     m.UserID,
+			Role:       m.Role,
+			FullName:   m.FullName,
+			Email:      m.Email,
+			AvatarURL:  avatarURLPtr(m.Avatar),
+			LastReadAt: tsPtr(m.LastReadAt),
 		})
 	}
 	writeJSON(w, http.StatusOK, out)

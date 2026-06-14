@@ -48,6 +48,13 @@ dependencies:
   fl_chart: ^1.2.0
   file_picker: ^11.0.2
   livekit_client: ^2.8.0
+  emoji_picker_flutter: ^4.4.0
+  video_player: ^2.11.1
+  record: ^7.1.0
+  audioplayers: ^6.7.1
+  geolocator: ^14.0.2
+  http_parser: ^4.1.2
+  web: ^1.1.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

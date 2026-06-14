@@ -2,7 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_config.dart';
 import '../../../data/models/conversation.dart';
+import '../../../data/models/link_preview.dart';
+import '../../../data/models/user_presence.dart';
 import '../../../data/repositories/chat_repository.dart';
+import '../../../data/repositories/giphy_repository.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/dio_provider.dart';
 import '../chat_socket.dart';
@@ -41,6 +44,16 @@ final Provider<ChatSocket?> chatSocketProvider = Provider<ChatSocket?>((ref) {
   return socket;
 });
 
+/// The Giphy repository (GIFs + stickers).
+final Provider<GiphyRepository> giphyRepositoryProvider =
+    Provider<GiphyRepository>((ref) => GiphyRepository());
+
+/// An Open Graph preview for a URL (cached per URL). Null when unavailable.
+final linkPreviewProvider =
+    FutureProvider.family<LinkPreview?, String>((ref, String url) {
+  return ref.watch(chatRepositoryProvider).linkPreview(url);
+});
+
 /// Decoded real-time chat events from the socket.
 final StreamProvider<Map<String, dynamic>> chatEventsProvider =
     StreamProvider<Map<String, dynamic>>((ref) {
@@ -51,32 +64,34 @@ final StreamProvider<Map<String, dynamic>> chatEventsProvider =
   return socket.events;
 });
 
-/// The set of currently-online user ids, seeded from the backend and kept in
-/// sync by `presence` socket events.
-final AsyncNotifierProvider<PresenceNotifier, Set<int>> presenceProvider =
-    AsyncNotifierProvider<PresenceNotifier, Set<int>>(PresenceNotifier.new);
+/// Per-user presence/status, keyed by user id. Seeded from the backend and kept
+/// in sync by `status` socket events.
+final AsyncNotifierProvider<PresenceNotifier, Map<int, UserPresence>>
+    presenceProvider =
+    AsyncNotifierProvider<PresenceNotifier, Map<int, UserPresence>>(
+        PresenceNotifier.new);
 
-class PresenceNotifier extends AsyncNotifier<Set<int>> {
+class PresenceNotifier extends AsyncNotifier<Map<int, UserPresence>> {
   @override
-  Future<Set<int>> build() async {
+  Future<Map<int, UserPresence>> build() async {
     ref.listen<AsyncValue<Map<String, dynamic>>>(chatEventsProvider,
         (AsyncValue<Map<String, dynamic>>? _,
             AsyncValue<Map<String, dynamic>> next) {
       next.whenData((Map<String, dynamic> e) {
-        if (e['type'] != 'presence') {
+        if (e['type'] != 'status') {
           return;
         }
-        final int id = e['user_id'] as int;
-        final bool online = e['online'] as bool? ?? false;
-        final Set<int> current = <int>{...?state.asData?.value};
-        if (online) {
-          current.add(id);
-        } else {
-          current.remove(id);
-        }
-        state = AsyncData<Set<int>>(current);
+        final UserPresence p = UserPresence.fromJson(e);
+        final Map<int, UserPresence> current =
+            <int, UserPresence>{...?state.asData?.value};
+        current[p.userId] = p;
+        state = AsyncData<Map<int, UserPresence>>(current);
       });
     });
-    return ref.read(chatRepositoryProvider).presence();
+    final List<UserPresence> list =
+        await ref.read(chatRepositoryProvider).presence();
+    return <int, UserPresence>{
+      for (final UserPresence p in list) p.userId: p,
+    };
   }
 }

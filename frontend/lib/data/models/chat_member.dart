@@ -6,6 +6,7 @@ class ChatMember {
   final String fullName;
   final String email;
   final String? avatarUrl;
+  final DateTime? lastReadAt;
 
   const ChatMember({
     required this.userId,
@@ -13,6 +14,7 @@ class ChatMember {
     this.fullName = '',
     this.email = '',
     this.avatarUrl,
+    this.lastReadAt,
   });
 
   bool get isAdmin => role == 'admin';
@@ -23,6 +25,9 @@ class ChatMember {
         fullName: json['full_name'] as String? ?? '',
         email: json['email'] as String? ?? '',
         avatarUrl: json['avatar_url'] as String?,
+        lastReadAt: json['last_read_at'] == null
+            ? null
+            : DateTime.parse(json['last_read_at'] as String),
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -31,6 +36,7 @@ class ChatMember {
         'full_name': fullName,
         'email': email,
         'avatar_url': avatarUrl,
+        'last_read_at': lastReadAt?.toIso8601String(),
       };
 
   @override
@@ -44,8 +50,10 @@ class ChatMember {
           other.role == role &&
           other.fullName == fullName &&
           other.email == email &&
-          other.avatarUrl == avatarUrl;
+          other.avatarUrl == avatarUrl &&
+          other.lastReadAt == lastReadAt;
 
   @override
-  int get hashCode => Object.hash(userId, role, fullName, email, avatarUrl);
+  int get hashCode =>
+      Object.hash(userId, role, fullName, email, avatarUrl, lastReadAt);
 }

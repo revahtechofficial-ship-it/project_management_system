@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/chat/call/call_actions.dart';
 import '../../features/chat/providers/chat_providers.dart';
+import '../../features/chat/widgets/status_picker.dart';
 import '../../features/notifications/providers/notifications_providers.dart';
 import '../../features/search/widgets/command_palette.dart';
 import '../../providers/auth_provider.dart';
@@ -384,13 +385,20 @@ class _AvatarMenu extends ConsumerWidget {
     return PopupMenuButton<String>(
       tooltip: 'Account',
       onSelected: (String v) {
-        if (v == 'logout') {
-          ref.read(authControllerProvider.notifier).logout();
-        } else {
-          context.go('/settings');
+        switch (v) {
+          case 'logout':
+            ref.read(authControllerProvider.notifier).logout();
+          case 'status':
+            showStatusPicker(context, ref);
+          default:
+            context.go('/settings');
         }
       },
       itemBuilder: (BuildContext context) => const <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+            value: 'status',
+            child: ListTile(
+                leading: Icon(Icons.mood), title: Text('Set status'))),
         PopupMenuItem<String>(value: 'Profile', child: Text('Profile')),
         PopupMenuItem<String>(value: 'Settings', child: Text('Settings')),
         PopupMenuDivider(),

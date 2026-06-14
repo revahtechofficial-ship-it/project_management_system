@@ -53,6 +53,7 @@ type Conversation struct {
 	Name      string    `json:"name"`
 	CreatedBy *int64    `json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
+	Avatar    string    `json:"avatar"`
 }
 
 type ConversationMember struct {
@@ -61,6 +62,15 @@ type ConversationMember struct {
 	Role           string             `json:"role"`
 	LastReadAt     pgtype.Timestamptz `json:"last_read_at"`
 	JoinedAt       time.Time          `json:"joined_at"`
+}
+
+type CustomField struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	FieldType string    `json:"field_type"`
+	Options   []string  `json:"options"`
+	Position  int32     `json:"position"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type Message struct {
@@ -75,6 +85,9 @@ type Message struct {
 	AttachmentSize   int64     `json:"attachment_size"`
 	CreatedAt        time.Time `json:"created_at"`
 	Edited           bool      `json:"edited"`
+	ReplyToID        *int64    `json:"reply_to_id"`
+	Pinned           bool      `json:"pinned"`
+	Forwarded        bool      `json:"forwarded"`
 }
 
 type MessageReaction struct {
@@ -153,14 +166,23 @@ type TaskDependency struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
+type TaskFieldValue struct {
+	TaskID  int64  `json:"task_id"`
+	FieldID int64  `json:"field_id"`
+	Value   string `json:"value"`
+}
+
 type User struct {
-	ID            int64     `json:"id"`
-	Email         string    `json:"email"`
-	PasswordHash  string    `json:"password_hash"`
-	FullName      string    `json:"full_name"`
-	EmailVerified bool      `json:"email_verified"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
-	Role          string    `json:"role"`
-	Avatar        string    `json:"avatar"`
+	ID            int64              `json:"id"`
+	Email         string             `json:"email"`
+	PasswordHash  string             `json:"password_hash"`
+	FullName      string             `json:"full_name"`
+	EmailVerified bool               `json:"email_verified"`
+	CreatedAt     time.Time          `json:"created_at"`
+	UpdatedAt     time.Time          `json:"updated_at"`
+	Role          string             `json:"role"`
+	Avatar        string             `json:"avatar"`
+	Status        string             `json:"status"`
+	StatusMessage string             `json:"status_message"`
+	LastSeenAt    pgtype.Timestamptz `json:"last_seen_at"`
 }

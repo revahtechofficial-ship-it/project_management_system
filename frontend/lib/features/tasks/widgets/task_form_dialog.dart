@@ -20,6 +20,7 @@ import '../providers/subtask_providers.dart';
 import '../providers/tasks_providers.dart';
 import 'task_attachments.dart';
 import 'task_comments.dart';
+import 'task_custom_fields.dart';
 
 /// Create/edit dialog for a task, with project, assignee and schedule pickers
 /// fed by the live providers. Pops `true` on a successful save.
@@ -346,6 +347,11 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                         _Expander(
                           title: 'Attachments',
                           child: TaskAttachmentsSection(
+                              taskId: widget.task!.id),
+                        ),
+                        _Expander(
+                          title: 'Custom fields',
+                          child: TaskCustomFieldsSection(
                               taskId: widget.task!.id),
                         ),
                         _Expander(

@@ -11,6 +11,17 @@ class AppConfig {
     defaultValue: 'http://localhost:8080',
   );
 
+  /// Giphy API key for the GIF + sticker picker. Empty disables it.
+  /// Provide one (free) with:
+  ///   flutter run --dart-define=GIPHY_API_KEY=your_key
+  static const String giphyApiKey = String.fromEnvironment(
+    'GIPHY_API_KEY',
+    defaultValue: '',
+  );
+
+  /// Whether the GIF/sticker picker is enabled.
+  static bool get giphyEnabled => giphyApiKey.isNotEmpty;
+
   /// Keycloak realm issuer URL. Uses host.docker.internal so the issuer is
   /// identical for the browser and the Docker containers (Vikunja SSO).
   static const String oidcIssuer = String.fromEnvironment(

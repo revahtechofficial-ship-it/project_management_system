@@ -7,6 +7,8 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countUsers = `-- name: CountUsers :one
@@ -23,7 +25,7 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, password_hash, full_name)
 VALUES ($1, $2, $3)
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at
 `
 
 type CreateUserParams struct {
@@ -45,6 +47,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.Role,
 		&i.Avatar,
+		&i.Status,
+		&i.StatusMessage,
+		&i.LastSeenAt,
 	)
 	return i, err
 }
@@ -61,7 +66,7 @@ func (q *Queries) EmailExists(ctx context.Context, email string) (bool, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar FROM users
+SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at FROM users
 WHERE email = $1
 `
 
@@ -78,12 +83,15 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.UpdatedAt,
 		&i.Role,
 		&i.Avatar,
+		&i.Status,
+		&i.StatusMessage,
+		&i.LastSeenAt,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar FROM users
+SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at FROM users
 WHERE id = $1
 `
 
@@ -100,8 +108,47 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.UpdatedAt,
 		&i.Role,
 		&i.Avatar,
+		&i.Status,
+		&i.StatusMessage,
+		&i.LastSeenAt,
 	)
 	return i, err
+}
+
+const listUserStatuses = `-- name: ListUserStatuses :many
+SELECT id, status, status_message, last_seen_at FROM users
+`
+
+type ListUserStatusesRow struct {
+	ID            int64              `json:"id"`
+	Status        string             `json:"status"`
+	StatusMessage string             `json:"status_message"`
+	LastSeenAt    pgtype.Timestamptz `json:"last_seen_at"`
+}
+
+func (q *Queries) ListUserStatuses(ctx context.Context) ([]ListUserStatusesRow, error) {
+	rows, err := q.db.Query(ctx, listUserStatuses)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUserStatusesRow{}
+	for rows.Next() {
+		var i ListUserStatusesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Status,
+			&i.StatusMessage,
+			&i.LastSeenAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const markEmailVerified = `-- name: MarkEmailVerified :exec
@@ -115,11 +162,20 @@ func (q *Queries) MarkEmailVerified(ctx context.Context, email string) error {
 	return err
 }
 
+const setLastSeen = `-- name: SetLastSeen :exec
+UPDATE users SET last_seen_at = now() WHERE id = $1
+`
+
+func (q *Queries) SetLastSeen(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, setLastSeen, id)
+	return err
+}
+
 const setUserAvatar = `-- name: SetUserAvatar :one
 UPDATE users
 SET avatar = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at
 `
 
 type SetUserAvatarParams struct {
@@ -140,6 +196,9 @@ func (q *Queries) SetUserAvatar(ctx context.Context, arg SetUserAvatarParams) (U
 		&i.UpdatedAt,
 		&i.Role,
 		&i.Avatar,
+		&i.Status,
+		&i.StatusMessage,
+		&i.LastSeenAt,
 	)
 	return i, err
 }
@@ -148,7 +207,7 @@ const setUserRole = `-- name: SetUserRole :one
 UPDATE users
 SET role = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at
 `
 
 type SetUserRoleParams struct {
@@ -169,8 +228,28 @@ func (q *Queries) SetUserRole(ctx context.Context, arg SetUserRoleParams) (User,
 		&i.UpdatedAt,
 		&i.Role,
 		&i.Avatar,
+		&i.Status,
+		&i.StatusMessage,
+		&i.LastSeenAt,
 	)
 	return i, err
+}
+
+const setUserStatus = `-- name: SetUserStatus :exec
+UPDATE users
+SET status = $2, status_message = $3, updated_at = now()
+WHERE id = $1
+`
+
+type SetUserStatusParams struct {
+	ID            int64  `json:"id"`
+	Status        string `json:"status"`
+	StatusMessage string `json:"status_message"`
+}
+
+func (q *Queries) SetUserStatus(ctx context.Context, arg SetUserStatusParams) error {
+	_, err := q.db.Exec(ctx, setUserStatus, arg.ID, arg.Status, arg.StatusMessage)
+	return err
 }
 
 const updatePassword = `-- name: UpdatePassword :exec
@@ -193,7 +272,7 @@ const updateUserName = `-- name: UpdateUserName :one
 UPDATE users
 SET full_name = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at
 `
 
 type UpdateUserNameParams struct {
@@ -214,6 +293,9 @@ func (q *Queries) UpdateUserName(ctx context.Context, arg UpdateUserNameParams) 
 		&i.UpdatedAt,
 		&i.Role,
 		&i.Avatar,
+		&i.Status,
+		&i.StatusMessage,
+		&i.LastSeenAt,
 	)
 	return i, err
 }

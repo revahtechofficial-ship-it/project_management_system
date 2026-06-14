@@ -96,11 +96,12 @@ class _LandingNav extends StatelessWidget {
 }
 
 class _Brand extends StatelessWidget {
-  const _Brand();
+  const _Brand({this.height = 40});
+  final double height;
 
   @override
   Widget build(BuildContext context) {
-    return const RevahLogo(height: 30);
+    return RevahLogo(height: height);
   }
 }
 
@@ -120,7 +121,7 @@ class _Footer extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 1180),
           child: Column(
             children: <Widget>[
-              const _Brand(),
+              const _Brand(height: 30),
               const SizedBox(height: 10),
               Text('Built in-house for the Revah Tech team.',
                   style: TextStyle(color: scheme.onSurfaceVariant)),

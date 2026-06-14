@@ -3,14 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/widgets/avatar_crop_dialog.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
 import '../../core/widgets/user_avatar.dart';
+import '../../data/enums/custom_field_type.dart';
 import '../../data/models/auth_user.dart';
+import '../../data/models/custom_field.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../tasks/providers/custom_fields_providers.dart';
 import 'providers/settings_providers.dart';
 import 'widgets/change_password_dialog.dart';
+import 'widgets/custom_field_dialog.dart';
 import 'widgets/edit_profile_dialog.dart';
 
 /// Account and preference management. The theme selector and notification
@@ -45,6 +50,10 @@ class SettingsPage extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             _NotificationsCard(settings: settings),
+            if (user?.isAdmin ?? false) ...<Widget>[
+              const SizedBox(height: 16),
+              const _CustomFieldsCard(),
+            ],
             const SizedBox(height: 16),
             const _SecurityCard(),
             const SizedBox(height: 16),
@@ -130,13 +139,17 @@ class _ProfileCard extends ConsumerWidget {
     final FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.image, withData: true);
     final bytes = result?.files.first.bytes;
-    if (result == null || bytes == null) {
+    if (result == null || bytes == null || !context.mounted) {
+      return;
+    }
+    final cropped = await cropAvatar(context, bytes);
+    if (cropped == null) {
       return;
     }
     try {
       await ref
           .read(authControllerProvider.notifier)
-          .updateAvatar(bytes, result.files.first.name);
+          .updateAvatar(cropped, 'avatar.png');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Photo updated')),
@@ -263,6 +276,84 @@ class _NotificationsCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+/// Admin-only management of workspace custom fields for tasks.
+class _CustomFieldsCard extends ConsumerWidget {
+  const _CustomFieldsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final List<CustomField> fields =
+        ref.watch(customFieldsProvider).asData?.value ?? const <CustomField>[];
+    return DashboardCard(
+      title: 'Custom fields',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('Add fields that appear on every task.',
+              style: TextStyle(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 8),
+          if (fields.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text('No custom fields yet.',
+                  style: TextStyle(color: scheme.onSurfaceVariant)),
+            ),
+          for (final CustomField f in fields)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(f.type.icon, color: scheme.onSurfaceVariant),
+              title: Text(f.name),
+              subtitle: Text(f.type == CustomFieldType.select
+                  ? 'Dropdown · ${f.options.join(', ')}'
+                  : f.type.label),
+              trailing: IconButton(
+                tooltip: 'Delete field',
+                icon: Icon(Icons.delete_outline, color: scheme.error),
+                onPressed: () => _delete(context, ref, f),
+              ),
+            ),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () => showCustomFieldDialog(context),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Add field'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _delete(
+      BuildContext context, WidgetRef ref, CustomField f) async {
+    final bool ok = await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: Text('Delete "${f.name}"?'),
+            content: const Text(
+                'This removes the field and its values from every task.'),
+            actions: <Widget>[
+              TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel')),
+              FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Delete')),
+            ],
+          ),
+        ) ??
+        false;
+    if (!ok) {
+      return;
+    }
+    await ref.read(customFieldsRepositoryProvider).delete(f.id);
+    ref.invalidate(customFieldsProvider);
   }
 }
 

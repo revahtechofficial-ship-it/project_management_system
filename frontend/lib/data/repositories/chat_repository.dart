@@ -1,13 +1,17 @@
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart';
 
 import '../../core/constants/app_config.dart';
+import '../enums/user_status.dart';
 import '../models/call_credentials.dart';
 import '../models/chat_member.dart';
 import '../models/chat_message.dart';
 import '../models/chat_reaction.dart';
 import '../models/conversation.dart';
+import '../models/link_preview.dart';
+import '../models/user_presence.dart';
 
 /// Talks to the backend's /api/v1/chat endpoints (AGENTS.md §1
 /// `data/repositories`).
@@ -66,25 +70,56 @@ class ChatRepository {
         .toList(growable: false);
   }
 
-  /// Sends a text message and returns the stored message.
-  Future<ChatMessage> sendText(int conversationId, String body) async {
+  /// Sends a text message (optionally a reply to [replyTo]) and returns it.
+  Future<ChatMessage> sendText(int conversationId, String body,
+      {int? replyTo}) async {
     final Response<Map<String, dynamic>> res =
         await _dio.post<Map<String, dynamic>>(
       '/api/v1/chat/conversations/$conversationId/messages',
-      data: <String, dynamic>{'body': body},
+      data: <String, dynamic>{'body': body, 'reply_to': replyTo},
     );
     return ChatMessage.fromJson(res.data ?? const <String, dynamic>{});
   }
 
-  /// Uploads a file/image as a message and returns the stored message.
+  /// Pins or unpins a message.
+  Future<void> setPin(int messageId, {required bool pinned}) =>
+      _dio.post<void>(
+        '/api/v1/chat/messages/$messageId/pin',
+        data: <String, dynamic>{'pinned': pinned},
+      );
+
+  /// The pinned messages of a conversation, newest first.
+  Future<List<ChatMessage>> pinned(int conversationId) async {
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+        '/api/v1/chat/conversations/$conversationId/pinned');
+    final List<dynamic> data = res.data ?? <dynamic>[];
+    return data
+        .map((dynamic e) => ChatMessage.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  /// Forwards a message into another conversation.
+  Future<void> forward(int messageId, int conversationId) => _dio.post<void>(
+        '/api/v1/chat/messages/$messageId/forward',
+        data: <String, dynamic>{'conversation_id': conversationId},
+      );
+
+  /// Uploads a file/image/voice as a message and returns the stored message.
+  /// Pass [contentType] to force a MIME type (e.g. `audio/webm` for voice).
   Future<ChatMessage> uploadFile(
     int conversationId,
     Uint8List bytes,
     String filename, {
     String caption = '',
+    String? contentType,
   }) async {
     final FormData form = FormData.fromMap(<String, dynamic>{
-      'file': MultipartFile.fromBytes(bytes, filename: filename),
+      'file': MultipartFile.fromBytes(
+        bytes,
+        filename: filename,
+        contentType:
+            contentType == null ? null : MediaType.parse(contentType),
+      ),
       'caption': caption,
     });
     final Response<Map<String, dynamic>> res =
@@ -127,6 +162,21 @@ class ChatRepository {
         data: <String, dynamic>{'name': name},
       );
 
+  /// Uploads a group conversation's photo and returns its URL.
+  Future<String?> uploadGroupAvatar(
+      int conversationId, Uint8List bytes) async {
+    final FormData form = FormData.fromMap(<String, dynamic>{
+      'file': MultipartFile.fromBytes(bytes, filename: 'group.png'),
+    });
+    final Response<Map<String, dynamic>> res =
+        await _dio.post<Map<String, dynamic>>(
+      '/api/v1/chat/conversations/$conversationId/avatar',
+      data: form,
+    );
+    return (res.data ?? const <String, dynamic>{})['group_avatar_url']
+        as String?;
+  }
+
   /// Deletes a message (its sender, or a conversation admin).
   Future<void> deleteMessage(int messageId) =>
       _dio.delete<void>('/api/v1/chat/messages/$messageId');
@@ -158,20 +208,46 @@ class ChatRepository {
         .toList(growable: false);
   }
 
-  /// The ids of users currently connected to the chat socket.
-  Future<Set<int>> presence() async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.get<Map<String, dynamic>>('/api/v1/chat/presence');
-    final List<dynamic> online =
-        (res.data ?? const <String, dynamic>{})['online'] as List<dynamic>? ??
-            <dynamic>[];
-    return online.map((dynamic e) => e as int).toSet();
+  /// Every user's presence/status.
+  Future<List<UserPresence>> presence() async {
+    final Response<List<dynamic>> res =
+        await _dio.get<List<dynamic>>('/api/v1/chat/presence');
+    final List<dynamic> data = res.data ?? <dynamic>[];
+    return data
+        .map((dynamic e) => UserPresence.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false);
   }
+
+  /// Sets the current user's status and optional custom message.
+  Future<void> setStatus(UserStatus status, String message) =>
+      _dio.post<void>(
+        '/api/v1/chat/status',
+        data: <String, dynamic>{
+          'status': status.toJson(),
+          'status_message': message,
+        },
+      );
 
   /// The authenticated URL to download/preview a message attachment.
   String attachmentUrl(int messageId, String token) =>
       '${AppConfig.apiBaseUrl}/api/v1/chat/messages/$messageId/download'
       '?token=$token';
+
+  /// Fetches Open Graph metadata for [url] (server-side, avoiding CORS).
+  Future<LinkPreview?> linkPreview(String url) async {
+    try {
+      final Response<Map<String, dynamic>> res =
+          await _dio.get<Map<String, dynamic>>(
+        '/api/v1/link-preview',
+        queryParameters: <String, dynamic>{'url': url},
+      );
+      final LinkPreview pv =
+          LinkPreview.fromJson(res.data ?? const <String, dynamic>{});
+      return pv.hasContent ? pv : null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Requests a LiveKit join token for a conversation's call. Set [ring] true
   /// when starting a call to ring the other members.

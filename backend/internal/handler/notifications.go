@@ -107,8 +107,12 @@ func recipientOf(ctx context.Context) (*int64, bool) {
 
 // notifyUser delivers an in-app notification to one recipient on a best-effort
 // basis; failures are swallowed so they never break the triggering action.
+// Recipients in Do Not Disturb mode are skipped.
 func notifyUser(ctx context.Context, q *db.Queries, userID int64,
 	typ, title, body string) {
+	if u, err := q.GetUserByID(ctx, userID); err == nil && u.Status == "dnd" {
+		return
+	}
 	uid := userID
 	_, _ = q.CreateNotification(ctx, db.CreateNotificationParams{
 		UserID: &uid,

@@ -17,6 +17,10 @@ WHERE conversation_id = sqlc.arg(conversation_id)
 UPDATE conversations SET name = sqlc.arg(name)
 WHERE id = sqlc.arg(id);
 
+-- name: SetConversationAvatar :exec
+UPDATE conversations SET avatar = sqlc.arg(avatar)
+WHERE id = sqlc.arg(id);
+
 -- name: GetConversationMemberRole :one
 SELECT role FROM conversation_members
 WHERE conversation_id = $1 AND user_id = $2;
@@ -26,7 +30,8 @@ SELECT user_id FROM conversation_members
 WHERE conversation_id = $1;
 
 -- name: ListConversationMembers :many
-SELECT cm.user_id, cm.role, cm.joined_at, u.full_name, u.email, u.avatar
+SELECT cm.user_id, cm.role, cm.joined_at, cm.last_read_at,
+       u.full_name, u.email, u.avatar
 FROM conversation_members cm
 JOIN users u ON u.id = cm.user_id
 WHERE cm.conversation_id = $1
@@ -47,26 +52,50 @@ LIMIT 1;
 -- name: CreateMessage :one
 INSERT INTO messages (
     conversation_id, sender_id, kind, body,
-    attachment_name, attachment_stored, attachment_type, attachment_size)
+    attachment_name, attachment_stored, attachment_type, attachment_size,
+    reply_to_id, forwarded)
 VALUES (
     sqlc.arg(conversation_id), sqlc.narg(sender_id), sqlc.arg(kind), sqlc.arg(body),
     sqlc.arg(attachment_name), sqlc.arg(attachment_stored),
-    sqlc.arg(attachment_type), sqlc.arg(attachment_size))
+    sqlc.arg(attachment_type), sqlc.arg(attachment_size),
+    sqlc.narg(reply_to_id), sqlc.arg(forwarded))
 RETURNING *;
 
 -- name: GetMessageWithSender :one
-SELECT m.*, u.full_name AS sender_name, u.avatar AS sender_avatar
+SELECT m.*, u.full_name AS sender_name, u.avatar AS sender_avatar,
+       r.body AS reply_body, r.kind AS reply_kind,
+       ru.full_name AS reply_sender_name
 FROM messages m
 LEFT JOIN users u ON u.id = m.sender_id
+LEFT JOIN messages r ON r.id = m.reply_to_id
+LEFT JOIN users ru ON ru.id = r.sender_id
 WHERE m.id = $1;
 
 -- name: ListMessages :many
-SELECT m.*, u.full_name AS sender_name, u.avatar AS sender_avatar
+SELECT m.*, u.full_name AS sender_name, u.avatar AS sender_avatar,
+       r.body AS reply_body, r.kind AS reply_kind,
+       ru.full_name AS reply_sender_name
 FROM messages m
 LEFT JOIN users u ON u.id = m.sender_id
+LEFT JOIN messages r ON r.id = m.reply_to_id
+LEFT JOIN users ru ON ru.id = r.sender_id
 WHERE m.conversation_id = sqlc.arg(conversation_id)
 ORDER BY m.created_at DESC
 LIMIT sqlc.arg(lim) OFFSET sqlc.arg(off);
+
+-- name: ListPinnedMessages :many
+SELECT m.*, u.full_name AS sender_name, u.avatar AS sender_avatar,
+       r.body AS reply_body, r.kind AS reply_kind,
+       ru.full_name AS reply_sender_name
+FROM messages m
+LEFT JOIN users u ON u.id = m.sender_id
+LEFT JOIN messages r ON r.id = m.reply_to_id
+LEFT JOIN users ru ON ru.id = r.sender_id
+WHERE m.conversation_id = $1 AND m.pinned
+ORDER BY m.created_at DESC;
+
+-- name: SetMessagePinned :exec
+UPDATE messages SET pinned = $2 WHERE id = $1;
 
 -- name: MarkConversationRead :exec
 UPDATE conversation_members SET last_read_at = now()
@@ -106,6 +135,7 @@ SELECT
     c.id,
     c.type,
     c.name,
+    c.avatar,
     c.created_at,
     cm.last_read_at,
     COALESCE((SELECT m.body FROM messages m WHERE m.conversation_id = c.id

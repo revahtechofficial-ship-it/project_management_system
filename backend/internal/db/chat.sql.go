@@ -74,7 +74,7 @@ func (q *Queries) ConversationMemberIDs(ctx context.Context, conversationID int6
 const createConversation = `-- name: CreateConversation :one
 INSERT INTO conversations (type, name, created_by)
 VALUES ($1, $2, $3)
-RETURNING id, type, name, created_by, created_at
+RETURNING id, type, name, created_by, created_at, avatar
 `
 
 type CreateConversationParams struct {
@@ -92,6 +92,7 @@ func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversation
 		&i.Name,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.Avatar,
 	)
 	return i, err
 }
@@ -99,12 +100,14 @@ func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversation
 const createMessage = `-- name: CreateMessage :one
 INSERT INTO messages (
     conversation_id, sender_id, kind, body,
-    attachment_name, attachment_stored, attachment_type, attachment_size)
+    attachment_name, attachment_stored, attachment_type, attachment_size,
+    reply_to_id, forwarded)
 VALUES (
     $1, $2, $3, $4,
     $5, $6,
-    $7, $8)
-RETURNING id, conversation_id, sender_id, kind, body, attachment_name, attachment_stored, attachment_type, attachment_size, created_at, edited
+    $7, $8,
+    $9, $10)
+RETURNING id, conversation_id, sender_id, kind, body, attachment_name, attachment_stored, attachment_type, attachment_size, created_at, edited, reply_to_id, pinned, forwarded
 `
 
 type CreateMessageParams struct {
@@ -116,6 +119,8 @@ type CreateMessageParams struct {
 	AttachmentStored string `json:"attachment_stored"`
 	AttachmentType   string `json:"attachment_type"`
 	AttachmentSize   int64  `json:"attachment_size"`
+	ReplyToID        *int64 `json:"reply_to_id"`
+	Forwarded        bool   `json:"forwarded"`
 }
 
 func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error) {
@@ -128,6 +133,8 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 		arg.AttachmentStored,
 		arg.AttachmentType,
 		arg.AttachmentSize,
+		arg.ReplyToID,
+		arg.Forwarded,
 	)
 	var i Message
 	err := row.Scan(
@@ -142,6 +149,9 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 		&i.AttachmentSize,
 		&i.CreatedAt,
 		&i.Edited,
+		&i.ReplyToID,
+		&i.Pinned,
+		&i.Forwarded,
 	)
 	return i, err
 }
@@ -198,9 +208,13 @@ func (q *Queries) GetConversationMemberRole(ctx context.Context, arg GetConversa
 }
 
 const getMessageWithSender = `-- name: GetMessageWithSender :one
-SELECT m.id, m.conversation_id, m.sender_id, m.kind, m.body, m.attachment_name, m.attachment_stored, m.attachment_type, m.attachment_size, m.created_at, m.edited, u.full_name AS sender_name, u.avatar AS sender_avatar
+SELECT m.id, m.conversation_id, m.sender_id, m.kind, m.body, m.attachment_name, m.attachment_stored, m.attachment_type, m.attachment_size, m.created_at, m.edited, m.reply_to_id, m.pinned, m.forwarded, u.full_name AS sender_name, u.avatar AS sender_avatar,
+       r.body AS reply_body, r.kind AS reply_kind,
+       ru.full_name AS reply_sender_name
 FROM messages m
 LEFT JOIN users u ON u.id = m.sender_id
+LEFT JOIN messages r ON r.id = m.reply_to_id
+LEFT JOIN users ru ON ru.id = r.sender_id
 WHERE m.id = $1
 `
 
@@ -216,8 +230,14 @@ type GetMessageWithSenderRow struct {
 	AttachmentSize   int64     `json:"attachment_size"`
 	CreatedAt        time.Time `json:"created_at"`
 	Edited           bool      `json:"edited"`
+	ReplyToID        *int64    `json:"reply_to_id"`
+	Pinned           bool      `json:"pinned"`
+	Forwarded        bool      `json:"forwarded"`
 	SenderName       *string   `json:"sender_name"`
 	SenderAvatar     *string   `json:"sender_avatar"`
+	ReplyBody        *string   `json:"reply_body"`
+	ReplyKind        *string   `json:"reply_kind"`
+	ReplySenderName  *string   `json:"reply_sender_name"`
 }
 
 func (q *Queries) GetMessageWithSender(ctx context.Context, id int64) (GetMessageWithSenderRow, error) {
@@ -235,8 +255,14 @@ func (q *Queries) GetMessageWithSender(ctx context.Context, id int64) (GetMessag
 		&i.AttachmentSize,
 		&i.CreatedAt,
 		&i.Edited,
+		&i.ReplyToID,
+		&i.Pinned,
+		&i.Forwarded,
 		&i.SenderName,
 		&i.SenderAvatar,
+		&i.ReplyBody,
+		&i.ReplyKind,
+		&i.ReplySenderName,
 	)
 	return i, err
 }
@@ -262,7 +288,8 @@ func (q *Queries) HasReaction(ctx context.Context, arg HasReactionParams) (bool,
 }
 
 const listConversationMembers = `-- name: ListConversationMembers :many
-SELECT cm.user_id, cm.role, cm.joined_at, u.full_name, u.email, u.avatar
+SELECT cm.user_id, cm.role, cm.joined_at, cm.last_read_at,
+       u.full_name, u.email, u.avatar
 FROM conversation_members cm
 JOIN users u ON u.id = cm.user_id
 WHERE cm.conversation_id = $1
@@ -270,12 +297,13 @@ ORDER BY u.full_name
 `
 
 type ListConversationMembersRow struct {
-	UserID   int64     `json:"user_id"`
-	Role     string    `json:"role"`
-	JoinedAt time.Time `json:"joined_at"`
-	FullName string    `json:"full_name"`
-	Email    string    `json:"email"`
-	Avatar   string    `json:"avatar"`
+	UserID     int64              `json:"user_id"`
+	Role       string             `json:"role"`
+	JoinedAt   time.Time          `json:"joined_at"`
+	LastReadAt pgtype.Timestamptz `json:"last_read_at"`
+	FullName   string             `json:"full_name"`
+	Email      string             `json:"email"`
+	Avatar     string             `json:"avatar"`
 }
 
 func (q *Queries) ListConversationMembers(ctx context.Context, conversationID int64) ([]ListConversationMembersRow, error) {
@@ -291,6 +319,7 @@ func (q *Queries) ListConversationMembers(ctx context.Context, conversationID in
 			&i.UserID,
 			&i.Role,
 			&i.JoinedAt,
+			&i.LastReadAt,
 			&i.FullName,
 			&i.Email,
 			&i.Avatar,
@@ -310,6 +339,7 @@ SELECT
     c.id,
     c.type,
     c.name,
+    c.avatar,
     c.created_at,
     cm.last_read_at,
     COALESCE((SELECT m.body FROM messages m WHERE m.conversation_id = c.id
@@ -353,6 +383,7 @@ type ListConversationsForUserRow struct {
 	ID              int64              `json:"id"`
 	Type            string             `json:"type"`
 	Name            string             `json:"name"`
+	Avatar          string             `json:"avatar"`
 	CreatedAt       time.Time          `json:"created_at"`
 	LastReadAt      pgtype.Timestamptz `json:"last_read_at"`
 	LastBody        string             `json:"last_body"`
@@ -378,6 +409,7 @@ func (q *Queries) ListConversationsForUser(ctx context.Context, userID *int64) (
 			&i.ID,
 			&i.Type,
 			&i.Name,
+			&i.Avatar,
 			&i.CreatedAt,
 			&i.LastReadAt,
 			&i.LastBody,
@@ -400,9 +432,13 @@ func (q *Queries) ListConversationsForUser(ctx context.Context, userID *int64) (
 }
 
 const listMessages = `-- name: ListMessages :many
-SELECT m.id, m.conversation_id, m.sender_id, m.kind, m.body, m.attachment_name, m.attachment_stored, m.attachment_type, m.attachment_size, m.created_at, m.edited, u.full_name AS sender_name, u.avatar AS sender_avatar
+SELECT m.id, m.conversation_id, m.sender_id, m.kind, m.body, m.attachment_name, m.attachment_stored, m.attachment_type, m.attachment_size, m.created_at, m.edited, m.reply_to_id, m.pinned, m.forwarded, u.full_name AS sender_name, u.avatar AS sender_avatar,
+       r.body AS reply_body, r.kind AS reply_kind,
+       ru.full_name AS reply_sender_name
 FROM messages m
 LEFT JOIN users u ON u.id = m.sender_id
+LEFT JOIN messages r ON r.id = m.reply_to_id
+LEFT JOIN users ru ON ru.id = r.sender_id
 WHERE m.conversation_id = $1
 ORDER BY m.created_at DESC
 LIMIT $3 OFFSET $2
@@ -426,8 +462,14 @@ type ListMessagesRow struct {
 	AttachmentSize   int64     `json:"attachment_size"`
 	CreatedAt        time.Time `json:"created_at"`
 	Edited           bool      `json:"edited"`
+	ReplyToID        *int64    `json:"reply_to_id"`
+	Pinned           bool      `json:"pinned"`
+	Forwarded        bool      `json:"forwarded"`
 	SenderName       *string   `json:"sender_name"`
 	SenderAvatar     *string   `json:"sender_avatar"`
+	ReplyBody        *string   `json:"reply_body"`
+	ReplyKind        *string   `json:"reply_kind"`
+	ReplySenderName  *string   `json:"reply_sender_name"`
 }
 
 func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]ListMessagesRow, error) {
@@ -451,8 +493,88 @@ func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]L
 			&i.AttachmentSize,
 			&i.CreatedAt,
 			&i.Edited,
+			&i.ReplyToID,
+			&i.Pinned,
+			&i.Forwarded,
 			&i.SenderName,
 			&i.SenderAvatar,
+			&i.ReplyBody,
+			&i.ReplyKind,
+			&i.ReplySenderName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPinnedMessages = `-- name: ListPinnedMessages :many
+SELECT m.id, m.conversation_id, m.sender_id, m.kind, m.body, m.attachment_name, m.attachment_stored, m.attachment_type, m.attachment_size, m.created_at, m.edited, m.reply_to_id, m.pinned, m.forwarded, u.full_name AS sender_name, u.avatar AS sender_avatar,
+       r.body AS reply_body, r.kind AS reply_kind,
+       ru.full_name AS reply_sender_name
+FROM messages m
+LEFT JOIN users u ON u.id = m.sender_id
+LEFT JOIN messages r ON r.id = m.reply_to_id
+LEFT JOIN users ru ON ru.id = r.sender_id
+WHERE m.conversation_id = $1 AND m.pinned
+ORDER BY m.created_at DESC
+`
+
+type ListPinnedMessagesRow struct {
+	ID               int64     `json:"id"`
+	ConversationID   int64     `json:"conversation_id"`
+	SenderID         *int64    `json:"sender_id"`
+	Kind             string    `json:"kind"`
+	Body             string    `json:"body"`
+	AttachmentName   string    `json:"attachment_name"`
+	AttachmentStored string    `json:"attachment_stored"`
+	AttachmentType   string    `json:"attachment_type"`
+	AttachmentSize   int64     `json:"attachment_size"`
+	CreatedAt        time.Time `json:"created_at"`
+	Edited           bool      `json:"edited"`
+	ReplyToID        *int64    `json:"reply_to_id"`
+	Pinned           bool      `json:"pinned"`
+	Forwarded        bool      `json:"forwarded"`
+	SenderName       *string   `json:"sender_name"`
+	SenderAvatar     *string   `json:"sender_avatar"`
+	ReplyBody        *string   `json:"reply_body"`
+	ReplyKind        *string   `json:"reply_kind"`
+	ReplySenderName  *string   `json:"reply_sender_name"`
+}
+
+func (q *Queries) ListPinnedMessages(ctx context.Context, conversationID int64) ([]ListPinnedMessagesRow, error) {
+	rows, err := q.db.Query(ctx, listPinnedMessages, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPinnedMessagesRow{}
+	for rows.Next() {
+		var i ListPinnedMessagesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ConversationID,
+			&i.SenderID,
+			&i.Kind,
+			&i.Body,
+			&i.AttachmentName,
+			&i.AttachmentStored,
+			&i.AttachmentType,
+			&i.AttachmentSize,
+			&i.CreatedAt,
+			&i.Edited,
+			&i.ReplyToID,
+			&i.Pinned,
+			&i.Forwarded,
+			&i.SenderName,
+			&i.SenderAvatar,
+			&i.ReplyBody,
+			&i.ReplyKind,
+			&i.ReplySenderName,
 		); err != nil {
 			return nil, err
 		}
@@ -558,6 +680,35 @@ type RenameConversationParams struct {
 
 func (q *Queries) RenameConversation(ctx context.Context, arg RenameConversationParams) error {
 	_, err := q.db.Exec(ctx, renameConversation, arg.Name, arg.ID)
+	return err
+}
+
+const setConversationAvatar = `-- name: SetConversationAvatar :exec
+UPDATE conversations SET avatar = $1
+WHERE id = $2
+`
+
+type SetConversationAvatarParams struct {
+	Avatar string `json:"avatar"`
+	ID     int64  `json:"id"`
+}
+
+func (q *Queries) SetConversationAvatar(ctx context.Context, arg SetConversationAvatarParams) error {
+	_, err := q.db.Exec(ctx, setConversationAvatar, arg.Avatar, arg.ID)
+	return err
+}
+
+const setMessagePinned = `-- name: SetMessagePinned :exec
+UPDATE messages SET pinned = $2 WHERE id = $1
+`
+
+type SetMessagePinnedParams struct {
+	ID     int64 `json:"id"`
+	Pinned bool  `json:"pinned"`
+}
+
+func (q *Queries) SetMessagePinned(ctx context.Context, arg SetMessagePinnedParams) error {
+	_, err := q.db.Exec(ctx, setMessagePinned, arg.ID, arg.Pinned)
 	return err
 }
 

@@ -44,8 +44,8 @@ func (h *AvatarHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
-	if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
-		writeError(w, http.StatusBadRequest, errors.New("file too large (max 25MB)"))
+	if err := r.ParseMultipartForm(maxUploadMemory); err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("file too large (max 100MB)"))
 		return
 	}
 	file, header, err := r.FormFile("file")

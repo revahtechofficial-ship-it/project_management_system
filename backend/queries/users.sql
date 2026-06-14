@@ -23,6 +23,17 @@ SET avatar = $2, updated_at = now()
 WHERE id = $1
 RETURNING *;
 
+-- name: SetUserStatus :exec
+UPDATE users
+SET status = $2, status_message = $3, updated_at = now()
+WHERE id = $1;
+
+-- name: SetLastSeen :exec
+UPDATE users SET last_seen_at = now() WHERE id = $1;
+
+-- name: ListUserStatuses :many
+SELECT id, status, status_message, last_seen_at FROM users;
+
 -- name: CountUsers :one
 SELECT COUNT(*) FROM users;
 

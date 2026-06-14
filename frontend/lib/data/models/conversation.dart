@@ -6,6 +6,7 @@ class Conversation {
   final String name;
   final int? otherUserId;
   final String? otherAvatarUrl;
+  final String? groupAvatarUrl;
   final int unreadCount;
   final String lastBody;
   final String lastKind;
@@ -21,6 +22,7 @@ class Conversation {
     this.name = '',
     this.otherUserId,
     this.otherAvatarUrl,
+    this.groupAvatarUrl,
     this.unreadCount = 0,
     this.lastBody = '',
     this.lastKind = '',
@@ -44,6 +46,7 @@ class Conversation {
         name: name,
         otherUserId: otherUserId,
         otherAvatarUrl: otherAvatarUrl,
+        groupAvatarUrl: groupAvatarUrl,
         unreadCount: unreadCount ?? this.unreadCount,
         lastBody: lastBody,
         lastKind: lastKind,
@@ -56,6 +59,7 @@ class Conversation {
         name: json['name'] as String? ?? '',
         otherUserId: json['other_user_id'] as int?,
         otherAvatarUrl: json['other_avatar_url'] as String?,
+        groupAvatarUrl: json['group_avatar_url'] as String?,
         unreadCount: json['unread_count'] as int? ?? 0,
         lastBody: json['last_body'] as String? ?? '',
         lastKind: json['last_kind'] as String? ?? '',
@@ -70,6 +74,7 @@ class Conversation {
         'name': name,
         'other_user_id': otherUserId,
         'other_avatar_url': otherAvatarUrl,
+        'group_avatar_url': groupAvatarUrl,
         'unread_count': unreadCount,
         'last_body': lastBody,
         'last_kind': lastKind,
@@ -90,6 +95,7 @@ class Conversation {
           other.name == name &&
           other.otherUserId == otherUserId &&
           other.otherAvatarUrl == otherAvatarUrl &&
+          other.groupAvatarUrl == groupAvatarUrl &&
           other.unreadCount == unreadCount &&
           other.lastBody == lastBody &&
           other.lastKind == lastKind &&
@@ -99,5 +105,6 @@ class Conversation {
 
   @override
   int get hashCode => Object.hash(id, type, name, otherUserId, otherAvatarUrl,
-      unreadCount, lastBody, lastKind, lastAt, lastSenderId, createdAt);
+      groupAvatarUrl, unreadCount, lastBody, lastKind, lastAt, lastSenderId,
+      createdAt);
 }

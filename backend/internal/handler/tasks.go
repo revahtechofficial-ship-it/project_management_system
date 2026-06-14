@@ -51,6 +51,8 @@ func (h *TaskHandler) Routes() http.Handler {
 	r.Get("/{id}/activity", h.listActivity)
 	r.Get("/{id}/attachments", h.listAttachments)
 	r.Post("/{id}/attachments", h.uploadAttachment)
+	r.Get("/{id}/fields", h.listTaskFields)
+	r.Put("/{id}/fields/{fieldId}", h.setTaskField)
 	return r
 }
 

@@ -17,7 +17,10 @@ import (
 	"github.com/revah-tech/revahms/backend/internal/db"
 )
 
-const maxUploadBytes = 25 << 20 // 25 MiB
+const (
+	maxUploadBytes  = 100 << 20 // 100 MiB total per upload
+	maxUploadMemory = 16 << 20  // buffered in memory; the rest spills to a temp file
+)
 
 // attachmentResponse is the JSON shape exposed to clients — it deliberately
 // omits the on-disk stored_name.
@@ -53,9 +56,9 @@ func (h *TaskHandler) uploadAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes+(1<<20))
-	if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
+	if err := r.ParseMultipartForm(maxUploadMemory); err != nil {
 		writeError(w, http.StatusBadRequest,
-			errors.New("file too large (max 25 MB) or malformed upload"))
+			errors.New("file too large (max 100 MB) or malformed upload"))
 		return
 	}
 	file, header, err := r.FormFile("file")
@@ -66,7 +69,7 @@ func (h *TaskHandler) uploadAttachment(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 	if header.Size > maxUploadBytes {
 		writeError(w, http.StatusBadRequest,
-			errors.New("file too large (max 25 MB)"))
+			errors.New("file too large (max 100 MB)"))
 		return
 	}
 
