@@ -21,18 +21,36 @@ DNS, your **Gmail App Password** (already in your local `.env`), and optionally 
    Render reads [`render.yaml`](render.yaml) and provisions **revahms-db**
    (Postgres) + **revahms-backend** (the Go service).
 2. When prompted, fill the secret env vars (the `sync: false` ones):
-   - `SMTP_USER` = `revah.tech.official@gmail.com`
-   - `SMTP_PASS` = your Gmail App Password
-   - `SMTP_FROM` = `revah.tech.official@gmail.com`
+   - `RESEND_API_KEY` = your Resend API key (see **Email** below)
+   - `RESEND_FROM` = a sender on your verified domain, e.g. `noreply@yourdomain.com`
    - `CORS_ORIGIN` = leave blank for now (set it in step 4)
+   - `SMTP_*` = leave blank (Render free tier blocks SMTP; we use Resend)
    - `LIVEKIT_*` = leave blank unless you set up calls (see step 6)
 3. Deploy. Migrations run automatically on boot. When it's live, copy the URL,
    e.g. `https://revahms-backend.onrender.com`. Check `…/healthz` returns `ok`.
 
-> Notes: the blueprint uses the **starter** web plan so uploads persist on a
-> disk and the service doesn't sleep. The **free** plan has no disk (uploaded
-> files are lost on each redeploy) and sleeps when idle. The **free Postgres**
-> expires after ~30 days — upgrade for production.
+> **Email — why Resend, not SMTP.** Render's **free** tier blocks all outbound
+> SMTP ports (25/465/587) as of 2025-09-26, so neither Gmail nor a Hostinger
+> mailbox can be reached over SMTP. The backend therefore sends OTP email via
+> **Resend** over HTTPS. Setup (free, no card):
+> 1. Sign up at <https://resend.com> → **Domains ▸ Add Domain** → enter your
+>    domain (e.g. `yourdomain.com`).
+> 2. Resend shows a few DNS records (an `MX` + `TXT` SPF on a `send` subdomain,
+>    and a `TXT` DKIM key). Add them **exactly** in your DNS host's zone editor
+>    (Hostinger: **hPanel ▸ Domains ▸ DNS / Nameservers ▸ DNS Zone**). These sit
+>    alongside your existing mail records — they don't affect receiving mail.
+> 3. Wait for Resend to mark the domain **Verified** (minutes to a few hours).
+> 4. **API Keys ▸ Create API Key** → copy it into `RESEND_API_KEY` on Render.
+> 5. Set `RESEND_FROM` to any address on that domain (e.g. `noreply@yourdomain.com`).
+>
+> When `RESEND_API_KEY` is set it takes precedence over SMTP. With neither set,
+> the server logs OTP codes to stdout (dev mode). On a **paid** host that allows
+> SMTP, leave `RESEND_API_KEY` blank and fill `SMTP_HOST/USER/PASS/FROM` instead.
+
+> Notes: this blueprint uses the **free** plan — no disk (uploaded files reset on
+> each redeploy), the service sleeps when idle (~50s cold start), and the free
+> Postgres expires after ~30 days. For production, switch the plans to paid, add
+> a `disk:` block, and point `UPLOAD_DIR` at it.
 
 ## 2. Configure the frontend build (GitHub)
 

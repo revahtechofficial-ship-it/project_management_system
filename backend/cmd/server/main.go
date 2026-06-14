@@ -55,7 +55,7 @@ func main() {
 	reminder.Start(remCtx, queries, 30*time.Minute)
 
 	// Custom email/password auth: users in Postgres, app-issued JWT, OTP email.
-	mailer := email.NewSender(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.AppName)
+	mailer := email.NewSender(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.AppName, cfg.ResendAPIKey, cfg.ResendFrom)
 	appTokens := account.NewTokens(cfg.JWTSecret)
 	accountHandler := handler.NewAccountHandler(account.NewService(queries, appTokens, mailer))
 

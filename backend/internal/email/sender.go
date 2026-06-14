@@ -1,33 +1,55 @@
-// Package email sends transactional mail (OTP codes) over SMTP as a branded
-// multipart (HTML + plain-text) message. When SMTP is not configured it logs
-// the code instead, so the flow is testable in dev.
+// Package email sends transactional mail (OTP codes) as a branded multipart
+// (HTML + plain-text) message. It supports two transports:
+//
+//   - Resend (https://resend.com) over HTTPS — preferred, and required on hosts
+//     that block outbound SMTP ports (e.g. Render's free tier).
+//   - Raw SMTP — used when no Resend key is set but SMTP is configured.
+//
+// When neither is configured it logs the code instead, so the flow is testable
+// in dev.
 package email
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"net/smtp"
 	"strings"
+	"time"
 )
 
-// Sender sends OTP emails via SMTP.
+// resendEndpoint is Resend's transactional email API.
+const resendEndpoint = "https://api.resend.com/emails"
+
+// Sender sends OTP emails via Resend (HTTPS) or SMTP.
 type Sender struct {
 	host, port, user, pass, from, appName string
+	resendKey, resendFrom                 string
+	http                                  *http.Client
 }
 
-// NewSender builds a Sender. If host/from are empty, it runs in dev mode
-// (logs codes instead of sending).
-func NewSender(host, port, user, pass, from, appName string) *Sender {
+// NewSender builds a Sender. Transport selection at send time:
+//   - resendKey set        → Resend HTTPS API (from = resendFrom, else from).
+//   - else host & from set → SMTP.
+//   - else                 → dev mode (logs codes instead of sending).
+func NewSender(host, port, user, pass, from, appName, resendKey, resendFrom string) *Sender {
 	if port == "" {
 		port = "587"
 	}
 	if appName == "" {
 		appName = "Revah Management System"
 	}
-	return &Sender{host: host, port: port, user: user, pass: pass, from: from, appName: appName}
+	return &Sender{
+		host: host, port: port, user: user, pass: pass, from: from, appName: appName,
+		resendKey: resendKey, resendFrom: resendFrom,
+		http: &http.Client{Timeout: 15 * time.Second},
+	}
 }
 
-func (s *Sender) configured() bool { return s.host != "" && s.from != "" }
+func (s *Sender) smtpConfigured() bool { return s.host != "" && s.from != "" }
 
 // SendOTP delivers a 6-digit code for the given purpose ("signup" | "reset").
 func (s *Sender) SendOTP(to, code, purpose string) error {
@@ -53,18 +75,71 @@ func (s *Sender) SendOTP(to, code, purpose string) error {
 	)
 	html := s.htmlBody(headingText, intro, code)
 
-	if !s.configured() {
-		log.Printf("[email DEV] no SMTP configured — OTP for %s (%s): %s", to, purpose, code)
+	switch {
+	case s.resendKey != "":
+		return s.sendResend(to, subject, plain, html)
+	case s.smtpConfigured():
+		return s.sendSMTP(to, subject, plain, html)
+	default:
+		log.Printf("[email DEV] no email provider configured — OTP for %s (%s): %s", to, purpose, code)
 		return nil
 	}
+}
 
+// fromAddress is the verified sender for Resend (resendFrom, falling back to the
+// SMTP from address).
+func (s *Sender) fromAddress() string {
+	if s.resendFrom != "" {
+		return s.resendFrom
+	}
+	return s.from
+}
+
+// sendResend posts the message to Resend's HTTPS API (works where SMTP ports are
+// blocked).
+func (s *Sender) sendResend(to, subject, plain, html string) error {
+	payload := map[string]any{
+		"from":    fmt.Sprintf("%s <%s>", s.appName, s.fromAddress()),
+		"to":      []string{to},
+		"subject": subject,
+		"html":    html,
+		"text":    plain,
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest(http.MethodPost, resendEndpoint, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+s.resendKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.http.Do(req)
+	if err != nil {
+		log.Printf("[email] Resend request to %s failed: %v", to, err)
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		detail, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		log.Printf("[email] Resend send to %s failed: %d %s", to, resp.StatusCode, detail)
+		return fmt.Errorf("resend: unexpected status %d", resp.StatusCode)
+	}
+	log.Printf("[email] sent code to %s via Resend", to)
+	return nil
+}
+
+// sendSMTP delivers the message over SMTP (STARTTLS on port 587).
+func (s *Sender) sendSMTP(to, subject, plain, html string) error {
 	msg := s.mimeMessage(to, subject, plain, html)
 	auth := smtp.PlainAuth("", s.user, s.pass, s.host)
 	if err := smtp.SendMail(s.host+":"+s.port, auth, s.from, []string{to}, msg); err != nil {
 		log.Printf("[email] SMTP send to %s failed: %v", to, err)
 		return err
 	}
-	log.Printf("[email] sent %s code to %s", purpose, to)
+	log.Printf("[email] sent code to %s via SMTP", to)
 	return nil
 }
 

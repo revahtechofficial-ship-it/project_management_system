@@ -35,6 +35,13 @@ type Config struct {
 	SMTPPass string
 	SMTPFrom string
 
+	// Resend (https://resend.com) sends OTP email over HTTPS instead of SMTP.
+	// Preferred on hosts that block outbound SMTP ports (e.g. Render's free
+	// tier). When ResendAPIKey is set it takes precedence over SMTP. ResendFrom
+	// is the verified sender address, e.g. "noreply@yourdomain.com".
+	ResendAPIKey string
+	ResendFrom   string
+
 	// UploadDir is where task file attachments are stored on disk.
 	UploadDir string
 
@@ -66,6 +73,8 @@ func Load() Config {
 		SMTPUser:       getenv("SMTP_USER", ""),
 		SMTPPass:       getenv("SMTP_PASS", ""),
 		SMTPFrom:       getenv("SMTP_FROM", ""),
+		ResendAPIKey:   getenv("RESEND_API_KEY", ""),
+		ResendFrom:     getenv("RESEND_FROM", ""),
 		UploadDir:      getenv("UPLOAD_DIR", "./uploads"),
 		// Defaults match `livekit-server --dev` (devkey/secret on :7880).
 		LiveKitURL:       getenv("LIVEKIT_URL", "ws://localhost:7880"),

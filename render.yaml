@@ -50,9 +50,19 @@ services:
       # The browser origin of the deployed frontend (GitHub Pages / your domain).
       - key: CORS_ORIGIN
         sync: false
-      # OTP email (your Gmail App Password).
+      # OTP email. Render's free tier BLOCKS outbound SMTP ports (25/465/587),
+      # so email is sent via Resend's HTTPS API instead. Set these two:
+      #   RESEND_API_KEY – from https://resend.com (API Keys)
+      #   RESEND_FROM    – a sender on your Resend-verified domain,
+      #                    e.g. noreply@yourdomain.com
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      # SMTP fallback (used only if RESEND_API_KEY is unset — e.g. a paid host
+      # that permits outbound SMTP). Harmless to leave blank on Render free.
       - key: SMTP_HOST
-        value: smtp.gmail.com
+        sync: false
       - key: SMTP_PORT
         value: "587"
       - key: SMTP_USER
