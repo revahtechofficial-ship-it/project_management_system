@@ -1,0 +1,69 @@
+# Render Blueprint for the Revah Management System backend (Go BFF + Postgres).
+#
+# One-time setup:
+#   1. Push this file to GitHub.
+#   2. On https://dashboard.render.com → "New" → "Blueprint" → pick this repo.
+#   3. Render reads this file and provisions the database + web service.
+#   4. Fill in the secret env vars marked `sync: false` (SMTP, CORS_ORIGIN, etc.).
+#
+# Migrations run automatically on boot (goose, embedded in the binary), so the
+# database is set up on first deploy — no manual step.
+#
+# Plans: the web service is "starter" so it has a PERSISTENT DISK for uploads and
+# does not sleep. The "free" web plan has no disk (uploads would be lost on every
+# redeploy) and sleeps after inactivity. Free Postgres expires after ~30 days —
+# upgrade the DB plan for anything beyond a trial.
+
+databases:
+  - name: revahms-db
+    databaseName: revahms
+    user: revahms
+    plan: free # upgrade to a paid plan for production (free DB expires)
+
+services:
+  - type: web
+    name: revahms-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter # needs a paid plan for the persistent uploads disk below
+    healthCheckPath: /healthz
+    autoDeploy: true
+    disk:
+      name: uploads
+      mountPath: /var/uploads
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: revahms-db
+          property: connectionString
+      - key: PORT
+        value: "8080"
+      - key: UPLOAD_DIR
+        value: /var/uploads
+      - key: APP_NAME
+        value: Revah Management System
+      - key: JWT_SECRET
+        generateValue: true # Render creates a strong secret
+      # The browser origin of the deployed frontend (GitHub Pages / your domain).
+      - key: CORS_ORIGIN
+        sync: false
+      # OTP email (your Gmail App Password).
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      # Calls (optional) — leave blank to disable, or use LiveKit Cloud values.
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false

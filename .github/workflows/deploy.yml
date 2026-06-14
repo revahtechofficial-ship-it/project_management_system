@@ -1,0 +1,72 @@
+name: Deploy frontend to GitHub Pages
+
+# Builds the Flutter web app and publishes it to GitHub Pages.
+#
+# Required repo configuration (Settings → Secrets and variables → Actions):
+#   Variables:
+#     API_BASE_URL   – the deployed backend URL, e.g. https://revahms-backend.onrender.com
+#     CUSTOM_DOMAIN  – (optional) your Pages custom domain, e.g. app.yourdomain.com
+#     BASE_HREF      – (optional) "/" for a custom domain (default),
+#                       or "/project_management_system/" for the github.io project URL
+#   Secrets:
+#     GIPHY_API_KEY  – (optional) enables the GIF/sticker picker
+#
+# Also enable Pages once: Settings → Pages → Source = "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build web
+        run: >
+          flutter build web --release --no-tree-shake-icons
+          --base-href "${{ vars.BASE_HREF || '/' }}"
+          --dart-define=API_BASE_URL=${{ vars.API_BASE_URL }}
+          --dart-define=GIPHY_API_KEY=${{ secrets.GIPHY_API_KEY }}
+
+      - name: Add CNAME for custom domain
+        if: ${{ vars.CUSTOM_DOMAIN != '' }}
+        run: echo "${{ vars.CUSTOM_DOMAIN }}" > build/web/CNAME
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
