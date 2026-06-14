@@ -9,16 +9,20 @@
 # Migrations run automatically on boot (goose, embedded in the binary), so the
 # database is set up on first deploy — no manual step.
 #
-# Plans: the web service is "starter" so it has a PERSISTENT DISK for uploads and
-# does not sleep. The "free" web plan has no disk (uploads would be lost on every
-# redeploy) and sleeps after inactivity. Free Postgres expires after ~30 days —
-# upgrade the DB plan for anything beyond a trial.
+# FREE (no card) setup. Trade-offs to be aware of:
+#   * The web service SLEEPS after ~15 min idle; the next request cold-starts
+#     (~50s). The chat socket auto-reconnects after a wake.
+#   * There is no persistent disk, so uploaded files (chat media, avatars) are
+#     written to /tmp and RESET on every redeploy.
+#   * The free Postgres EXPIRES after ~30 days.
+# For production, switch both `plan: free` to a paid plan, add back a `disk:`
+# block on the web service, and set UPLOAD_DIR to the disk's mount path.
 
 databases:
   - name: revahms-db
     databaseName: revahms
     user: revahms
-    plan: free # upgrade to a paid plan for production (free DB expires)
+    plan: free # expires after ~30 days; upgrade for production
 
 services:
   - type: web
@@ -26,13 +30,9 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: starter # needs a paid plan for the persistent uploads disk below
+    plan: free
     healthCheckPath: /healthz
     autoDeploy: true
-    disk:
-      name: uploads
-      mountPath: /var/uploads
-      sizeGB: 1
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -40,8 +40,9 @@ services:
           property: connectionString
       - key: PORT
         value: "8080"
+      # /tmp is writable by the non-root container user (no disk on free plan).
       - key: UPLOAD_DIR
-        value: /var/uploads
+        value: /tmp/uploads
       - key: APP_NAME
         value: Revah Management System
       - key: JWT_SECRET
