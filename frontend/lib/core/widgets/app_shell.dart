@@ -161,11 +161,15 @@ class _Sidebar extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 24, 20, 20),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: RevahLogo(height: 30),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => context.go('/'),
+                    child: const RevahLogo(height: 30),
+                  ),
                 ),
               ),
               Expanded(
@@ -180,6 +184,7 @@ class _Sidebar extends ConsumerWidget {
               ),
               Divider(color: scheme.outlineVariant.withValues(alpha: 0.6)),
               ListTile(
+                onTap: () => context.push('/profile'),
                 leading: UserAvatar(
                     name: user?.name ?? '',
                     radius: 18,
@@ -188,6 +193,8 @@ class _Sidebar extends ConsumerWidget {
                     maxLines: 1, overflow: TextOverflow.ellipsis),
                 subtitle: Text(user?.email ?? '',
                     maxLines: 1, overflow: TextOverflow.ellipsis),
+                trailing: Icon(Icons.chevron_right,
+                    color: scheme.onSurfaceVariant),
               ),
               ListTile(
                 leading: const Icon(Icons.logout),
@@ -390,6 +397,8 @@ class _AvatarMenu extends ConsumerWidget {
             ref.read(authControllerProvider.notifier).logout();
           case 'status':
             showStatusPicker(context, ref);
+          case 'Profile':
+            context.push('/profile');
           default:
             context.go('/settings');
         }
