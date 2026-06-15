@@ -75,9 +75,28 @@ func (s *Service) VerifyEmail(ctx context.Context, em, code string) error {
 	return s.q.MarkEmailVerified(ctx, em)
 }
 
-// UpdateProfile changes the user's display name and returns the updated row.
-func (s *Service) UpdateProfile(ctx context.Context, userID int64, fullName string) (db.User, error) {
-	return s.q.UpdateUserName(ctx, db.UpdateUserNameParams{ID: userID, FullName: fullName})
+// ProfileInput carries the editable fields of a user's profile.
+type ProfileInput struct {
+	FullName   string
+	Phone      string
+	JobTitle   string
+	Department string
+	Location   string
+	Bio        string
+}
+
+// UpdateProfile saves the user's editable profile fields and returns the
+// updated row.
+func (s *Service) UpdateProfile(ctx context.Context, userID int64, p ProfileInput) (db.User, error) {
+	return s.q.UpdateUserProfile(ctx, db.UpdateUserProfileParams{
+		ID:         userID,
+		FullName:   p.FullName,
+		Phone:      p.Phone,
+		JobTitle:   p.JobTitle,
+		Department: p.Department,
+		Location:   p.Location,
+		Bio:        p.Bio,
+	})
 }
 
 // GetUser returns a user by id (used to surface fields not carried in the JWT,

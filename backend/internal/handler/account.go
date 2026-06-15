@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/revah-tech/revahms/backend/internal/account"
+	"github.com/revah-tech/revahms/backend/internal/db"
 )
 
 // AccountHandler serves the custom email/password auth endpoints.
@@ -20,6 +21,23 @@ func NewAccountHandler(svc *account.Service) *AccountHandler {
 }
 
 func normEmail(e string) string { return strings.ToLower(strings.TrimSpace(e)) }
+
+// userResponse is the JSON shape the client expects for the signed-in user,
+// used by login, /me, and the profile endpoints so every payload is identical.
+func userResponse(u db.User) map[string]any {
+	return map[string]any{
+		"id":         u.ID,
+		"email":      u.Email,
+		"name":       u.FullName,
+		"role":       u.Role,
+		"avatar_url": avatarURLPtr(u.Avatar),
+		"phone":      u.Phone,
+		"job_title":  u.JobTitle,
+		"department": u.Department,
+		"location":   u.Location,
+		"bio":        u.Bio,
+	}
+}
 
 func decode(r *http.Request, v any) error {
 	return json.NewDecoder(r.Body).Decode(v)
@@ -111,20 +129,23 @@ func (h *AccountHandler) Login(w http.ResponseWriter, r *http.Request) {
 		h.accountError(w, err)
 		return
 	}
-	var avatar *string
+	var user map[string]any
 	if u, uerr := h.svc.GetUser(r.Context(), claims.UserID); uerr == nil {
-		avatar = avatarURLPtr(u.Avatar)
+		user = userResponse(u)
+	} else {
+		user = claimsResponse(claims)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"token": token,
-		"user": map[string]any{
-			"id":         claims.UserID,
-			"email":      claims.Email,
-			"name":       claims.Name,
-			"role":       claims.Role,
-			"avatar_url": avatar,
-		},
-	})
+	writeJSON(w, http.StatusOK, map[string]any{"token": token, "user": user})
+}
+
+// claimsResponse is a minimal user payload built from the JWT when the full row
+// can't be loaded (keeps the same keys as userResponse for client safety).
+func claimsResponse(c account.Claims) map[string]any {
+	return map[string]any{
+		"id": c.UserID, "email": c.Email, "name": c.Name, "role": c.Role,
+		"avatar_url": nil, "phone": "", "job_title": "",
+		"department": "", "location": "", "bio": "",
+	}
 }
 
 type emailReq struct {
@@ -191,21 +212,24 @@ func (h *AccountHandler) Me(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, errors.New("not authenticated"))
 		return
 	}
-	var avatar *string
 	if u, uerr := h.svc.GetUser(r.Context(), claims.UserID); uerr == nil {
-		avatar = avatarURLPtr(u.Avatar)
+		writeJSON(w, http.StatusOK, userResponse(u))
+		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"id": claims.UserID, "email": claims.Email, "name": claims.Name,
-		"role": claims.Role, "avatar_url": avatar,
-	})
+	writeJSON(w, http.StatusOK, claimsResponse(claims))
 }
 
 type updateProfileReq struct {
-	FullName string `json:"full_name"`
+	FullName   string `json:"full_name"`
+	Phone      string `json:"phone"`
+	JobTitle   string `json:"job_title"`
+	Department string `json:"department"`
+	Location   string `json:"location"`
+	Bio        string `json:"bio"`
 }
 
-// UpdateProfile changes the authenticated user's display name (JWT-protected).
+// UpdateProfile saves the authenticated user's editable profile fields
+// (JWT-protected) and returns the refreshed user.
 func (h *AccountHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	claims, ok := account.FromContext(r.Context())
 	if !ok {
@@ -222,15 +246,19 @@ func (h *AccountHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, errors.New("name is required"))
 		return
 	}
-	u, err := h.svc.UpdateProfile(r.Context(), claims.UserID, name)
+	u, err := h.svc.UpdateProfile(r.Context(), claims.UserID, account.ProfileInput{
+		FullName:   name,
+		Phone:      strings.TrimSpace(b.Phone),
+		JobTitle:   strings.TrimSpace(b.JobTitle),
+		Department: strings.TrimSpace(b.Department),
+		Location:   strings.TrimSpace(b.Location),
+		Bio:        strings.TrimSpace(b.Bio),
+	})
 	if err != nil {
 		h.accountError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"id": u.ID, "email": u.Email, "name": u.FullName, "role": u.Role,
-		"avatar_url": avatarURLPtr(u.Avatar),
-	})
+	writeJSON(w, http.StatusOK, userResponse(u))
 }
 
 type changePasswordReq struct {

@@ -11,6 +11,7 @@ import '../../features/chat/chat_page.dart';
 import '../../features/dashboard/dashboard_page.dart';
 import '../../features/landing/landing_page.dart';
 import '../../features/notifications/notifications_page.dart';
+import '../../features/profile/profile_page.dart';
 import '../../features/projects/projects_page.dart';
 import '../../features/reports/reports_page.dart';
 import '../../features/settings/settings_page.dart';
@@ -80,6 +81,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
         builder: (c, s) =>
             LoginPage(notice: s.uri.queryParameters['notice']),
       ),
+      GoRoute(path: '/profile', builder: (c, s) => const ProfilePage()),
       GoRoute(path: '/signup', builder: (c, s) => const SignupPage()),
       GoRoute(
         path: '/verify-otp',

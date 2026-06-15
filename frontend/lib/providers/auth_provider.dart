@@ -44,11 +44,24 @@ class AuthController extends AsyncNotifier<AuthState> {
     state = const AsyncData<AuthState>(AuthState.signedOut());
   }
 
-  /// Updates the display name and refreshes the in-memory session.
-  Future<void> updateProfile({required String fullName}) async {
-    final AuthUser user = await ref
-        .read(authServiceProvider)
-        .updateProfile(fullName: fullName);
+  /// Saves the editable profile fields and refreshes the in-memory session.
+  Future<void> updateProfile({
+    required String fullName,
+    String phone = '',
+    String jobTitle = '',
+    String department = '',
+    String location = '',
+    String bio = '',
+  }) async {
+    final AuthUser user =
+        await ref.read(authServiceProvider).updateProfile(
+              fullName: fullName,
+              phone: phone,
+              jobTitle: jobTitle,
+              department: department,
+              location: location,
+              bio: bio,
+            );
     final AuthSession? current = state.asData?.value.session;
     if (current != null) {
       state = AsyncData<AuthState>(AuthState(

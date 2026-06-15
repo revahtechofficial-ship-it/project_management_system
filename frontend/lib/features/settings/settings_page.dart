@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/avatar_crop_dialog.dart';
@@ -16,7 +17,6 @@ import '../tasks/providers/custom_fields_providers.dart';
 import 'providers/settings_providers.dart';
 import 'widgets/change_password_dialog.dart';
 import 'widgets/custom_field_dialog.dart';
-import 'widgets/edit_profile_dialog.dart';
 
 /// Account and preference management. The theme selector and notification
 /// switches are fully wired and persisted.
@@ -127,7 +127,7 @@ class _ProfileCard extends ConsumerWidget {
           ),
           const SizedBox(width: 12),
           OutlinedButton(
-            onPressed: () => _editProfile(context, name),
+            onPressed: () => context.push('/profile'),
             child: const Text('Edit'),
           ),
         ],
@@ -164,18 +164,6 @@ class _ProfileCard extends ConsumerWidget {
     }
   }
 
-  Future<void> _editProfile(BuildContext context, String name) async {
-    final bool? saved = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) =>
-          EditProfileDialog(currentName: name),
-    );
-    if ((saved ?? false) && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated')),
-      );
-    }
-  }
 }
 
 class _AppearanceCard extends ConsumerWidget {

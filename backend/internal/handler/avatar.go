@@ -87,13 +87,7 @@ func (h *AvatarHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	if old.Avatar != "" && old.Avatar != stored {
 		_ = os.Remove(filepath.Join(h.dir, old.Avatar))
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"id":         u.ID,
-		"email":      u.Email,
-		"name":       u.FullName,
-		"role":       u.Role,
-		"avatar_url": avatarURLPtr(u.Avatar),
-	})
+	writeJSON(w, http.StatusOK, userResponse(u))
 }
 
 // Serve streams a profile photo by its stored name. Avatars are not sensitive,

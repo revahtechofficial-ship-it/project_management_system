@@ -9,6 +9,11 @@ class AuthUser {
   final String name;
   final MemberRole role;
   final String? avatarUrl;
+  final String phone;
+  final String jobTitle;
+  final String department;
+  final String location;
+  final String bio;
 
   const AuthUser({
     required this.id,
@@ -16,6 +21,11 @@ class AuthUser {
     this.name = '',
     this.role = MemberRole.member,
     this.avatarUrl,
+    this.phone = '',
+    this.jobTitle = '',
+    this.department = '',
+    this.location = '',
+    this.bio = '',
   });
 
   /// Whether this user may perform admin-only actions.
@@ -27,6 +37,11 @@ class AuthUser {
         name: json['name'] as String? ?? '',
         role: MemberRole.fromJson(json['role'] as String? ?? 'member'),
         avatarUrl: json['avatar_url'] as String?,
+        phone: json['phone'] as String? ?? '',
+        jobTitle: json['job_title'] as String? ?? '',
+        department: json['department'] as String? ?? '',
+        location: json['location'] as String? ?? '',
+        bio: json['bio'] as String? ?? '',
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -35,6 +50,11 @@ class AuthUser {
         'name': name,
         'role': role.toJson(),
         'avatar_url': avatarUrl,
+        'phone': phone,
+        'job_title': jobTitle,
+        'department': department,
+        'location': location,
+        'bio': bio,
       };
 
   @override
@@ -49,8 +69,14 @@ class AuthUser {
           other.email == email &&
           other.name == name &&
           other.role == role &&
-          other.avatarUrl == avatarUrl;
+          other.avatarUrl == avatarUrl &&
+          other.phone == phone &&
+          other.jobTitle == jobTitle &&
+          other.department == department &&
+          other.location == location &&
+          other.bio == bio;
 
   @override
-  int get hashCode => Object.hash(id, email, name, role, avatarUrl);
+  int get hashCode => Object.hash(id, email, name, role, avatarUrl, phone,
+      jobTitle, department, location, bio);
 }

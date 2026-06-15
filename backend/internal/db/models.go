@@ -185,4 +185,9 @@ type User struct {
 	Status        string             `json:"status"`
 	StatusMessage string             `json:"status_message"`
 	LastSeenAt    pgtype.Timestamptz `json:"last_seen_at"`
+	Phone         string             `json:"phone"`
+	JobTitle      string             `json:"job_title"`
+	Department    string             `json:"department"`
+	Location      string             `json:"location"`
+	Bio           string             `json:"bio"`
 }

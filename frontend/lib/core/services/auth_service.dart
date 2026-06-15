@@ -114,13 +114,27 @@ class AuthService {
         <String, dynamic>{'email': email, 'purpose': purpose});
   }
 
-  /// Updates the signed-in user's display name and re-persists it.
-  Future<AuthUser> updateProfile({required String fullName}) async {
+  /// Saves the signed-in user's editable profile fields and re-persists it.
+  Future<AuthUser> updateProfile({
+    required String fullName,
+    String phone = '',
+    String jobTitle = '',
+    String department = '',
+    String location = '',
+    String bio = '',
+  }) async {
     final String token = await _token();
     final Map<String, dynamic> data = await _send(
       'PATCH',
       '/api/v1/profile',
-      <String, dynamic>{'full_name': fullName},
+      <String, dynamic>{
+        'full_name': fullName,
+        'phone': phone,
+        'job_title': jobTitle,
+        'department': department,
+        'location': location,
+        'bio': bio,
+      },
       token,
     );
     final AuthUser user = AuthUser.fromJson(data);

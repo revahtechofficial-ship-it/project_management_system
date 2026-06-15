@@ -17,6 +17,18 @@ SET full_name = $2, updated_at = now()
 WHERE id = $1
 RETURNING *;
 
+-- name: UpdateUserProfile :one
+UPDATE users
+SET full_name  = $2,
+    phone      = $3,
+    job_title  = $4,
+    department = $5,
+    location   = $6,
+    bio        = $7,
+    updated_at = now()
+WHERE id = $1
+RETURNING *;
+
 -- name: SetUserAvatar :one
 UPDATE users
 SET avatar = $2, updated_at = now()
