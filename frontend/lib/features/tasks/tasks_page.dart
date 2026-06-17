@@ -299,6 +299,11 @@ class _TaskTile extends ConsumerWidget {
                   icon: Icons.checklist_rounded,
                   label: '${task.subtaskDoneCount}/${task.subtaskCount}',
                   color: AppColors.violet),
+            if (task.estimateLabel.isNotEmpty)
+              _Chip(
+                  icon: Icons.timer_outlined,
+                  label: task.estimateLabel,
+                  color: AppColors.sky),
             if (task.recurrence.repeats)
               _Chip(
                   icon: Icons.repeat,

@@ -46,6 +46,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
   TaskPriority _priority = TaskPriority.none;
   final TextEditingController _tagInput = TextEditingController();
   late List<String> _tags;
+  late final TextEditingController _estimate;
   bool _saving = false;
   String? _error;
 
@@ -69,6 +70,8 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
         : t.recurrence;
     _priority = t?.priority ?? TaskPriority.none;
     _tags = List<String>.of(t?.tags ?? const <String>[]);
+    final int est = t?.estimateMinutes ?? 0;
+    _estimate = TextEditingController(text: est > 0 ? _hoursLabel(est) : '');
   }
 
   @override
@@ -76,7 +79,23 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
     _title.dispose();
     _description.dispose();
     _tagInput.dispose();
+    _estimate.dispose();
     super.dispose();
+  }
+
+  /// Minutes → an editable hours string (e.g. 90 → "1.5", 60 → "1").
+  String _hoursLabel(int minutes) {
+    final double h = minutes / 60.0;
+    return h == h.roundToDouble() ? h.toInt().toString() : '$h';
+  }
+
+  /// Parses the hours field back into whole minutes (0 when blank/invalid).
+  int _estimateMinutes() {
+    final double? hours = double.tryParse(_estimate.text.trim());
+    if (hours == null || hours <= 0) {
+      return 0;
+    }
+    return (hours * 60).round();
   }
 
   void _addTag(String raw) {
@@ -117,6 +136,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           recurrence: _recurrence,
           priority: _priority,
           tags: _tags,
+          estimateMinutes: _estimateMinutes(),
         );
       } else {
         await repo.create(
@@ -130,6 +150,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           recurrence: _recurrence,
           priority: _priority,
           tags: _tags,
+          estimateMinutes: _estimateMinutes(),
         );
       }
       if (mounted) {
@@ -187,8 +208,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                   controller: _description,
                   minLines: 2,
                   maxLines: 4,
-                  decoration:
-                      const InputDecoration(labelText: 'Description'),
+                  decoration: const InputDecoration(labelText: 'Description'),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<TaskStatus>(
@@ -216,11 +236,12 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
                             Icon(
-                                p.isSet
-                                    ? Icons.flag_rounded
-                                    : Icons.outlined_flag,
-                                size: 16,
-                                color: p.color),
+                              p.isSet
+                                  ? Icons.flag_rounded
+                                  : Icons.outlined_flag,
+                              size: 16,
+                              color: p.color,
+                            ),
                             const SizedBox(width: 8),
                             Text(p.label),
                           ],
@@ -254,10 +275,11 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                   decoration: const InputDecoration(labelText: 'Project'),
                   items: <DropdownMenuItem<int?>>[
                     const DropdownMenuItem<int?>(
-                        value: null, child: Text('No project')),
+                      value: null,
+                      child: Text('No project'),
+                    ),
                     for (final Project p in projects)
-                      DropdownMenuItem<int?>(
-                          value: p.id, child: Text(p.name)),
+                      DropdownMenuItem<int?>(value: p.id, child: Text(p.name)),
                   ],
                   onChanged: (int? v) => setState(() => _projectId = v),
                 ),
@@ -267,12 +289,14 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                   decoration: const InputDecoration(labelText: 'Assignee'),
                   items: <DropdownMenuItem<int?>>[
                     const DropdownMenuItem<int?>(
-                        value: null, child: Text('Unassigned')),
+                      value: null,
+                      child: Text('Unassigned'),
+                    ),
                     for (final TeamMember m in members)
                       DropdownMenuItem<int?>(
-                          value: m.id,
-                          child:
-                              Text(m.name.isEmpty ? m.email : m.name)),
+                        value: m.id,
+                        child: Text(m.name.isEmpty ? m.email : m.name),
+                      ),
                   ],
                   onChanged: (int? v) => setState(() => _assigneeId = v),
                 ),
@@ -298,13 +322,38 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _estimate,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Estimate (hours)',
+                    hintText: 'e.g. 1.5',
+                    prefixIcon: Icon(Icons.timer_outlined, size: 20),
+                  ),
+                  validator: (String? v) {
+                    final String s = (v ?? '').trim();
+                    if (s.isEmpty) {
+                      return null;
+                    }
+                    final double? h = double.tryParse(s);
+                    return (h == null || h < 0)
+                        ? 'Enter hours, e.g. 1.5'
+                        : null;
+                  },
+                ),
                 const SizedBox(height: 16),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('Tags',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurfaceVariant)),
+                  child: Text(
+                    'Tags',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 if (_tags.isNotEmpty)
@@ -335,24 +384,26 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                   const SizedBox(height: 8),
                   const Divider(height: 1),
                   Theme(
-                    data: Theme.of(context)
-                        .copyWith(dividerColor: Colors.transparent),
+                    data: Theme.of(
+                      context,
+                    ).copyWith(dividerColor: Colors.transparent),
                     child: Column(
                       children: <Widget>[
                         _Expander(
                           title: 'Comments',
-                          child:
-                              TaskCommentsSection(taskId: widget.task!.id),
+                          child: TaskCommentsSection(taskId: widget.task!.id),
                         ),
                         _Expander(
                           title: 'Attachments',
                           child: TaskAttachmentsSection(
-                              taskId: widget.task!.id),
+                            taskId: widget.task!.id,
+                          ),
                         ),
                         _Expander(
                           title: 'Custom fields',
                           child: TaskCustomFieldsSection(
-                              taskId: widget.task!.id),
+                            taskId: widget.task!.id,
+                          ),
                         ),
                         _Expander(
                           title: 'Subtasks',
@@ -364,13 +415,11 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                         ),
                         _Expander(
                           title: 'Dependencies',
-                          child:
-                              _DependencySection(taskId: widget.task!.id),
+                          child: _DependencySection(taskId: widget.task!.id),
                         ),
                         _Expander(
                           title: 'Activity',
-                          child:
-                              TaskActivitySection(taskId: widget.task!.id),
+                          child: TaskActivitySection(taskId: widget.task!.id),
                         ),
                       ],
                     ),
@@ -380,8 +429,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                   const SizedBox(height: 10),
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(_error!,
-                        style: TextStyle(color: scheme.error)),
+                    child: Text(_error!, style: TextStyle(color: scheme.error)),
                   ),
                 ],
               ],
@@ -400,7 +448,8 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
               ? const SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2))
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : Text(_isEdit ? 'Save' : 'Create'),
         ),
       ],
@@ -459,9 +508,14 @@ class _TagChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text(tag,
-              style: TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+          Text(
+            tag,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
           const SizedBox(width: 4),
           InkWell(
             onTap: onRemove,
@@ -481,8 +535,7 @@ class _DependencySection extends ConsumerStatefulWidget {
   final int taskId;
 
   @override
-  ConsumerState<_DependencySection> createState() =>
-      _DependencySectionState();
+  ConsumerState<_DependencySection> createState() => _DependencySectionState();
 }
 
 class _DependencySectionState extends ConsumerState<_DependencySection> {
@@ -501,11 +554,9 @@ class _DependencySectionState extends ConsumerState<_DependencySection> {
       _error = null;
     });
     try {
-      await ref.read(dependenciesRepositoryProvider).create(
-            predecessorId: pred,
-            successorId: widget.taskId,
-            type: _type,
-          );
+      await ref
+          .read(dependenciesRepositoryProvider)
+          .create(predecessorId: pred, successorId: widget.taskId, type: _type);
       ref.invalidate(dependenciesProvider);
       ref.invalidate(tasksProvider);
       setState(() {
@@ -531,7 +582,7 @@ class _DependencySectionState extends ConsumerState<_DependencySection> {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final List<TaskDependency> deps =
         ref.watch(dependenciesProvider).asData?.value ??
-            const <TaskDependency>[];
+        const <TaskDependency>[];
     final List<Task> tasks =
         ref.watch(tasksProvider).asData?.value ?? const <Task>[];
     final Map<int, String> titleById = <int, String>{
@@ -540,8 +591,9 @@ class _DependencySectionState extends ConsumerState<_DependencySection> {
     final List<TaskDependency> preds = deps
         .where((TaskDependency d) => d.successorId == widget.taskId)
         .toList();
-    final Set<int> predIds =
-        preds.map((TaskDependency d) => d.predecessorId).toSet();
+    final Set<int> predIds = preds
+        .map((TaskDependency d) => d.predecessorId)
+        .toSet();
     final List<Task> candidates = tasks
         .where((Task t) => t.id != widget.taskId && !predIds.contains(t.id))
         .toList();
@@ -549,15 +601,19 @@ class _DependencySectionState extends ConsumerState<_DependencySection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text('Depends on',
-            style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurfaceVariant)),
+        Text(
+          'Depends on',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
         const SizedBox(height: 6),
         if (preds.isEmpty)
-          Text('Nothing yet',
-              style: TextStyle(
-                  fontSize: 13, color: scheme.onSurfaceVariant))
+          Text(
+            'Nothing yet',
+            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+          )
         else
           for (final TaskDependency d in preds)
             Padding(
@@ -627,7 +683,8 @@ class _DependencySectionState extends ConsumerState<_DependencySection> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.add),
               onPressed: (_predId == null || _busy) ? null : _add,
             ),
@@ -636,8 +693,10 @@ class _DependencySectionState extends ConsumerState<_DependencySection> {
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(_error!,
-                style: TextStyle(color: scheme.error, fontSize: 12)),
+            child: Text(
+              _error!,
+              style: TextStyle(color: scheme.error, fontSize: 12),
+            ),
           ),
       ],
     );
@@ -666,14 +725,17 @@ class _Expander extends StatelessWidget {
       tilePadding: EdgeInsets.zero,
       childrenPadding: const EdgeInsets.only(bottom: 10),
       expandedCrossAxisAlignment: CrossAxisAlignment.start,
-      title: Text(title,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
       children: <Widget>[child],
     );
   }
 }
 
-/// Manages a task's subtasks: quick-add, toggle done, delete. Persists
+/// Manages a task's subtasks as a nested tree: quick-add at the top, plus
+/// per-row toggle/delete and inline add-subtask at any depth. Persists
 /// immediately and refreshes the parent's rollup counts.
 class _SubtaskSection extends ConsumerStatefulWidget {
   const _SubtaskSection({required this.taskId});
@@ -717,50 +779,19 @@ class _SubtaskSectionState extends ConsumerState<_SubtaskSection> {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final List<Task> subs =
         ref.watch(subtasksProvider(widget.taskId)).asData?.value ??
-            const <Task>[];
+        const <Task>[];
     final int done = subs.where((Task t) => t.done).length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         if (subs.isNotEmpty)
-          Text('$done of ${subs.length} complete',
-              style: TextStyle(
-                  fontSize: 12, color: scheme.onSurfaceVariant)),
-        for (final Task sub in subs)
-          Row(
-            children: <Widget>[
-              SizedBox(
-                width: 30,
-                height: 30,
-                child: Checkbox(
-                  value: sub.done,
-                  onChanged: (bool? v) async {
-                    await ref
-                        .read(tasksRepositoryProvider)
-                        .setDone(sub.id, done: v ?? false);
-                    _refresh();
-                  },
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(sub.title,
-                    style: TextStyle(
-                        decoration:
-                            sub.done ? TextDecoration.lineThrough : null,
-                        color: sub.done ? scheme.onSurfaceVariant : null)),
-              ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.close, size: 16),
-                onPressed: () async {
-                  await ref.read(tasksRepositoryProvider).delete(sub.id);
-                  _refresh();
-                },
-              ),
-            ],
+          Text(
+            '$done of ${subs.length} complete',
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
           ),
+        for (final Task sub in subs)
+          _SubtaskTile(task: sub, depth: 0, onChanged: _refresh),
         Row(
           children: <Widget>[
             Expanded(
@@ -778,12 +809,172 @@ class _SubtaskSectionState extends ConsumerState<_SubtaskSection> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.add),
               onPressed: _busy ? null : _add,
             ),
           ],
         ),
+      ],
+    );
+  }
+}
+
+/// One subtask in the tree: a checkbox + title, a delete and (until the depth
+/// cap) an inline "add subtask", and its own children rendered indented below.
+class _SubtaskTile extends ConsumerStatefulWidget {
+  const _SubtaskTile({
+    required this.task,
+    required this.depth,
+    required this.onChanged,
+  });
+
+  final Task task;
+  final int depth;
+  final VoidCallback onChanged;
+
+  @override
+  ConsumerState<_SubtaskTile> createState() => _SubtaskTileState();
+}
+
+class _SubtaskTileState extends ConsumerState<_SubtaskTile> {
+  static const int _maxDepth = 5;
+  final TextEditingController _input = TextEditingController();
+  bool _adding = false;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggle(bool v) async {
+    await ref.read(tasksRepositoryProvider).setDone(widget.task.id, done: v);
+    widget.onChanged();
+  }
+
+  Future<void> _delete() async {
+    await ref.read(tasksRepositoryProvider).delete(widget.task.id);
+    widget.onChanged();
+  }
+
+  Future<void> _addChild() async {
+    final String title = _input.text.trim();
+    if (title.isEmpty) {
+      return;
+    }
+    setState(() => _busy = true);
+    await ref
+        .read(tasksRepositoryProvider)
+        .create(title: title, parentId: widget.task.id);
+    _input.clear();
+    setState(() {
+      _busy = false;
+      _adding = false;
+    });
+    ref.invalidate(subtasksProvider(widget.task.id));
+    widget.onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final bool canNest = widget.depth < _maxDepth;
+    final List<Task> children = canNest
+        ? (ref.watch(subtasksProvider(widget.task.id)).asData?.value ??
+              const <Task>[])
+        : const <Task>[];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            SizedBox(
+              width: 30,
+              height: 30,
+              child: Checkbox(
+                value: widget.task.done,
+                onChanged: (bool? v) => _toggle(v ?? false),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                widget.task.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  decoration: widget.task.done
+                      ? TextDecoration.lineThrough
+                      : null,
+                  color: widget.task.done ? scheme.onSurfaceVariant : null,
+                ),
+              ),
+            ),
+            if (canNest)
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Add subtask',
+                icon: const Icon(Icons.add, size: 16),
+                onPressed: () => setState(() => _adding = !_adding),
+              ),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.close, size: 16),
+              onPressed: _delete,
+            ),
+          ],
+        ),
+        if (_adding)
+          Padding(
+            padding: const EdgeInsets.only(left: 36, bottom: 4),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    controller: _input,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      hintText: 'Add a subtask',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _addChild(),
+                  ),
+                ),
+                IconButton(
+                  icon: _busy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check, size: 18),
+                  onPressed: _busy ? null : _addChild,
+                ),
+              ],
+            ),
+          ),
+        if (children.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                for (final Task child in children)
+                  _SubtaskTile(
+                    task: child,
+                    depth: widget.depth + 1,
+                    onChanged: () {
+                      ref.invalidate(subtasksProvider(widget.task.id));
+                      widget.onChanged();
+                    },
+                  ),
+              ],
+            ),
+          ),
       ],
     );
   }
@@ -795,8 +986,7 @@ class _ChecklistSection extends ConsumerStatefulWidget {
   final int taskId;
 
   @override
-  ConsumerState<_ChecklistSection> createState() =>
-      _ChecklistSectionState();
+  ConsumerState<_ChecklistSection> createState() => _ChecklistSectionState();
 }
 
 class _ChecklistSectionState extends ConsumerState<_ChecklistSection> {
@@ -817,9 +1007,7 @@ class _ChecklistSectionState extends ConsumerState<_ChecklistSection> {
       return;
     }
     setState(() => _busy = true);
-    await ref
-        .read(checklistRepositoryProvider)
-        .add(widget.taskId, content);
+    await ref.read(checklistRepositoryProvider).add(widget.taskId, content);
     _input.clear();
     setState(() => _busy = false);
     _refresh();
@@ -830,7 +1018,7 @@ class _ChecklistSectionState extends ConsumerState<_ChecklistSection> {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final List<ChecklistItem> items =
         ref.watch(checklistProvider(widget.taskId)).asData?.value ??
-            const <ChecklistItem>[];
+        const <ChecklistItem>[];
     final int done = items.where((ChecklistItem i) => i.done).length;
 
     return Column(
@@ -866,20 +1054,19 @@ class _ChecklistSectionState extends ConsumerState<_ChecklistSection> {
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: Text(item.content,
-                    style: TextStyle(
-                        decoration:
-                            item.done ? TextDecoration.lineThrough : null,
-                        color:
-                            item.done ? scheme.onSurfaceVariant : null)),
+                child: Text(
+                  item.content,
+                  style: TextStyle(
+                    decoration: item.done ? TextDecoration.lineThrough : null,
+                    color: item.done ? scheme.onSurfaceVariant : null,
+                  ),
+                ),
               ),
               IconButton(
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.close, size: 16),
                 onPressed: () async {
-                  await ref
-                      .read(checklistRepositoryProvider)
-                      .delete(item.id);
+                  await ref.read(checklistRepositoryProvider).delete(item.id);
                   _refresh();
                 },
               ),
@@ -902,7 +1089,8 @@ class _ChecklistSectionState extends ConsumerState<_ChecklistSection> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.add),
               onPressed: _busy ? null : _add,
             ),

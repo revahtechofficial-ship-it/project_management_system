@@ -80,27 +80,29 @@ type taskResponse struct {
 	BaselineDue      *time.Time `json:"baseline_due"`
 	Priority         string     `json:"priority"`
 	Tags             []string   `json:"tags"`
+	EstimateMinutes  int32      `json:"estimate_minutes"`
 }
 
 func taskFromModel(t db.Task) taskResponse {
 	return taskResponse{
-		ID:          t.ID,
-		Title:       t.Title,
-		Description: t.Description,
-		Done:        t.Done,
-		Status:      t.Status,
-		CreatedAt:   t.CreatedAt,
-		UpdatedAt:   t.UpdatedAt,
-		ProjectID:   t.ProjectID,
-		AssigneeID:  t.AssigneeID,
-		StartDate:     tsPtr(t.StartDate),
-		DueDate:       tsPtr(t.DueDate),
-		ParentID:      t.ParentID,
-		Recurrence:    t.Recurrence,
-		BaselineStart: tsPtr(t.BaselineStart),
-		BaselineDue:   tsPtr(t.BaselineDue),
-		Priority:      t.Priority,
-		Tags:          t.Tags,
+		ID:              t.ID,
+		Title:           t.Title,
+		Description:     t.Description,
+		Done:            t.Done,
+		Status:          t.Status,
+		CreatedAt:       t.CreatedAt,
+		UpdatedAt:       t.UpdatedAt,
+		ProjectID:       t.ProjectID,
+		AssigneeID:      t.AssigneeID,
+		StartDate:       tsPtr(t.StartDate),
+		DueDate:         tsPtr(t.DueDate),
+		ParentID:        t.ParentID,
+		Recurrence:      t.Recurrence,
+		BaselineStart:   tsPtr(t.BaselineStart),
+		BaselineDue:     tsPtr(t.BaselineDue),
+		Priority:        t.Priority,
+		Tags:            t.Tags,
+		EstimateMinutes: t.EstimateMinutes,
 	}
 }
 
@@ -127,7 +129,20 @@ func taskFromRow(r db.ListTasksRow) taskResponse {
 		BaselineDue:      tsPtr(r.BaselineDue),
 		Priority:         r.Priority,
 		Tags:             r.Tags,
+		EstimateMinutes:  r.EstimateMinutes,
 	}
+}
+
+// clampEstimate keeps the estimate non-negative and within a sane ceiling
+// (1000 hours), so a bad client value can't poison the column.
+func clampEstimate(m int32) int32 {
+	if m < 0 {
+		return 0
+	}
+	if m > 60000 {
+		return 60000
+	}
+	return m
 }
 
 func validPriority(s string) bool {
@@ -242,16 +257,17 @@ func (h *TaskHandler) spawnNext(ctx context.Context, t db.Task) {
 		return pgtype.Timestamptz{Time: addPeriod(ts.Time, t.Recurrence), Valid: true}
 	}
 	next, err := h.q.CreateTask(ctx, db.CreateTaskParams{
-		Title:       t.Title,
-		Description: t.Description,
-		ProjectID:   t.ProjectID,
-		AssigneeID:  t.AssigneeID,
-		StartDate:   shift(t.StartDate),
-		DueDate:     shift(t.DueDate),
-		Status:      "todo",
-		Recurrence:  t.Recurrence,
-		Priority:    t.Priority,
-		Tags:        t.Tags,
+		Title:           t.Title,
+		Description:     t.Description,
+		ProjectID:       t.ProjectID,
+		AssigneeID:      t.AssigneeID,
+		StartDate:       shift(t.StartDate),
+		DueDate:         shift(t.DueDate),
+		Status:          "todo",
+		Recurrence:      t.Recurrence,
+		Priority:        t.Priority,
+		Tags:            t.Tags,
+		EstimateMinutes: t.EstimateMinutes,
 	})
 	if err == nil && next.AssigneeID != nil {
 		notifyUser(ctx, h.q, *next.AssigneeID, "assigned",
@@ -281,17 +297,18 @@ func (h *TaskHandler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 type taskBody struct {
-	Title       string  `json:"title"`
-	Description string  `json:"description"`
-	ProjectID   *int64  `json:"project_id"`
-	AssigneeID  *int64  `json:"assignee_id"`
-	StartDate   *string `json:"start_date"`
-	DueDate     *string `json:"due_date"`
-	Status      string  `json:"status"`
-	ParentID    *int64   `json:"parent_id"`
-	Recurrence  string   `json:"recurrence"`
-	Priority    string   `json:"priority"`
-	Tags        []string `json:"tags"`
+	Title           string   `json:"title"`
+	Description     string   `json:"description"`
+	ProjectID       *int64   `json:"project_id"`
+	AssigneeID      *int64   `json:"assignee_id"`
+	StartDate       *string  `json:"start_date"`
+	DueDate         *string  `json:"due_date"`
+	Status          string   `json:"status"`
+	ParentID        *int64   `json:"parent_id"`
+	Recurrence      string   `json:"recurrence"`
+	Priority        string   `json:"priority"`
+	Tags            []string `json:"tags"`
+	EstimateMinutes int32    `json:"estimate_minutes"`
 }
 
 func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
@@ -325,17 +342,18 @@ func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	task, err := h.q.CreateTask(r.Context(), db.CreateTaskParams{
-		Title:       body.Title,
-		Description: body.Description,
-		ProjectID:   body.ProjectID,
-		AssigneeID:  body.AssigneeID,
-		StartDate:   start,
-		DueDate:     due,
-		Status:      status,
-		ParentID:    body.ParentID,
-		Recurrence:  recurrence,
-		Priority:    priority,
-		Tags:        sanitizeTags(body.Tags),
+		Title:           body.Title,
+		Description:     body.Description,
+		ProjectID:       body.ProjectID,
+		AssigneeID:      body.AssigneeID,
+		StartDate:       start,
+		DueDate:         due,
+		Status:          status,
+		ParentID:        body.ParentID,
+		Recurrence:      recurrence,
+		Priority:        priority,
+		Tags:            sanitizeTags(body.Tags),
+		EstimateMinutes: clampEstimate(body.EstimateMinutes),
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -385,17 +403,18 @@ func (h *TaskHandler) update(w http.ResponseWriter, r *http.Request) {
 	}
 	prior, _ := h.q.GetTask(r.Context(), id)
 	task, err := h.q.UpdateTask(r.Context(), db.UpdateTaskParams{
-		ID:          id,
-		Title:       body.Title,
-		Description: body.Description,
-		ProjectID:   body.ProjectID,
-		AssigneeID:  body.AssigneeID,
-		StartDate:   start,
-		DueDate:     due,
-		Status:      status,
-		Recurrence:  recurrence,
-		Priority:    priority,
-		Tags:        sanitizeTags(body.Tags),
+		ID:              id,
+		Title:           body.Title,
+		Description:     body.Description,
+		ProjectID:       body.ProjectID,
+		AssigneeID:      body.AssigneeID,
+		StartDate:       start,
+		DueDate:         due,
+		Status:          status,
+		Recurrence:      recurrence,
+		Priority:        priority,
+		Tags:            sanitizeTags(body.Tags),
+		EstimateMinutes: clampEstimate(body.EstimateMinutes),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, errors.New("task not found"))

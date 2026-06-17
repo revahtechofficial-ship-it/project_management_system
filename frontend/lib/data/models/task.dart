@@ -31,6 +31,7 @@ class Task {
   final DateTime? baselineDue;
   final TaskPriority priority;
   final List<String> tags;
+  final int estimateMinutes;
 
   const Task({
     required this.id,
@@ -54,73 +55,91 @@ class Task {
     this.baselineDue,
     this.priority = TaskPriority.none,
     this.tags = const <String>[],
+    this.estimateMinutes = 0,
   });
+
+  /// Human-readable estimate (e.g. "2h 30m", "45m"), or '' when unset.
+  String get estimateLabel {
+    if (estimateMinutes <= 0) {
+      return '';
+    }
+    final int h = estimateMinutes ~/ 60;
+    final int m = estimateMinutes % 60;
+    if (h > 0 && m > 0) {
+      return '${h}h ${m}m';
+    }
+    return h > 0 ? '${h}h' : '${m}m';
+  }
 
   /// Builds a [Task] from a decoded JSON map with snake_case keys.
   factory Task.fromJson(Map<String, dynamic> json) => Task(
-        id: json['id'] as int,
-        title: json['title'] as String? ?? '',
-        description: json['description'] as String? ?? '',
-        done: json['done'] as bool,
-        status: TaskStatus.fromJson(json['status'] as String? ?? 'todo'),
-        createdAt: DateTime.parse(json['created_at'] as String),
-        updatedAt: DateTime.parse(json['updated_at'] as String),
-        projectId: json['project_id'] as int?,
-        assigneeId: json['assignee_id'] as int?,
-        projectName: json['project_name'] as String?,
-        assigneeName: json['assignee_name'] as String?,
-        startDate: json['start_date'] == null
-            ? null
-            : DateTime.parse(json['start_date'] as String),
-        dueDate: json['due_date'] == null
-            ? null
-            : DateTime.parse(json['due_date'] as String),
-        parentId: json['parent_id'] as int?,
-        recurrence:
-            RecurrenceType.fromJson(json['recurrence'] as String? ?? 'none'),
-        subtaskCount: json['subtask_count'] as int? ?? 0,
-        subtaskDoneCount: json['subtask_done_count'] as int? ?? 0,
-        baselineStart: json['baseline_start'] == null
-            ? null
-            : DateTime.parse(json['baseline_start'] as String),
-        baselineDue: json['baseline_due'] == null
-            ? null
-            : DateTime.parse(json['baseline_due'] as String),
-        priority:
-            TaskPriority.fromJson(json['priority'] as String? ?? 'none'),
-        tags: (json['tags'] as List<dynamic>?)
-                ?.map((dynamic e) => e as String)
-                .toList(growable: false) ??
-            const <String>[],
-      );
+    id: json['id'] as int,
+    title: json['title'] as String? ?? '',
+    description: json['description'] as String? ?? '',
+    done: json['done'] as bool,
+    status: TaskStatus.fromJson(json['status'] as String? ?? 'todo'),
+    createdAt: DateTime.parse(json['created_at'] as String),
+    updatedAt: DateTime.parse(json['updated_at'] as String),
+    projectId: json['project_id'] as int?,
+    assigneeId: json['assignee_id'] as int?,
+    projectName: json['project_name'] as String?,
+    assigneeName: json['assignee_name'] as String?,
+    startDate: json['start_date'] == null
+        ? null
+        : DateTime.parse(json['start_date'] as String),
+    dueDate: json['due_date'] == null
+        ? null
+        : DateTime.parse(json['due_date'] as String),
+    parentId: json['parent_id'] as int?,
+    recurrence: RecurrenceType.fromJson(
+      json['recurrence'] as String? ?? 'none',
+    ),
+    subtaskCount: json['subtask_count'] as int? ?? 0,
+    subtaskDoneCount: json['subtask_done_count'] as int? ?? 0,
+    baselineStart: json['baseline_start'] == null
+        ? null
+        : DateTime.parse(json['baseline_start'] as String),
+    baselineDue: json['baseline_due'] == null
+        ? null
+        : DateTime.parse(json['baseline_due'] as String),
+    priority: TaskPriority.fromJson(json['priority'] as String? ?? 'none'),
+    tags:
+        (json['tags'] as List<dynamic>?)
+            ?.map((dynamic e) => e as String)
+            .toList(growable: false) ??
+        const <String>[],
+    estimateMinutes: json['estimate_minutes'] as int? ?? 0,
+  );
 
   /// Serializes this task to a JSON map with snake_case keys.
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'title': title,
-        'description': description,
-        'done': done,
-        'status': status.toJson(),
-        'created_at': createdAt.toIso8601String(),
-        'updated_at': updatedAt.toIso8601String(),
-        'project_id': projectId,
-        'assignee_id': assigneeId,
-        'project_name': projectName,
-        'assignee_name': assigneeName,
-        'start_date': startDate?.toIso8601String(),
-        'due_date': dueDate?.toIso8601String(),
-        'parent_id': parentId,
-        'recurrence': recurrence.toJson(),
-        'subtask_count': subtaskCount,
-        'subtask_done_count': subtaskDoneCount,
-        'baseline_start': baselineStart?.toIso8601String(),
-        'baseline_due': baselineDue?.toIso8601String(),
-        'priority': priority.toJson(),
-        'tags': tags,
-      };
+    'id': id,
+    'title': title,
+    'description': description,
+    'done': done,
+    'status': status.toJson(),
+    'created_at': createdAt.toIso8601String(),
+    'updated_at': updatedAt.toIso8601String(),
+    'project_id': projectId,
+    'assignee_id': assigneeId,
+    'project_name': projectName,
+    'assignee_name': assigneeName,
+    'start_date': startDate?.toIso8601String(),
+    'due_date': dueDate?.toIso8601String(),
+    'parent_id': parentId,
+    'recurrence': recurrence.toJson(),
+    'subtask_count': subtaskCount,
+    'subtask_done_count': subtaskDoneCount,
+    'baseline_start': baselineStart?.toIso8601String(),
+    'baseline_due': baselineDue?.toIso8601String(),
+    'priority': priority.toJson(),
+    'tags': tags,
+    'estimate_minutes': estimateMinutes,
+  };
 
   @override
-  String toString() => 'Task('
+  String toString() =>
+      'Task('
       'id: $id, '
       'title: $title, '
       'description: $description, '
@@ -155,30 +174,32 @@ class Task {
           other.baselineStart == baselineStart &&
           other.baselineDue == baselineDue &&
           other.priority == priority &&
+          other.estimateMinutes == estimateMinutes &&
           listEquals(other.tags, tags);
 
   @override
   int get hashCode => Object.hashAll(<Object?>[
-        id,
-        title,
-        description,
-        done,
-        status,
-        createdAt,
-        updatedAt,
-        projectId,
-        assigneeId,
-        projectName,
-        assigneeName,
-        startDate,
-        dueDate,
-        parentId,
-        recurrence,
-        subtaskCount,
-        subtaskDoneCount,
-        baselineStart,
-        baselineDue,
-        priority,
-        Object.hashAll(tags),
-      ]);
+    id,
+    title,
+    description,
+    done,
+    status,
+    createdAt,
+    updatedAt,
+    projectId,
+    assigneeId,
+    projectName,
+    assigneeName,
+    startDate,
+    dueDate,
+    parentId,
+    recurrence,
+    subtaskCount,
+    subtaskDoneCount,
+    baselineStart,
+    baselineDue,
+    priority,
+    estimateMinutes,
+    Object.hashAll(tags),
+  ]);
 }

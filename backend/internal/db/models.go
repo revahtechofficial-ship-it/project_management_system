@@ -138,24 +138,25 @@ type Project struct {
 }
 
 type Task struct {
-	ID            int64              `json:"id"`
-	Title         string             `json:"title"`
-	Description   string             `json:"description"`
-	Done          bool               `json:"done"`
-	CreatedAt     time.Time          `json:"created_at"`
-	UpdatedAt     time.Time          `json:"updated_at"`
-	ProjectID     *int64             `json:"project_id"`
-	AssigneeID    *int64             `json:"assignee_id"`
-	StartDate     pgtype.Timestamptz `json:"start_date"`
-	DueDate       pgtype.Timestamptz `json:"due_date"`
-	Status        string             `json:"status"`
-	ParentID      *int64             `json:"parent_id"`
-	Recurrence    string             `json:"recurrence"`
-	BaselineStart pgtype.Timestamptz `json:"baseline_start"`
-	BaselineDue   pgtype.Timestamptz `json:"baseline_due"`
-	Priority      string             `json:"priority"`
-	Tags          []string           `json:"tags"`
-	ReminderSent  bool               `json:"reminder_sent"`
+	ID              int64              `json:"id"`
+	Title           string             `json:"title"`
+	Description     string             `json:"description"`
+	Done            bool               `json:"done"`
+	CreatedAt       time.Time          `json:"created_at"`
+	UpdatedAt       time.Time          `json:"updated_at"`
+	ProjectID       *int64             `json:"project_id"`
+	AssigneeID      *int64             `json:"assignee_id"`
+	StartDate       pgtype.Timestamptz `json:"start_date"`
+	DueDate         pgtype.Timestamptz `json:"due_date"`
+	Status          string             `json:"status"`
+	ParentID        *int64             `json:"parent_id"`
+	Recurrence      string             `json:"recurrence"`
+	BaselineStart   pgtype.Timestamptz `json:"baseline_start"`
+	BaselineDue     pgtype.Timestamptz `json:"baseline_due"`
+	Priority        string             `json:"priority"`
+	Tags            []string           `json:"tags"`
+	ReminderSent    bool               `json:"reminder_sent"`
+	EstimateMinutes int32              `json:"estimate_minutes"`
 }
 
 type TaskDependency struct {
