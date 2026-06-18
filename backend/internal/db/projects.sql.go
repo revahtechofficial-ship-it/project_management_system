@@ -13,9 +13,9 @@ import (
 )
 
 const createProject = `-- name: CreateProject :one
-INSERT INTO projects (name, description, status, due_date, created_by)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, description, status, due_date, created_by, created_at, updated_at
+INSERT INTO projects (name, description, status, due_date, created_by, space_id, folder_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, name, description, status, due_date, created_by, created_at, updated_at, space_id, folder_id
 `
 
 type CreateProjectParams struct {
@@ -24,6 +24,8 @@ type CreateProjectParams struct {
 	Status      string             `json:"status"`
 	DueDate     pgtype.Timestamptz `json:"due_date"`
 	CreatedBy   *int64             `json:"created_by"`
+	SpaceID     *int64             `json:"space_id"`
+	FolderID    *int64             `json:"folder_id"`
 }
 
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error) {
@@ -33,6 +35,8 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		arg.Status,
 		arg.DueDate,
 		arg.CreatedBy,
+		arg.SpaceID,
+		arg.FolderID,
 	)
 	var i Project
 	err := row.Scan(
@@ -44,6 +48,8 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SpaceID,
+		&i.FolderID,
 	)
 	return i, err
 }
@@ -59,7 +65,7 @@ func (q *Queries) DeleteProject(ctx context.Context, id int64) error {
 }
 
 const getProject = `-- name: GetProject :one
-SELECT id, name, description, status, due_date, created_by, created_at, updated_at FROM projects
+SELECT id, name, description, status, due_date, created_by, created_at, updated_at, space_id, folder_id FROM projects
 WHERE id = $1
 `
 
@@ -75,12 +81,14 @@ func (q *Queries) GetProject(ctx context.Context, id int64) (Project, error) {
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SpaceID,
+		&i.FolderID,
 	)
 	return i, err
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT p.id, p.name, p.description, p.status, p.due_date, p.created_by, p.created_at, p.updated_at,
+SELECT p.id, p.name, p.description, p.status, p.due_date, p.created_by, p.created_at, p.updated_at, p.space_id, p.folder_id,
        COALESCE(c.total, 0)::int          AS total_tasks,
        COALESCE(c.done, 0)::int           AS done_tasks,
        COALESCE(m.member_names, '{}')::text[] AS member_names
@@ -112,6 +120,8 @@ type ListProjectsRow struct {
 	CreatedBy   *int64             `json:"created_by"`
 	CreatedAt   time.Time          `json:"created_at"`
 	UpdatedAt   time.Time          `json:"updated_at"`
+	SpaceID     *int64             `json:"space_id"`
+	FolderID    *int64             `json:"folder_id"`
 	TotalTasks  int32              `json:"total_tasks"`
 	DoneTasks   int32              `json:"done_tasks"`
 	MemberNames []string           `json:"member_names"`
@@ -135,6 +145,8 @@ func (q *Queries) ListProjects(ctx context.Context) ([]ListProjectsRow, error) {
 			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SpaceID,
+			&i.FolderID,
 			&i.TotalTasks,
 			&i.DoneTasks,
 			&i.MemberNames,
@@ -155,9 +167,11 @@ SET name        = $2,
     description = $3,
     status      = $4,
     due_date    = $5,
+    space_id    = $6,
+    folder_id   = $7,
     updated_at  = now()
 WHERE id = $1
-RETURNING id, name, description, status, due_date, created_by, created_at, updated_at
+RETURNING id, name, description, status, due_date, created_by, created_at, updated_at, space_id, folder_id
 `
 
 type UpdateProjectParams struct {
@@ -166,6 +180,8 @@ type UpdateProjectParams struct {
 	Description string             `json:"description"`
 	Status      string             `json:"status"`
 	DueDate     pgtype.Timestamptz `json:"due_date"`
+	SpaceID     *int64             `json:"space_id"`
+	FolderID    *int64             `json:"folder_id"`
 }
 
 func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error) {
@@ -175,6 +191,8 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		arg.Description,
 		arg.Status,
 		arg.DueDate,
+		arg.SpaceID,
+		arg.FolderID,
 	)
 	var i Project
 	err := row.Scan(
@@ -186,6 +204,8 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SpaceID,
+		&i.FolderID,
 	)
 	return i, err
 }

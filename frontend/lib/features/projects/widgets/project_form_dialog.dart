@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/date_format.dart';
 import '../../../data/enums/project_status.dart';
+import '../../../data/models/folder.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/project_template.dart';
+import '../../../data/models/space.dart';
 import '../providers/project_templates_providers.dart';
 import '../providers/projects_providers.dart';
+import '../providers/spaces_providers.dart';
 
 /// Create/edit dialog for a [Project]. Pops `true` on a successful save so the
 /// caller can refresh the list.
@@ -28,6 +31,8 @@ class _ProjectFormDialogState extends ConsumerState<ProjectFormDialog> {
   late final TextEditingController _description;
   late ProjectStatus _status;
   DateTime? _dueDate;
+  int? _spaceId;
+  int? _folderId;
   bool _saving = false;
   String? _error;
 
@@ -48,6 +53,8 @@ class _ProjectFormDialogState extends ConsumerState<ProjectFormDialog> {
               ? tmpl.status
               : ProjectStatus.active);
     _dueDate = p?.dueDate;
+    _spaceId = p?.spaceId;
+    _folderId = p?.folderId;
   }
 
   @override
@@ -74,6 +81,8 @@ class _ProjectFormDialogState extends ConsumerState<ProjectFormDialog> {
           description: _description.text.trim(),
           status: _status,
           dueDate: _dueDate,
+          spaceId: _spaceId,
+          folderId: _folderId,
         );
       } else {
         await repo.create(
@@ -81,6 +90,8 @@ class _ProjectFormDialogState extends ConsumerState<ProjectFormDialog> {
           description: _description.text.trim(),
           status: _status,
           dueDate: _dueDate,
+          spaceId: _spaceId,
+          folderId: _folderId,
         );
       }
       if (mounted) {
@@ -165,6 +176,12 @@ class _ProjectFormDialogState extends ConsumerState<ProjectFormDialog> {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final List<Space> spaces =
+        ref.watch(spacesProvider).asData?.value ?? const <Space>[];
+    final List<Folder> folders =
+        (ref.watch(foldersProvider).asData?.value ?? const <Folder>[])
+            .where((Folder f) => f.spaceId == _spaceId)
+            .toList(growable: false);
     return AlertDialog(
       title: Text(_isEdit ? 'Edit project' : 'New project'),
       content: SizedBox(
@@ -203,6 +220,49 @@ class _ProjectFormDialogState extends ConsumerState<ProjectFormDialog> {
                 onChanged: (ProjectStatus? v) =>
                     setState(() => _status = v ?? ProjectStatus.active),
               ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<int?>(
+                initialValue: spaces.any((Space s) => s.id == _spaceId)
+                    ? _spaceId
+                    : null,
+                decoration: const InputDecoration(
+                  labelText: 'Space',
+                  prefixIcon: Icon(Icons.workspaces_outline, size: 20),
+                ),
+                items: <DropdownMenuItem<int?>>[
+                  const DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text('No space'),
+                  ),
+                  for (final Space s in spaces)
+                    DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
+                ],
+                onChanged: (int? v) => setState(() {
+                  _spaceId = v;
+                  _folderId = null;
+                }),
+              ),
+              if (_spaceId != null) ...<Widget>[
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int?>(
+                  initialValue: folders.any((Folder f) => f.id == _folderId)
+                      ? _folderId
+                      : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Folder',
+                    prefixIcon: Icon(Icons.folder_outlined, size: 20),
+                  ),
+                  items: <DropdownMenuItem<int?>>[
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('No folder'),
+                    ),
+                    for (final Folder f in folders)
+                      DropdownMenuItem<int?>(value: f.id, child: Text(f.name)),
+                  ],
+                  onChanged: (int? v) => setState(() => _folderId = v),
+                ),
+              ],
               const SizedBox(height: 12),
               InkWell(
                 onTap: _pickDate,

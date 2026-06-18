@@ -26,8 +26,8 @@ SELECT * FROM projects
 WHERE id = $1;
 
 -- name: CreateProject :one
-INSERT INTO projects (name, description, status, due_date, created_by)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO projects (name, description, status, due_date, created_by, space_id, folder_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
 -- name: UpdateProject :one
@@ -36,6 +36,8 @@ SET name        = $2,
     description = $3,
     status      = $4,
     due_date    = $5,
+    space_id    = $6,
+    folder_id   = $7,
     updated_at  = now()
 WHERE id = $1
 RETURNING *;

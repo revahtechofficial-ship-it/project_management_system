@@ -13,8 +13,9 @@ class ProjectsRepository {
 
   /// Fetches all projects with aggregated task counts and members.
   Future<List<Project>> list() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/projects');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/projects',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => Project.fromJson(e as Map<String, dynamic>))
@@ -27,17 +28,21 @@ class ProjectsRepository {
     String description = '',
     ProjectStatus status = ProjectStatus.active,
     DateTime? dueDate,
+    int? spaceId,
+    int? folderId,
   }) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.post<Map<String, dynamic>>(
-      '/api/v1/projects',
-      data: <String, dynamic>{
-        'name': name,
-        'description': description,
-        'status': status.toJson(),
-        'due_date': _dateOnly(dueDate),
-      },
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/projects',
+          data: <String, dynamic>{
+            'name': name,
+            'description': description,
+            'status': status.toJson(),
+            'due_date': _dateOnly(dueDate),
+            'space_id': spaceId,
+            'folder_id': folderId,
+          },
+        );
     return _projectFrom(res);
   }
 
@@ -48,17 +53,21 @@ class ProjectsRepository {
     String description = '',
     ProjectStatus status = ProjectStatus.active,
     DateTime? dueDate,
+    int? spaceId,
+    int? folderId,
   }) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.put<Map<String, dynamic>>(
-      '/api/v1/projects/$id',
-      data: <String, dynamic>{
-        'name': name,
-        'description': description,
-        'status': status.toJson(),
-        'due_date': _dateOnly(dueDate),
-      },
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .put<Map<String, dynamic>>(
+          '/api/v1/projects/$id',
+          data: <String, dynamic>{
+            'name': name,
+            'description': description,
+            'status': status.toJson(),
+            'due_date': _dateOnly(dueDate),
+            'space_id': spaceId,
+            'folder_id': folderId,
+          },
+        );
     return _projectFrom(res);
   }
 

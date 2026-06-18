@@ -10,11 +10,14 @@ import '../../core/widgets/stat_card.dart';
 import '../../core/widgets/status_pill.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../data/enums/project_status.dart';
+import '../../data/models/folder.dart';
 import '../../data/models/project.dart';
 import '../../data/models/project_template.dart';
+import '../../data/models/space.dart';
 import '../../providers/auth_provider.dart';
 import 'providers/project_templates_providers.dart';
 import 'providers/projects_providers.dart';
+import 'providers/spaces_providers.dart';
 import 'widgets/project_form_dialog.dart';
 
 /// The projects board: delivery status, progress and team per project — all
@@ -47,6 +50,15 @@ class ProjectsPage extends ConsumerWidget {
               p.dueDate!.toLocal().isBefore(today),
         )
         .length;
+    final List<Space> spaces =
+        ref.watch(spacesProvider).asData?.value ?? const <Space>[];
+    final List<Folder> folders =
+        ref.watch(foldersProvider).asData?.value ?? const <Folder>[];
+    final bool isAdmin =
+        ref.watch(authControllerProvider).asData?.value.isAdmin ?? false;
+    final List<Project> uncategorized = projects
+        .where((Project p) => p.spaceId == null)
+        .toList(growable: false);
 
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -64,6 +76,12 @@ class ProjectsPage extends ConsumerWidget {
               onSelected: (ProjectTemplate t) =>
                   _openForm(context, ref, template: t),
             ),
+            if (isAdmin)
+              OutlinedButton.icon(
+                onPressed: () => _showSpaceDialog(context, ref, null),
+                icon: const Icon(Icons.create_new_folder_outlined, size: 18),
+                label: const Text('New space'),
+              ),
             FilledButton.icon(
               onPressed: () => _openForm(context, ref),
               icon: const Icon(Icons.add, size: 18),
@@ -118,31 +136,560 @@ class ProjectsPage extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 20),
-        if (projects.isEmpty && !projectsAsync.isLoading)
+        if (projects.isEmpty && spaces.isEmpty && !projectsAsync.isLoading)
           const EmptyState(
             icon: Icons.folder_off_rounded,
             message: 'No projects yet. Create your first one.',
           )
-        else
-          LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              final double w = constraints.maxWidth;
-              final int cols = w >= 1080 ? 3 : (w >= 680 ? 2 : 1);
-              const double gap = 16;
-              final double cardW = (w - gap * (cols - 1)) / cols;
-              return Wrap(
-                spacing: gap,
-                runSpacing: gap,
-                children: <Widget>[
-                  for (final Project project in projects)
-                    SizedBox(
-                      width: cardW,
-                      child: _ProjectCard(project: project),
-                    ),
-                ],
-              );
-            },
+        else ...<Widget>[
+          for (final Space space in spaces)
+            _SpaceSection(
+              space: space,
+              folders: folders
+                  .where((Folder f) => f.spaceId == space.id)
+                  .toList(growable: false),
+              projects: projects
+                  .where((Project p) => p.spaceId == space.id)
+                  .toList(growable: false),
+              isAdmin: isAdmin,
+            ),
+          if (uncategorized.isNotEmpty) ...<Widget>[
+            const _SectionLabel(
+              icon: Icons.inbox_outlined,
+              label: 'Uncategorized',
+            ),
+            const SizedBox(height: 12),
+            _ProjectGrid(projects: uncategorized),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+/// A muted section label with an icon, used for spaces / folders headings.
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({
+    required this.icon,
+    required this.label,
+    this.color,
+    this.trailing,
+  });
+  final IconData icon;
+  final String label;
+  final Color? color;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: <Widget>[
+        Icon(icon, size: 18, color: color ?? scheme.onSurfaceVariant),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        if (trailing != null) ...<Widget>[const Spacer(), trailing!],
+      ],
+    );
+  }
+}
+
+/// A responsive grid of project cards.
+class _ProjectGrid extends StatelessWidget {
+  const _ProjectGrid({required this.projects});
+  final List<Project> projects;
+
+  @override
+  Widget build(BuildContext context) {
+    if (projects.isEmpty) {
+      final ColorScheme scheme = Theme.of(context).colorScheme;
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Text(
+          'No projects here yet.',
+          style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+        ),
+      );
+    }
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double w = constraints.maxWidth;
+        final int cols = w >= 1080 ? 3 : (w >= 680 ? 2 : 1);
+        const double gap = 16;
+        final double cardW = (w - gap * (cols - 1)) / cols;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: <Widget>[
+            for (final Project project in projects)
+              SizedBox(
+                width: cardW,
+                child: _ProjectCard(project: project),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// A space heading with its folders and direct projects, plus admin actions.
+class _SpaceSection extends ConsumerWidget {
+  const _SpaceSection({
+    required this.space,
+    required this.folders,
+    required this.projects,
+    required this.isAdmin,
+  });
+
+  final Space space;
+  final List<Folder> folders;
+  final List<Project> projects;
+  final bool isAdmin;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final List<Project> direct = projects
+        .where((Project p) => p.folderId == null)
+        .toList();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          _SectionLabel(
+            icon: Icons.workspaces_outline,
+            label: space.name,
+            color: space.color,
+            trailing: isAdmin
+                ? PopupMenuButton<String>(
+                    tooltip: 'Space actions',
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.more_horiz, size: 20),
+                    onSelected: (String v) {
+                      switch (v) {
+                        case 'folder':
+                          _showFolderDialog(context, ref, space.id, null);
+                        case 'edit':
+                          _showSpaceDialog(context, ref, space);
+                        case 'delete':
+                          _deleteSpace(context, ref, space);
+                      }
+                    },
+                    itemBuilder: (BuildContext context) =>
+                        const <PopupMenuEntry<String>>[
+                          PopupMenuItem<String>(
+                            value: 'folder',
+                            child: Text('Add folder'),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'edit',
+                            child: Text('Rename / recolor'),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Text('Delete space'),
+                          ),
+                        ],
+                  )
+                : null,
           ),
+          const SizedBox(height: 12),
+          for (final Folder folder in folders) ...<Widget>[
+            _FolderHeader(folder: folder, isAdmin: isAdmin),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.only(left: 26),
+              child: _ProjectGrid(
+                projects: projects
+                    .where((Project p) => p.folderId == folder.id)
+                    .toList(growable: false),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          _ProjectGrid(projects: direct),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+}
+
+class _FolderHeader extends ConsumerWidget {
+  const _FolderHeader({required this.folder, required this.isAdmin});
+  final Folder folder;
+  final bool isAdmin;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.folder_outlined, size: 16, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Text(
+            folder.name,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          if (isAdmin)
+            PopupMenuButton<String>(
+              tooltip: 'Folder actions',
+              padding: EdgeInsets.zero,
+              icon: Icon(
+                Icons.more_horiz,
+                size: 18,
+                color: scheme.onSurfaceVariant,
+              ),
+              onSelected: (String v) {
+                if (v == 'edit') {
+                  _showFolderDialog(context, ref, folder.spaceId, folder);
+                } else if (v == 'delete') {
+                  _deleteFolder(context, ref, folder);
+                }
+              },
+              itemBuilder: (BuildContext context) =>
+                  const <PopupMenuEntry<String>>[
+                    PopupMenuItem<String>(value: 'edit', child: Text('Rename')),
+                    PopupMenuItem<String>(
+                      value: 'delete',
+                      child: Text('Delete'),
+                    ),
+                  ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+Future<void> _showSpaceDialog(
+  BuildContext context,
+  WidgetRef ref,
+  Space? space,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (BuildContext context) => _SpaceDialog(space: space),
+  );
+}
+
+Future<void> _showFolderDialog(
+  BuildContext context,
+  WidgetRef ref,
+  int spaceId,
+  Folder? folder,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (BuildContext context) =>
+        _FolderDialog(spaceId: spaceId, folder: folder),
+  );
+}
+
+Future<void> _deleteSpace(
+  BuildContext context,
+  WidgetRef ref,
+  Space space,
+) async {
+  final bool ok =
+      await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+          title: Text('Delete "${space.name}"?'),
+          content: const Text(
+            'Its folders are removed and its projects become '
+            'uncategorized. No projects are deleted.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.rose),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+  if (!ok) {
+    return;
+  }
+  await ref.read(spacesRepositoryProvider).deleteSpace(space.id);
+  ref.invalidate(spacesProvider);
+  ref.invalidate(foldersProvider);
+  ref.invalidate(projectsProvider);
+}
+
+Future<void> _deleteFolder(
+  BuildContext context,
+  WidgetRef ref,
+  Folder folder,
+) async {
+  final bool ok =
+      await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+          title: Text('Delete "${folder.name}"?'),
+          content: const Text(
+            'Its projects move directly into the space. None are deleted.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+  if (!ok) {
+    return;
+  }
+  await ref.read(spacesRepositoryProvider).deleteFolder(folder.id);
+  ref.invalidate(foldersProvider);
+  ref.invalidate(projectsProvider);
+}
+
+/// Add / edit a space: a name plus an accent color.
+class _SpaceDialog extends ConsumerStatefulWidget {
+  const _SpaceDialog({this.space});
+  final Space? space;
+
+  @override
+  ConsumerState<_SpaceDialog> createState() => _SpaceDialogState();
+}
+
+class _SpaceDialogState extends ConsumerState<_SpaceDialog> {
+  static const List<String> _palette = <String>[
+    '#6366f1',
+    '#0ea5e9',
+    '#14b8a6',
+    '#22c55e',
+    '#f59e0b',
+    '#ef4444',
+    '#ec4899',
+    '#8b5cf6',
+    '#64748b',
+    '#f97316',
+  ];
+
+  late final TextEditingController _name = TextEditingController(
+    text: widget.space?.name ?? '',
+  );
+  late String _color = widget.space?.colorHex ?? _palette.first;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final String name = _name.text.trim();
+    if (name.isEmpty) {
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final repo = ref.read(spacesRepositoryProvider);
+      if (widget.space != null) {
+        await repo.updateSpace(widget.space!.id, name: name, color: _color);
+      } else {
+        await repo.createSpace(name: name, color: _color);
+      }
+      ref.invalidate(spacesProvider);
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (_) {
+      setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return AlertDialog(
+      title: Text(widget.space == null ? 'New space' : 'Edit space'),
+      content: SizedBox(
+        width: 360,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            TextField(
+              controller: _name,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Name'),
+              onSubmitted: (_) => _save(),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Color',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: <Widget>[
+                for (final String hex in _palette)
+                  _Swatch(
+                    hex: hex,
+                    selected: hex == _color,
+                    onTap: () => setState(() => _color = hex),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+class _Swatch extends StatelessWidget {
+  const _Swatch({
+    required this.hex,
+    required this.selected,
+    required this.onTap,
+  });
+  final String hex;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = Space(id: 0, colorHex: hex).color;
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: selected ? scheme.onSurface : Colors.transparent,
+            width: 2.5,
+          ),
+        ),
+        child: selected
+            ? const Icon(Icons.check, size: 16, color: Colors.white)
+            : null,
+      ),
+    );
+  }
+}
+
+/// Add / rename a folder inside a space.
+class _FolderDialog extends ConsumerStatefulWidget {
+  const _FolderDialog({required this.spaceId, this.folder});
+  final int spaceId;
+  final Folder? folder;
+
+  @override
+  ConsumerState<_FolderDialog> createState() => _FolderDialogState();
+}
+
+class _FolderDialogState extends ConsumerState<_FolderDialog> {
+  late final TextEditingController _name = TextEditingController(
+    text: widget.folder?.name ?? '',
+  );
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final String name = _name.text.trim();
+    if (name.isEmpty) {
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final repo = ref.read(spacesRepositoryProvider);
+      if (widget.folder != null) {
+        await repo.updateFolder(widget.folder!.id, name: name);
+      } else {
+        await repo.createFolder(spaceId: widget.spaceId, name: name);
+      }
+      ref.invalidate(foldersProvider);
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (_) {
+      setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.folder == null ? 'New folder' : 'Rename folder'),
+      content: SizedBox(
+        width: 320,
+        child: TextField(
+          controller: _name,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Folder name'),
+          onSubmitted: (_) => _save(),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save'),
+        ),
       ],
     );
   }

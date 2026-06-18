@@ -73,6 +73,14 @@ type CustomField struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Folder struct {
+	ID        int64     `json:"id"`
+	SpaceID   int64     `json:"space_id"`
+	Name      string    `json:"name"`
+	Position  int32     `json:"position"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Message struct {
 	ID               int64     `json:"id"`
 	ConversationID   int64     `json:"conversation_id"`
@@ -135,6 +143,8 @@ type Project struct {
 	CreatedBy   *int64             `json:"created_by"`
 	CreatedAt   time.Time          `json:"created_at"`
 	UpdatedAt   time.Time          `json:"updated_at"`
+	SpaceID     *int64             `json:"space_id"`
+	FolderID    *int64             `json:"folder_id"`
 }
 
 type ProjectTemplate struct {
@@ -145,6 +155,15 @@ type ProjectTemplate struct {
 	Status      string    `json:"status"`
 	CreatedBy   *int64    `json:"created_by"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type Space struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	Color     string    `json:"color"`
+	Position  int32     `json:"position"`
+	CreatedBy *int64    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type Sprint struct {

@@ -44,6 +44,8 @@ type projectResponse struct {
 	TotalTasks  int32      `json:"total_tasks"`
 	DoneTasks   int32      `json:"done_tasks"`
 	MemberNames []string   `json:"member_names"`
+	SpaceID     *int64     `json:"space_id"`
+	FolderID    *int64     `json:"folder_id"`
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
@@ -57,6 +59,8 @@ func projectFromRow(r db.ListProjectsRow) projectResponse {
 		TotalTasks:  r.TotalTasks,
 		DoneTasks:   r.DoneTasks,
 		MemberNames: r.MemberNames,
+		SpaceID:     r.SpaceID,
+		FolderID:    r.FolderID,
 		CreatedAt:   r.CreatedAt,
 	}
 }
@@ -71,6 +75,8 @@ func projectFromModel(p db.Project) projectResponse {
 		TotalTasks:  0,
 		DoneTasks:   0,
 		MemberNames: []string{},
+		SpaceID:     p.SpaceID,
+		FolderID:    p.FolderID,
 		CreatedAt:   p.CreatedAt,
 	}
 }
@@ -93,6 +99,8 @@ type projectBody struct {
 	Description string  `json:"description"`
 	Status      string  `json:"status"`
 	DueDate     *string `json:"due_date"`
+	SpaceID     *int64  `json:"space_id"`
+	FolderID    *int64  `json:"folder_id"`
 }
 
 func (h *ProjectHandler) create(w http.ResponseWriter, r *http.Request) {
@@ -122,6 +130,8 @@ func (h *ProjectHandler) create(w http.ResponseWriter, r *http.Request) {
 		Status:      statusOrDefault(b.Status),
 		DueDate:     due,
 		CreatedBy:   createdBy,
+		SpaceID:     b.SpaceID,
+		FolderID:    b.FolderID,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -157,6 +167,8 @@ func (h *ProjectHandler) update(w http.ResponseWriter, r *http.Request) {
 		Description: b.Description,
 		Status:      statusOrDefault(b.Status),
 		DueDate:     due,
+		SpaceID:     b.SpaceID,
+		FolderID:    b.FolderID,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, errors.New("project not found"))
