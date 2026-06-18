@@ -15,6 +15,7 @@ import '../../features/profile/profile_page.dart';
 import '../../features/projects/projects_page.dart';
 import '../../features/reports/reports_page.dart';
 import '../../features/settings/settings_page.dart';
+import '../../features/sprints/sprints_page.dart';
 import '../../features/tasks/tasks_page.dart';
 import '../../features/team/team_page.dart';
 import '../../features/vikunja/vikunja_projects_page.dart';
@@ -35,15 +36,11 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
   final GoRouter router = GoRouter(
     initialLocation: '/',
     redirect: (context, state) {
-      final bool authed = ref
-              .read(authControllerProvider)
-              .asData
-              ?.value
-              .isAuthenticated ??
+      final bool authed =
+          ref.read(authControllerProvider).asData?.value.isAuthenticated ??
           false;
       final String loc = state.matchedLocation;
-      final bool isPublic =
-          loc == '/welcome' || _authPaths.contains(loc);
+      final bool isPublic = loc == '/welcome' || _authPaths.contains(loc);
       if (!authed) {
         // Signed-out visitors get the landing page as the front door.
         return isPublic ? null : '/welcome';
@@ -61,6 +58,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
         routes: <RouteBase>[
           GoRoute(path: '/', builder: (c, s) => const DashboardPage()),
           GoRoute(path: '/tasks', builder: (c, s) => const TasksPage()),
+          GoRoute(path: '/sprints', builder: (c, s) => const SprintsPage()),
           GoRoute(path: '/chat', builder: (c, s) => const ChatPage()),
           GoRoute(path: '/projects', builder: (c, s) => const ProjectsPage()),
           GoRoute(path: '/team', builder: (c, s) => const TeamPage()),
@@ -78,8 +76,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/login',
-        builder: (c, s) =>
-            LoginPage(notice: s.uri.queryParameters['notice']),
+        builder: (c, s) => LoginPage(notice: s.uri.queryParameters['notice']),
       ),
       GoRoute(path: '/profile', builder: (c, s) => const ProfilePage()),
       GoRoute(path: '/signup', builder: (c, s) => const SignupPage()),

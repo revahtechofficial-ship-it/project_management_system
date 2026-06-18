@@ -39,6 +39,7 @@ func (h *TaskHandler) Routes() http.Handler {
 	r.Put("/{id}", h.update)
 	r.Patch("/{id}", h.setDone)
 	r.Patch("/{id}/status", h.setStatus)
+	r.Patch("/{id}/sprint", h.setSprint)
 	r.Delete("/{id}", h.delete)
 	r.Get("/{id}/subtasks", h.listSubtasks)
 	r.Get("/{id}/checklist", h.listChecklist)
@@ -81,6 +82,8 @@ type taskResponse struct {
 	Priority         string     `json:"priority"`
 	Tags             []string   `json:"tags"`
 	EstimateMinutes  int32      `json:"estimate_minutes"`
+	SprintID         *int64     `json:"sprint_id"`
+	Points           int32      `json:"points"`
 	AssigneeIDs      []int64    `json:"assignee_ids"`
 	AssigneeNames    []string   `json:"assignee_names"`
 }
@@ -105,6 +108,8 @@ func taskFromModel(t db.Task) taskResponse {
 		Priority:        t.Priority,
 		Tags:            t.Tags,
 		EstimateMinutes: t.EstimateMinutes,
+		SprintID:        t.SprintID,
+		Points:          t.Points,
 		AssigneeIDs:     []int64{},
 		AssigneeNames:   []string{},
 	}
@@ -134,9 +139,22 @@ func taskFromRow(r db.ListTasksRow) taskResponse {
 		Priority:         r.Priority,
 		Tags:             r.Tags,
 		EstimateMinutes:  r.EstimateMinutes,
+		SprintID:         r.SprintID,
+		Points:           r.Points,
 		AssigneeIDs:      r.AssigneeIds,
 		AssigneeNames:    r.AssigneeNames,
 	}
+}
+
+// clampPoints keeps story points sane (0..1000).
+func clampPoints(p int32) int32 {
+	if p < 0 {
+		return 0
+	}
+	if p > 1000 {
+		return 1000
+	}
+	return p
 }
 
 // taskWithAssignees builds a single-task response and fills its full assignee
@@ -320,6 +338,8 @@ func (h *TaskHandler) spawnNext(ctx context.Context, t db.Task) {
 		Priority:        t.Priority,
 		Tags:            t.Tags,
 		EstimateMinutes: t.EstimateMinutes,
+		SprintID:        t.SprintID,
+		Points:          t.Points,
 	})
 	if err != nil {
 		return
@@ -363,6 +383,8 @@ type taskBody struct {
 	Priority        string   `json:"priority"`
 	Tags            []string `json:"tags"`
 	EstimateMinutes int32    `json:"estimate_minutes"`
+	SprintID        *int64   `json:"sprint_id"`
+	Points          int32    `json:"points"`
 }
 
 func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
@@ -409,6 +431,8 @@ func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
 		Priority:        priority,
 		Tags:            sanitizeTags(body.Tags),
 		EstimateMinutes: clampEstimate(body.EstimateMinutes),
+		SprintID:        body.SprintID,
+		Points:          clampPoints(body.Points),
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -478,6 +502,8 @@ func (h *TaskHandler) update(w http.ResponseWriter, r *http.Request) {
 		Priority:        priority,
 		Tags:            sanitizeTags(body.Tags),
 		EstimateMinutes: clampEstimate(body.EstimateMinutes),
+		SprintID:        body.SprintID,
+		Points:          clampPoints(body.Points),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, errors.New("task not found"))
@@ -604,6 +630,41 @@ func (h *TaskHandler) setStatus(w http.ResponseWriter, r *http.Request) {
 		logActivity(r.Context(), h.q, id, "completed", "")
 	} else {
 		logActivity(r.Context(), h.q, id, "status", body.Status)
+	}
+	writeJSON(w, http.StatusOK, h.taskWithAssignees(r.Context(), task))
+}
+
+type setSprintBody struct {
+	SprintID *int64 `json:"sprint_id"`
+}
+
+// setSprint moves a task into a sprint (or back to the backlog when null) —
+// the lightweight call used by sprint planning.
+func (h *TaskHandler) setSprint(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	var b setSprintBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if err := h.q.SetTaskSprint(r.Context(), db.SetTaskSprintParams{
+		ID: id, SprintID: b.SprintID,
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	task, err := h.q.GetTask(r.Context(), id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, errors.New("task not found"))
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
 	}
 	writeJSON(w, http.StatusOK, h.taskWithAssignees(r.Context(), task))
 }

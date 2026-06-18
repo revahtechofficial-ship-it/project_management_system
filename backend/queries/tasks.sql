@@ -81,8 +81,8 @@ SET baseline_start = start_date,
     updated_at     = now();
 
 -- name: CreateTask :one
-INSERT INTO tasks (title, description, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, priority, tags, estimate_minutes)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+INSERT INTO tasks (title, description, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, priority, tags, estimate_minutes, sprint_id, points)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 RETURNING *;
 
 -- name: UpdateTask :one
@@ -98,11 +98,18 @@ SET title       = $2,
     priority    = $10,
     tags        = $11,
     estimate_minutes = $12,
+    sprint_id   = $13,
+    points      = $14,
     done        = ($8 = 'done'),
     reminder_sent = FALSE,
     updated_at  = now()
 WHERE id = $1
 RETURNING *;
+
+-- name: SetTaskSprint :exec
+UPDATE tasks
+SET sprint_id = sqlc.narg(sprint_id), updated_at = now()
+WHERE id = $1;
 
 -- name: SetTaskStatus :one
 UPDATE tasks

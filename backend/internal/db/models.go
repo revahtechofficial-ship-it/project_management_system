@@ -147,6 +147,17 @@ type ProjectTemplate struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type Sprint struct {
+	ID        int64              `json:"id"`
+	Name      string             `json:"name"`
+	Goal      string             `json:"goal"`
+	Status    string             `json:"status"`
+	StartDate pgtype.Timestamptz `json:"start_date"`
+	EndDate   pgtype.Timestamptz `json:"end_date"`
+	CreatedBy *int64             `json:"created_by"`
+	CreatedAt time.Time          `json:"created_at"`
+}
+
 type Task struct {
 	ID              int64              `json:"id"`
 	Title           string             `json:"title"`
@@ -167,6 +178,8 @@ type Task struct {
 	Tags            []string           `json:"tags"`
 	ReminderSent    bool               `json:"reminder_sent"`
 	EstimateMinutes int32              `json:"estimate_minutes"`
+	SprintID        *int64             `json:"sprint_id"`
+	Points          int32              `json:"points"`
 }
 
 type TaskAssignee struct {

@@ -27,6 +27,7 @@ class _NavItem {
 const List<_NavItem> _navItems = <_NavItem>[
   _NavItem(Icons.dashboard_outlined, 'Dashboard', '/'),
   _NavItem(Icons.check_circle_outline, 'Tasks', '/tasks'),
+  _NavItem(Icons.directions_run, 'Sprints', '/sprints'),
   _NavItem(Icons.chat_bubble_outline, 'Chat', '/chat'),
   _NavItem(Icons.folder_outlined, 'Projects', '/projects'),
   _NavItem(Icons.groups_outlined, 'Team', '/team'),
@@ -49,15 +50,20 @@ class AppShell extends ConsumerWidget {
 
     // Ring an incoming-call prompt anywhere in the app when another member
     // starts a call.
-    ref.listen<AsyncValue<Map<String, dynamic>>>(chatEventsProvider,
-        (AsyncValue<Map<String, dynamic>>? prev,
-            AsyncValue<Map<String, dynamic>> next) {
+    ref.listen<AsyncValue<Map<String, dynamic>>>(chatEventsProvider, (
+      AsyncValue<Map<String, dynamic>>? prev,
+      AsyncValue<Map<String, dynamic>> next,
+    ) {
       next.whenData((Map<String, dynamic> e) {
         if (e['type'] != 'call') {
           return;
         }
-        final int? myId =
-            ref.read(authControllerProvider).asData?.value.user?.id;
+        final int? myId = ref
+            .read(authControllerProvider)
+            .asData
+            ?.value
+            .user
+            ?.id;
         if (e['from_id'] != myId) {
           showIncomingCall(context, ref, e);
         }
@@ -87,10 +93,9 @@ class AppShell extends ConsumerWidget {
             backgroundColor: Colors.transparent,
             extendBodyBehindAppBar: true,
             appBar: AppBar(
-              backgroundColor: Theme.of(context)
-                  .colorScheme
-                  .surface
-                  .withValues(alpha: 0.55),
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.surface.withValues(alpha: 0.55),
               title: const Text('Revah Management System'),
               actions: const <Widget>[
                 _SearchButton(iconOnly: true),
@@ -108,10 +113,10 @@ class AppShell extends ConsumerWidget {
     // Ctrl/Cmd+K opens the global search command palette anywhere in the app.
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.keyK, control: true):
-            () => showCommandPalette(context, ref),
-        const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
-            () => showCommandPalette(context, ref),
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
+            showCommandPalette(context, ref),
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
+            showCommandPalette(context, ref),
       },
       child: Focus(autofocus: true, child: scaffold),
     );
@@ -133,8 +138,7 @@ class _Chrome extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color:
-                scheme.surface.withValues(alpha: dark ? 0.45 : 0.6),
+            color: scheme.surface.withValues(alpha: dark ? 0.45 : 0.6),
             border: border,
           ),
           child: child,
@@ -177,8 +181,7 @@ class _Sidebar extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   children: <Widget>[
                     for (final _NavItem item in _navItems)
-                      _NavTile(
-                          item: item, selected: location == item.location),
+                      _NavTile(item: item, selected: location == item.location),
                   ],
                 ),
               ),
@@ -186,21 +189,29 @@ class _Sidebar extends ConsumerWidget {
               ListTile(
                 onTap: () => context.push('/profile'),
                 leading: UserAvatar(
-                    name: user?.name ?? '',
-                    radius: 18,
-                    imageUrl: user?.avatarUrl),
-                title: Text(user?.name ?? 'User',
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text(user?.email ?? '',
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-                trailing: Icon(Icons.chevron_right,
-                    color: scheme.onSurfaceVariant),
+                  name: user?.name ?? '',
+                  radius: 18,
+                  imageUrl: user?.avatarUrl,
+                ),
+                title: Text(
+                  user?.name ?? 'User',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  user?.email ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
               ListTile(
                 leading: const Icon(Icons.logout),
                 title: const Text('Sign out'),
-                onTap: () =>
-                    ref.read(authControllerProvider.notifier).logout(),
+                onTap: () => ref.read(authControllerProvider.notifier).logout(),
               ),
               const SizedBox(height: 8),
             ],
@@ -242,23 +253,20 @@ class _NavTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             onTap: () => context.go(item.location),
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
               child: Row(
                 children: <Widget>[
-                  Icon(item.icon,
-                      size: 20,
-                      color: selected
-                          ? Colors.white
-                          : scheme.onSurfaceVariant),
+                  Icon(
+                    item.icon,
+                    size: 20,
+                    color: selected ? Colors.white : scheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 12),
                   Text(
                     item.label,
                     style: TextStyle(
-                      fontWeight:
-                          selected ? FontWeight.w700 : FontWeight.w500,
-                      color:
-                          selected ? Colors.white : scheme.onSurface,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: selected ? Colors.white : scheme.onSurface,
                     ),
                   ),
                 ],
@@ -331,8 +339,7 @@ class _SearchButton extends ConsumerWidget {
             children: <Widget>[
               Icon(Icons.search, size: 18, color: scheme.onSurfaceVariant),
               const SizedBox(width: 8),
-              Text('Search…',
-                  style: TextStyle(color: scheme.onSurfaceVariant)),
+              Text('Search…', style: TextStyle(color: scheme.onSurfaceVariant)),
               const Spacer(),
               _KbdHint(scheme: scheme),
             ],
@@ -355,11 +362,14 @@ class _KbdHint extends StatelessWidget {
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(5),
       ),
-      child: Text('Ctrl K',
-          style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant)),
+      child: Text(
+        'Ctrl K',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: scheme.onSurfaceVariant,
+        ),
+      ),
     );
   }
 }
@@ -405,9 +415,9 @@ class _AvatarMenu extends ConsumerWidget {
       },
       itemBuilder: (BuildContext context) => const <PopupMenuEntry<String>>[
         PopupMenuItem<String>(
-            value: 'status',
-            child: ListTile(
-                leading: Icon(Icons.mood), title: Text('Set status'))),
+          value: 'status',
+          child: ListTile(leading: Icon(Icons.mood), title: Text('Set status')),
+        ),
         PopupMenuItem<String>(value: 'Profile', child: Text('Profile')),
         PopupMenuItem<String>(value: 'Settings', child: Text('Settings')),
         PopupMenuDivider(),
@@ -416,7 +426,10 @@ class _AvatarMenu extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: UserAvatar(
-            name: user?.name ?? '', radius: 17, imageUrl: user?.avatarUrl),
+          name: user?.name ?? '',
+          radius: 17,
+          imageUrl: user?.avatarUrl,
+        ),
       ),
     );
   }

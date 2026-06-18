@@ -9,12 +9,14 @@ import '../../../data/enums/recurrence_type.dart';
 import '../../../data/enums/task_priority.dart';
 import '../../../data/models/checklist_item.dart';
 import '../../../data/models/project.dart';
+import '../../../data/models/sprint.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_dependency.dart';
 import '../../../data/models/task_template.dart';
 import '../../../data/models/team_member.dart';
 import '../../../data/models/workflow_status.dart';
 import '../../projects/providers/projects_providers.dart';
+import '../../sprints/providers/sprints_providers.dart';
 import '../../team/providers/team_providers.dart';
 import '../providers/dependencies_providers.dart';
 import '../providers/statuses_providers.dart';
@@ -53,6 +55,8 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
   final TextEditingController _tagInput = TextEditingController();
   late List<String> _tags;
   late final TextEditingController _estimate;
+  late final TextEditingController _points;
+  int? _sprintId;
   bool _saving = false;
   String? _error;
 
@@ -84,6 +88,15 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
     _tags = List<String>.of(t?.tags ?? tmpl?.tags ?? const <String>[]);
     final int est = t?.estimateMinutes ?? tmpl?.estimateMinutes ?? 0;
     _estimate = TextEditingController(text: est > 0 ? _hoursLabel(est) : '');
+    _sprintId = t?.sprintId;
+    final int pts = t?.points ?? 0;
+    _points = TextEditingController(text: pts > 0 ? '$pts' : '');
+  }
+
+  /// Parses the story-points field (0 when blank/invalid).
+  int _pointsValue() {
+    final int? p = int.tryParse(_points.text.trim());
+    return (p == null || p < 0) ? 0 : p;
   }
 
   @override
@@ -92,6 +105,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
     _description.dispose();
     _tagInput.dispose();
     _estimate.dispose();
+    _points.dispose();
     super.dispose();
   }
 
@@ -159,6 +173,8 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           priority: _priority,
           tags: _tags,
           estimateMinutes: _estimateMinutes(),
+          points: _pointsValue(),
+          sprintId: _sprintId,
         );
       } else {
         await repo.create(
@@ -173,6 +189,8 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           priority: _priority,
           tags: _tags,
           estimateMinutes: _estimateMinutes(),
+          points: _pointsValue(),
+          sprintId: _sprintId,
         );
       }
       if (mounted) {
@@ -272,6 +290,8 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
     final List<WorkflowStatus> statuses = loadedStatuses.isEmpty
         ? WorkflowStatus.defaults
         : loadedStatuses;
+    final List<Sprint> sprints =
+        ref.watch(sprintsProvider).asData?.value ?? const <Sprint>[];
 
     return AlertDialog(
       title: Text(_isEdit ? 'Edit task' : 'New task'),
@@ -378,6 +398,25 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                   ],
                   onChanged: (RecurrenceType? v) =>
                       setState(() => _recurrence = v ?? RecurrenceType.none),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int?>(
+                  initialValue: sprints.any((Sprint s) => s.id == _sprintId)
+                      ? _sprintId
+                      : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Sprint',
+                    prefixIcon: Icon(Icons.directions_run, size: 20),
+                  ),
+                  items: <DropdownMenuItem<int?>>[
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('Backlog (no sprint)'),
+                    ),
+                    for (final Sprint s in sprints)
+                      DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
+                  ],
+                  onChanged: (int? v) => setState(() => _sprintId = v),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int?>(
@@ -492,26 +531,50 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: _estimate,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Estimate (hours)',
-                    hintText: 'e.g. 1.5',
-                    prefixIcon: Icon(Icons.timer_outlined, size: 20),
-                  ),
-                  validator: (String? v) {
-                    final String s = (v ?? '').trim();
-                    if (s.isEmpty) {
-                      return null;
-                    }
-                    final double? h = double.tryParse(s);
-                    return (h == null || h < 0)
-                        ? 'Enter hours, e.g. 1.5'
-                        : null;
-                  },
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: TextFormField(
+                        controller: _estimate,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Estimate (hours)',
+                          hintText: 'e.g. 1.5',
+                          prefixIcon: Icon(Icons.timer_outlined, size: 20),
+                        ),
+                        validator: (String? v) {
+                          final String s = (v ?? '').trim();
+                          if (s.isEmpty) {
+                            return null;
+                          }
+                          final double? h = double.tryParse(s);
+                          return (h == null || h < 0) ? 'Enter hours' : null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _points,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Points',
+                          hintText: 'e.g. 5',
+                          prefixIcon: Icon(Icons.bolt_outlined, size: 20),
+                        ),
+                        validator: (String? v) {
+                          final String s = (v ?? '').trim();
+                          if (s.isEmpty) {
+                            return null;
+                          }
+                          final int? p = int.tryParse(s);
+                          return (p == null || p < 0) ? 'Whole number' : null;
+                        },
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Align(

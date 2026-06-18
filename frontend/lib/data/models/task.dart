@@ -33,6 +33,8 @@ class Task {
   final TaskPriority priority;
   final List<String> tags;
   final int estimateMinutes;
+  final int? sprintId;
+  final int points;
   final List<int> assigneeIds;
   final List<String> assigneeNames;
 
@@ -60,6 +62,8 @@ class Task {
     this.priority = TaskPriority.none,
     this.tags = const <String>[],
     this.estimateMinutes = 0,
+    this.sprintId,
+    this.points = 0,
     this.assigneeIds = const <int>[],
     this.assigneeNames = const <String>[],
   });
@@ -127,6 +131,8 @@ class Task {
             .toList(growable: false) ??
         const <String>[],
     estimateMinutes: json['estimate_minutes'] as int? ?? 0,
+    sprintId: json['sprint_id'] as int?,
+    points: json['points'] as int? ?? 0,
     assigneeIds:
         (json['assignee_ids'] as List<dynamic>?)
             ?.map((dynamic e) => (e as num).toInt())
@@ -163,6 +169,8 @@ class Task {
     'priority': priority.toJson(),
     'tags': tags,
     'estimate_minutes': estimateMinutes,
+    'sprint_id': sprintId,
+    'points': points,
     'assignee_ids': assigneeIds,
     'assignee_names': assigneeNames,
   };
@@ -206,6 +214,8 @@ class Task {
           other.baselineDue == baselineDue &&
           other.priority == priority &&
           other.estimateMinutes == estimateMinutes &&
+          other.sprintId == sprintId &&
+          other.points == points &&
           listEquals(other.assigneeIds, assigneeIds) &&
           listEquals(other.assigneeNames, assigneeNames) &&
           listEquals(other.tags, tags);
@@ -234,6 +244,8 @@ class Task {
     baselineDue,
     priority,
     estimateMinutes,
+    sprintId,
+    points,
     Object.hashAll(assigneeIds),
     Object.hashAll(assigneeNames),
     Object.hashAll(tags),

@@ -59,7 +59,7 @@ func (q *Queries) SearchProjects(ctx context.Context, arg SearchProjectsParams) 
 }
 
 const searchTasks = `-- name: SearchTasks :many
-SELECT t.id, t.title, t.description, t.done, t.created_at, t.updated_at, t.project_id, t.assignee_id, t.start_date, t.due_date, t.status, t.parent_id, t.recurrence, t.baseline_start, t.baseline_due, t.priority, t.tags, t.reminder_sent, t.estimate_minutes,
+SELECT t.id, t.title, t.description, t.done, t.created_at, t.updated_at, t.project_id, t.assignee_id, t.start_date, t.due_date, t.status, t.parent_id, t.recurrence, t.baseline_start, t.baseline_due, t.priority, t.tags, t.reminder_sent, t.estimate_minutes, t.sprint_id, t.points,
        p.name      AS project_name,
        u.full_name AS assignee_name,
        COALESCE(st.total, 0)::int AS subtask_count,
@@ -115,6 +115,8 @@ type SearchTasksRow struct {
 	Tags             []string           `json:"tags"`
 	ReminderSent     bool               `json:"reminder_sent"`
 	EstimateMinutes  int32              `json:"estimate_minutes"`
+	SprintID         *int64             `json:"sprint_id"`
+	Points           int32              `json:"points"`
 	ProjectName      *string            `json:"project_name"`
 	AssigneeName     *string            `json:"assignee_name"`
 	SubtaskCount     int32              `json:"subtask_count"`
@@ -152,6 +154,8 @@ func (q *Queries) SearchTasks(ctx context.Context, arg SearchTasksParams) ([]Sea
 			&i.Tags,
 			&i.ReminderSent,
 			&i.EstimateMinutes,
+			&i.SprintID,
+			&i.Points,
 			&i.ProjectName,
 			&i.AssigneeName,
 			&i.SubtaskCount,

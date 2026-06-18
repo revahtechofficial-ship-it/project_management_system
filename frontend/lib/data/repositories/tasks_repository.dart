@@ -40,6 +40,8 @@ class TasksRepository {
     List<String> tags = const <String>[],
     int estimateMinutes = 0,
     List<int>? assigneeIds,
+    int? sprintId,
+    int points = 0,
   }) async {
     final Response<Map<String, dynamic>> res = await _dio
         .post<Map<String, dynamic>>(
@@ -58,6 +60,8 @@ class TasksRepository {
             'priority': priority.toJson(),
             'tags': tags,
             'estimate_minutes': estimateMinutes,
+            'sprint_id': sprintId,
+            'points': points,
           },
         );
     return _taskFrom(res);
@@ -79,6 +83,8 @@ class TasksRepository {
     List<String> tags = const <String>[],
     int estimateMinutes = 0,
     List<int>? assigneeIds,
+    int? sprintId,
+    int points = 0,
   }) async {
     final Response<Map<String, dynamic>> res = await _dio
         .put<Map<String, dynamic>>(
@@ -96,6 +102,8 @@ class TasksRepository {
             'priority': priority.toJson(),
             'tags': tags,
             'estimate_minutes': estimateMinutes,
+            'sprint_id': sprintId,
+            'points': points,
           },
         );
     return _taskFrom(res);
@@ -130,6 +138,17 @@ class TasksRepository {
         .patch<Map<String, dynamic>>(
           '/api/v1/tasks/$id/status',
           data: <String, dynamic>{'status': statusKey},
+        );
+    return _taskFrom(res);
+  }
+
+  /// Moves a task into a sprint (or back to the backlog when [sprintId] is
+  /// null) without a full update — used by sprint planning.
+  Future<Task> setSprint(int id, int? sprintId) async {
+    final Response<Map<String, dynamic>> res = await _dio
+        .patch<Map<String, dynamic>>(
+          '/api/v1/tasks/$id/sprint',
+          data: <String, dynamic>{'sprint_id': sprintId},
         );
     return _taskFrom(res);
   }

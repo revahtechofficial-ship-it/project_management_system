@@ -334,6 +334,12 @@ class _TaskTile extends ConsumerWidget {
                 label: task.estimateLabel,
                 color: AppColors.sky,
               ),
+            if (task.points > 0)
+              _Chip(
+                icon: Icons.bolt_outlined,
+                label: '${task.points} pts',
+                color: AppColors.amber,
+              ),
             if (task.recurrence.repeats)
               _Chip(
                 icon: Icons.repeat,
