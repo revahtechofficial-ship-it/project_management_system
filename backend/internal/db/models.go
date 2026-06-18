@@ -178,6 +178,15 @@ type TaskFieldValue struct {
 	Value   string `json:"value"`
 }
 
+type TaskStatus struct {
+	ID        int64  `json:"id"`
+	Key       string `json:"key"`
+	Label     string `json:"label"`
+	Color     string `json:"color"`
+	Position  int32  `json:"position"`
+	Protected bool   `json:"protected"`
+}
+
 type User struct {
 	ID            int64              `json:"id"`
 	Email         string             `json:"email"`

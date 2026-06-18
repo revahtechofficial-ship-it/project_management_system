@@ -251,13 +251,10 @@ func (h *TaskHandler) SetBaseline(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func validStatus(s string) bool {
-	switch s {
-	case "backlog", "todo", "in_progress", "review", "done":
-		return true
-	default:
-		return false
-	}
+// statusExists reports whether key names a real, customizable workflow status.
+func (h *TaskHandler) statusExists(ctx context.Context, key string) bool {
+	ok, err := h.q.StatusKeyExists(ctx, key)
+	return err == nil && ok
 }
 
 func statusOrTodo(s string) string {
@@ -384,7 +381,7 @@ func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	status := statusOrTodo(body.Status)
-	if !validStatus(status) {
+	if !h.statusExists(r.Context(), status) {
 		writeError(w, http.StatusBadRequest, errors.New("invalid status"))
 		return
 	}
@@ -448,7 +445,7 @@ func (h *TaskHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	status := statusOrTodo(body.Status)
-	if !validStatus(status) {
+	if !h.statusExists(r.Context(), status) {
 		writeError(w, http.StatusBadRequest, errors.New("invalid status"))
 		return
 	}
@@ -580,7 +577,7 @@ func (h *TaskHandler) setStatus(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	if !validStatus(body.Status) {
+	if !h.statusExists(r.Context(), body.Status) {
 		writeError(w, http.StatusBadRequest, errors.New("invalid status"))
 		return
 	}

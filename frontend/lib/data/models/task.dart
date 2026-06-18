@@ -15,6 +15,7 @@ class Task {
   final String description;
   final bool done;
   final TaskStatus status;
+  final String statusKey;
   final DateTime createdAt;
   final DateTime updatedAt;
   final int? projectId;
@@ -41,6 +42,7 @@ class Task {
     required this.createdAt,
     required this.updatedAt,
     this.status = TaskStatus.todo,
+    this.statusKey = 'todo',
     this.title = '',
     this.description = '',
     this.projectId,
@@ -93,6 +95,7 @@ class Task {
     description: json['description'] as String? ?? '',
     done: json['done'] as bool,
     status: TaskStatus.fromJson(json['status'] as String? ?? 'todo'),
+    statusKey: json['status'] as String? ?? 'todo',
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
     projectId: json['project_id'] as int?,
@@ -142,7 +145,7 @@ class Task {
     'title': title,
     'description': description,
     'done': done,
-    'status': status.toJson(),
+    'status': statusKey,
     'created_at': createdAt.toIso8601String(),
     'updated_at': updatedAt.toIso8601String(),
     'project_id': projectId,
@@ -186,6 +189,7 @@ class Task {
           other.description == description &&
           other.done == done &&
           other.status == status &&
+          other.statusKey == statusKey &&
           other.createdAt == createdAt &&
           other.updatedAt == updatedAt &&
           other.projectId == projectId &&
@@ -213,6 +217,7 @@ class Task {
     description,
     done,
     status,
+    statusKey,
     createdAt,
     updatedAt,
     projectId,

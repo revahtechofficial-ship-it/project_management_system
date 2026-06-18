@@ -126,6 +126,7 @@ func main() {
 		api.Get("/api/v1/search", handler.NewSearchHandler(queries).Search)
 		api.Get("/api/v1/link-preview", handler.LinkPreview)
 		api.Mount("/api/v1/custom-fields", handler.NewCustomFieldHandler(queries).Routes())
+		api.Mount("/api/v1/statuses", handler.NewStatusHandler(queries).Routes())
 		teamHandler := handler.NewTeamHandler(queries)
 		api.Get("/api/v1/team", teamHandler.List)
 		api.Patch("/api/v1/team/{id}/role", teamHandler.SetRole)

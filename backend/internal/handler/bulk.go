@@ -48,7 +48,7 @@ func (h *TaskHandler) bulk(w http.ResponseWriter, r *http.Request) {
 
 	case "status":
 		var status string
-		if jsonErr := json.Unmarshal(b.Value, &status); jsonErr != nil || !validStatus(status) {
+		if jsonErr := json.Unmarshal(b.Value, &status); jsonErr != nil || !h.statusExists(ctx, status) {
 			writeError(w, http.StatusBadRequest, errors.New("invalid status"))
 			return
 		}

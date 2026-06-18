@@ -310,7 +310,7 @@ class _TaskGanttViewState extends ConsumerState<TaskGanttView> {
             assigneeIds: t.assigneeIds,
             startDate: t.startDate?.add(shift),
             dueDate: t.dueDate?.add(shift),
-            status: t.status,
+            statusKey: t.statusKey,
             recurrence: t.recurrence,
             priority: t.priority,
             tags: t.tags,

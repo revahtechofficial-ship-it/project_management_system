@@ -33,7 +33,7 @@ class TasksRepository {
     int? assigneeId,
     DateTime? startDate,
     DateTime? dueDate,
-    TaskStatus status = TaskStatus.todo,
+    String statusKey = 'todo',
     int? parentId,
     RecurrenceType recurrence = RecurrenceType.none,
     TaskPriority priority = TaskPriority.none,
@@ -52,7 +52,7 @@ class TasksRepository {
             'assignee_ids': ?assigneeIds,
             'start_date': dateParam(startDate),
             'due_date': dateParam(dueDate),
-            'status': status.toJson(),
+            'status': statusKey,
             'parent_id': parentId,
             'recurrence': recurrence.toJson(),
             'priority': priority.toJson(),
@@ -73,7 +73,7 @@ class TasksRepository {
     int? assigneeId,
     DateTime? startDate,
     DateTime? dueDate,
-    TaskStatus status = TaskStatus.todo,
+    String statusKey = 'todo',
     RecurrenceType recurrence = RecurrenceType.none,
     TaskPriority priority = TaskPriority.none,
     List<String> tags = const <String>[],
@@ -91,7 +91,7 @@ class TasksRepository {
             'assignee_ids': ?assigneeIds,
             'start_date': dateParam(startDate),
             'due_date': dateParam(dueDate),
-            'status': status.toJson(),
+            'status': statusKey,
             'recurrence': recurrence.toJson(),
             'priority': priority.toJson(),
             'tags': tags,
@@ -119,6 +119,17 @@ class TasksRepository {
         .patch<Map<String, dynamic>>(
           '/api/v1/tasks/$id/status',
           data: <String, dynamic>{'status': status.toJson()},
+        );
+    return _taskFrom(res);
+  }
+
+  /// Moves a task to a workflow status by its raw key (supports custom
+  /// statuses, unlike the enum-typed [setStatus]).
+  Future<Task> setStatusKey(int id, String statusKey) async {
+    final Response<Map<String, dynamic>> res = await _dio
+        .patch<Map<String, dynamic>>(
+          '/api/v1/tasks/$id/status',
+          data: <String, dynamic>{'status': statusKey},
         );
     return _taskFrom(res);
   }

@@ -5,8 +5,9 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/user_avatar.dart';
-import '../../../data/enums/task_status.dart';
 import '../../../data/models/task.dart';
+import '../../../data/models/workflow_status.dart';
+import '../providers/statuses_providers.dart';
 import '../providers/tasks_providers.dart';
 
 /// A Kanban board: one column per workflow status. Drag a card to another
@@ -23,11 +24,17 @@ class TaskBoardView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Future<void> move(Task t, TaskStatus status) async {
-      if (t.status == status) {
+    final List<WorkflowStatus> loaded =
+        ref.watch(statusesProvider).asData?.value ?? const <WorkflowStatus>[];
+    final List<WorkflowStatus> statuses = loaded.isEmpty
+        ? WorkflowStatus.defaults
+        : loaded;
+
+    Future<void> move(Task t, String statusKey) async {
+      if (t.statusKey == statusKey) {
         return;
       }
-      await ref.read(tasksRepositoryProvider).setStatus(t.id, status);
+      await ref.read(tasksRepositoryProvider).setStatusKey(t.id, statusKey);
       ref.invalidate(tasksProvider);
     }
 
@@ -36,16 +43,16 @@ class TaskBoardView extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          for (final TaskStatus status in TaskStatus.board)
+          for (final WorkflowStatus status in statuses)
             SizedBox(
               width: 284,
               child: _BoardColumn(
                 status: status,
                 tasks: tasks
-                    .where((Task t) => t.status == status)
+                    .where((Task t) => t.statusKey == status.key)
                     .toList(growable: false),
                 onTapTask: onTapTask,
-                onDropTask: (Task t) => move(t, status),
+                onDropTask: (Task t) => move(t, status.key),
               ),
             ),
         ],
@@ -62,7 +69,7 @@ class _BoardColumn extends StatelessWidget {
     required this.onDropTask,
   });
 
-  final TaskStatus status;
+  final WorkflowStatus status;
   final List<Task> tasks;
   final void Function(Task) onTapTask;
   final void Function(Task) onDropTask;
@@ -83,25 +90,36 @@ class _BoardColumn extends StatelessWidget {
                   width: 10,
                   height: 10,
                   decoration: BoxDecoration(
-                      color: status.color, shape: BoxShape.circle),
+                    color: status.color,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 8),
-                Text(status.label,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w700)),
+                Text(
+                  status.label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(width: 6),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: scheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text('${tasks.length}',
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurfaceVariant)),
+                  child: Text(
+                    '${tasks.length}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -110,37 +128,48 @@ class _BoardColumn extends StatelessWidget {
             child: DragTarget<Task>(
               onAcceptWithDetails: (DragTargetDetails<Task> d) =>
                   onDropTask(d.data),
-              builder: (BuildContext context, List<Task?> candidate,
-                  List<dynamic> rejected) {
-                final bool active = candidate.isNotEmpty;
-                return Container(
-                  decoration: BoxDecoration(
-                    color: active
-                        ? status.color.withValues(alpha: 0.08)
-                        : scheme.surfaceContainerLowest,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: active ? status.color : scheme.outlineVariant,
-                      width: active ? 1.5 : 1,
-                    ),
-                  ),
-                  padding: const EdgeInsets.all(8),
-                  child: tasks.isEmpty
-                      ? Center(
-                          child: Text('Drop tasks here',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: scheme.onSurfaceVariant)),
-                        )
-                      : ListView(
-                          padding: EdgeInsets.zero,
-                          children: <Widget>[
-                            for (final Task t in tasks)
-                              _BoardCard(task: t, onTap: onTapTask),
-                          ],
+              builder:
+                  (
+                    BuildContext context,
+                    List<Task?> candidate,
+                    List<dynamic> rejected,
+                  ) {
+                    final bool active = candidate.isNotEmpty;
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: active
+                            ? status.color.withValues(alpha: 0.08)
+                            : scheme.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: active ? status.color : scheme.outlineVariant,
+                          width: active ? 1.5 : 1,
                         ),
-                );
-              },
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: tasks.isEmpty
+                          ? Center(
+                              child: Text(
+                                'Drop tasks here',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            )
+                          : ListView(
+                              padding: EdgeInsets.zero,
+                              children: <Widget>[
+                                for (final Task t in tasks)
+                                  _BoardCard(
+                                    task: t,
+                                    accent: status.color,
+                                    onTap: onTapTask,
+                                  ),
+                              ],
+                            ),
+                    );
+                  },
             ),
           ),
         ],
@@ -150,20 +179,28 @@ class _BoardColumn extends StatelessWidget {
 }
 
 class _BoardCard extends StatelessWidget {
-  const _BoardCard({required this.task, required this.onTap});
+  const _BoardCard({
+    required this.task,
+    required this.accent,
+    required this.onTap,
+  });
   final Task task;
+  final Color accent;
   final void Function(Task) onTap;
 
   @override
   Widget build(BuildContext context) {
-    final Widget card = _CardBody(task: task);
+    final Widget card = _CardBody(task: task, accent: accent);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Draggable<Task>(
         data: task,
         feedback: Material(
           color: Colors.transparent,
-          child: SizedBox(width: 256, child: _CardBody(task: task, dragging: true)),
+          child: SizedBox(
+            width: 256,
+            child: _CardBody(task: task, accent: accent, dragging: true),
+          ),
         ),
         childWhenDragging: Opacity(opacity: 0.4, child: card),
         child: InkWell(
@@ -177,14 +214,20 @@ class _BoardCard extends StatelessWidget {
 }
 
 class _CardBody extends StatelessWidget {
-  const _CardBody({required this.task, this.dragging = false});
+  const _CardBody({
+    required this.task,
+    required this.accent,
+    this.dragging = false,
+  });
   final Task task;
+  final Color accent;
   final bool dragging;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final bool overdue = !task.done &&
+    final bool overdue =
+        !task.done &&
         task.dueDate != null &&
         task.dueDate!.toLocal().isBefore(DateTime.now());
     return Container(
@@ -195,9 +238,10 @@ class _CardBody extends StatelessWidget {
         boxShadow: dragging
             ? <BoxShadow>[
                 BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4)),
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
               ]
             : null,
       ),
@@ -207,18 +251,22 @@ class _CardBody extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Container(width: 4, color: task.status.color),
+              Container(width: 4, color: accent),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(task.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text(
+                        task.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       if (task.projectName != null ||
                           task.assigneeName != null ||
                           task.dueDate != null ||
@@ -233,40 +281,45 @@ class _CardBody extends StatelessWidget {
                           children: <Widget>[
                             if (task.priority.isSet)
                               _MiniChip(
-                                  icon: Icons.flag_rounded,
-                                  label: task.priority.label,
-                                  color: task.priority.color),
+                                icon: Icons.flag_rounded,
+                                label: task.priority.label,
+                                color: task.priority.color,
+                              ),
                             if (task.projectName != null)
                               _MiniChip(
-                                  icon: Icons.folder_outlined,
-                                  label: task.projectName!,
-                                  color: AppColors.brand),
+                                icon: Icons.folder_outlined,
+                                label: task.projectName!,
+                                color: AppColors.brand,
+                              ),
                             if (task.assigneeNames.isNotEmpty)
                               _MiniChip(
-                                  icon: Icons.person_outline,
-                                  label: task.assigneeLabel,
-                                  color: AppColors.teal),
+                                icon: Icons.person_outline,
+                                label: task.assigneeLabel,
+                                color: AppColors.teal,
+                              ),
                             if (task.dueDate != null)
                               _MiniChip(
-                                  icon: Icons.event,
-                                  label: shortDate(task.dueDate!.toLocal()),
-                                  color: overdue
-                                      ? AppColors.rose
-                                      : AppColors.slate),
+                                icon: Icons.event,
+                                label: shortDate(task.dueDate!.toLocal()),
+                                color: overdue
+                                    ? AppColors.rose
+                                    : AppColors.slate,
+                              ),
                             if (task.subtaskCount > 0)
                               _MiniChip(
-                                  icon: Icons.checklist_rounded,
-                                  label:
-                                      '${task.subtaskDoneCount}/${task.subtaskCount}',
-                                  color: AppColors.violet),
+                                icon: Icons.checklist_rounded,
+                                label:
+                                    '${task.subtaskDoneCount}/${task.subtaskCount}',
+                                color: AppColors.violet,
+                              ),
                             if (task.recurrence.repeats)
                               _MiniChip(
-                                  icon: Icons.repeat,
-                                  label: task.recurrence.label,
-                                  color: AppColors.slate),
+                                icon: Icons.repeat,
+                                label: task.recurrence.label,
+                                color: AppColors.slate,
+                              ),
                             for (final String tag in task.tags.take(3))
-                              StatusPill(
-                                  label: tag, color: avatarColor(tag)),
+                              StatusPill(label: tag, color: avatarColor(tag)),
                           ],
                         ),
                       ],
@@ -283,8 +336,11 @@ class _CardBody extends StatelessWidget {
 }
 
 class _MiniChip extends StatelessWidget {
-  const _MiniChip(
-      {required this.icon, required this.label, required this.color});
+  const _MiniChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
   final IconData icon;
   final String label;
   final Color color;
@@ -302,9 +358,14 @@ class _MiniChip extends StatelessWidget {
         children: <Widget>[
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 3),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
         ],
       ),
     );

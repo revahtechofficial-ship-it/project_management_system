@@ -7,9 +7,10 @@ import '../../core/widgets/async_states.dart';
 import '../../core/widgets/status_pill.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../data/enums/task_priority.dart';
-import '../../data/enums/task_status.dart';
 import '../../data/enums/task_view.dart';
 import '../../data/models/task.dart';
+import '../../data/models/workflow_status.dart';
+import 'providers/statuses_providers.dart';
 import 'providers/tasks_providers.dart';
 import 'widgets/task_board_view.dart';
 import 'widgets/task_calendar_view.dart';
@@ -63,27 +64,31 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Bulk action failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Bulk action failed: $e')));
       }
     }
   }
 
   Future<void> _bulkDelete() async {
-    final bool ok = await showDialog<bool>(
+    final bool ok =
+        await showDialog<bool>(
           context: context,
           builder: (BuildContext context) => AlertDialog(
             title: const Text('Delete tasks'),
             content: Text(
-                'Delete ${_selected.length} selected task(s)? This cannot be undone.'),
+              'Delete ${_selected.length} selected task(s)? This cannot be undone.',
+            ),
             actions: <Widget>[
               TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel')),
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
               FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Delete')),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Delete'),
+              ),
             ],
           ),
         ) ??
@@ -130,9 +135,10 @@ class _TasksPageState extends ConsumerState<TasksPage> {
               runSpacing: 12,
               spacing: 12,
               children: <Widget>[
-                const Text('Tasks',
-                    style: TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.w800)),
+                const Text(
+                  'Tasks',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                ),
                 Wrap(
                   spacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -181,20 +187,23 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             Expanded(
               child: tasks.when(
                 data: (List<Task> items) => _body(items),
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (Object err, _) => Center(
-                  child: Text('Failed to load tasks:\n$err',
-                      textAlign: TextAlign.center),
+                  child: Text(
+                    'Failed to load tasks:\n$err',
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ),
             if (_selecting && _selected.isNotEmpty)
               _BulkBar(
                 count: _selected.length,
+                statuses:
+                    ref.watch(statusesProvider).asData?.value ??
+                    WorkflowStatus.defaults,
                 onComplete: () => _runBulk('done', value: true),
-                onStatus: (TaskStatus s) =>
-                    _runBulk('status', value: s.toJson()),
+                onStatus: (String key) => _runBulk('status', value: key),
                 onPriority: (TaskPriority p) =>
                     _runBulk('priority', value: p.toJson()),
                 onDelete: _bulkDelete,
@@ -215,21 +224,19 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     }
     return switch (_view) {
       TaskView.list => ListView.separated(
-          itemCount: items.length,
-          separatorBuilder: (BuildContext context, int i) =>
-              const Divider(height: 1),
-          itemBuilder: (BuildContext context, int i) => _selecting
-              ? _SelectableTaskTile(
-                  task: items[i],
-                  selected: _selected.contains(items[i].id),
-                  onChanged: () => _toggleSelected(items[i].id),
-                )
-              : _TaskTile(
-                  task: items[i], onEdit: () => _editTask(items[i])),
-        ),
+        itemCount: items.length,
+        separatorBuilder: (BuildContext context, int i) =>
+            const Divider(height: 1),
+        itemBuilder: (BuildContext context, int i) => _selecting
+            ? _SelectableTaskTile(
+                task: items[i],
+                selected: _selected.contains(items[i].id),
+                onChanged: () => _toggleSelected(items[i].id),
+              )
+            : _TaskTile(task: items[i], onEdit: () => _editTask(items[i])),
+      ),
       TaskView.board => TaskBoardView(tasks: items, onTapTask: _editTask),
-      TaskView.calendar =>
-        TaskCalendarView(tasks: items, onTapTask: _editTask),
+      TaskView.calendar => TaskCalendarView(tasks: items, onTapTask: _editTask),
       TaskView.gantt => TaskGanttView(tasks: items, onTapTask: _editTask),
     };
   }
@@ -245,9 +252,13 @@ class _TaskTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final bool overdue = !task.done &&
+    final bool overdue =
+        !task.done &&
         task.dueDate != null &&
         task.dueDate!.toLocal().isBefore(DateTime.now());
+    final List<WorkflowStatus> statuses =
+        ref.watch(statusesProvider).asData?.value ?? const <WorkflowStatus>[];
+    final WorkflowStatus ws = WorkflowStatus.forKey(statuses, task.statusKey);
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 4),
       onTap: onEdit,
@@ -273,42 +284,49 @@ class _TaskTile extends ConsumerWidget {
           spacing: 8,
           runSpacing: 4,
           children: <Widget>[
-            StatusPill(label: task.status.label, color: task.status.color),
+            StatusPill(label: ws.label, color: ws.color),
             if (task.priority.isSet)
               _Chip(
-                  icon: Icons.flag_rounded,
-                  label: task.priority.label,
-                  color: task.priority.color),
+                icon: Icons.flag_rounded,
+                label: task.priority.label,
+                color: task.priority.color,
+              ),
             if (task.projectName != null)
               _Chip(
-                  icon: Icons.folder_outlined,
-                  label: task.projectName!,
-                  color: AppColors.brand),
+                icon: Icons.folder_outlined,
+                label: task.projectName!,
+                color: AppColors.brand,
+              ),
             if (task.assigneeNames.isNotEmpty)
               _Chip(
-                  icon: Icons.person_outline,
-                  label: task.assigneeLabel,
-                  color: AppColors.teal),
+                icon: Icons.person_outline,
+                label: task.assigneeLabel,
+                color: AppColors.teal,
+              ),
             if (task.dueDate != null)
               _Chip(
-                  icon: Icons.event,
-                  label: 'Due ${shortDate(task.dueDate!.toLocal())}',
-                  color: overdue ? AppColors.rose : AppColors.slate),
+                icon: Icons.event,
+                label: 'Due ${shortDate(task.dueDate!.toLocal())}',
+                color: overdue ? AppColors.rose : AppColors.slate,
+              ),
             if (task.subtaskCount > 0)
               _Chip(
-                  icon: Icons.checklist_rounded,
-                  label: '${task.subtaskDoneCount}/${task.subtaskCount}',
-                  color: AppColors.violet),
+                icon: Icons.checklist_rounded,
+                label: '${task.subtaskDoneCount}/${task.subtaskCount}',
+                color: AppColors.violet,
+              ),
             if (task.estimateLabel.isNotEmpty)
               _Chip(
-                  icon: Icons.timer_outlined,
-                  label: task.estimateLabel,
-                  color: AppColors.sky),
+                icon: Icons.timer_outlined,
+                label: task.estimateLabel,
+                color: AppColors.sky,
+              ),
             if (task.recurrence.repeats)
               _Chip(
-                  icon: Icons.repeat,
-                  label: task.recurrence.label,
-                  color: AppColors.slate),
+                icon: Icons.repeat,
+                label: task.recurrence.label,
+                color: AppColors.slate,
+              ),
             for (final String tag in task.tags.take(4))
               StatusPill(label: tag, color: avatarColor(tag)),
           ],
@@ -344,10 +362,7 @@ class _SelectableTaskTile extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 4),
       onTap: onChanged,
       selected: selected,
-      leading: Checkbox(
-        value: selected,
-        onChanged: (_) => onChanged(),
-      ),
+      leading: Checkbox(value: selected, onChanged: (_) => onChanged()),
       title: Text(task.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Wrap(
         spacing: 8,
@@ -355,14 +370,16 @@ class _SelectableTaskTile extends StatelessWidget {
           StatusPill(label: task.status.label, color: task.status.color),
           if (task.priority.isSet)
             _Chip(
-                icon: Icons.flag_rounded,
-                label: task.priority.label,
-                color: task.priority.color),
+              icon: Icons.flag_rounded,
+              label: task.priority.label,
+              color: task.priority.color,
+            ),
           if (task.projectName != null)
             _Chip(
-                icon: Icons.folder_outlined,
-                label: task.projectName!,
-                color: AppColors.brand),
+              icon: Icons.folder_outlined,
+              label: task.projectName!,
+              color: AppColors.brand,
+            ),
         ],
       ),
     );
@@ -373,6 +390,7 @@ class _SelectableTaskTile extends StatelessWidget {
 class _BulkBar extends StatelessWidget {
   const _BulkBar({
     required this.count,
+    required this.statuses,
     required this.onComplete,
     required this.onStatus,
     required this.onPriority,
@@ -381,8 +399,9 @@ class _BulkBar extends StatelessWidget {
   });
 
   final int count;
+  final List<WorkflowStatus> statuses;
   final VoidCallback onComplete;
-  final ValueChanged<TaskStatus> onStatus;
+  final ValueChanged<String> onStatus;
   final ValueChanged<TaskPriority> onPriority;
   final VoidCallback onDelete;
   final VoidCallback onClear;
@@ -405,38 +424,46 @@ class _BulkBar extends StatelessWidget {
             children: <Widget>[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Text('$count selected',
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                child: Text(
+                  '$count selected',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
               FilledButton.tonalIcon(
                 onPressed: onComplete,
                 icon: const Icon(Icons.check, size: 18),
                 label: const Text('Complete'),
               ),
-              PopupMenuButton<TaskStatus>(
+              PopupMenuButton<String>(
                 onSelected: onStatus,
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<TaskStatus>>[
-                  for (final TaskStatus s in TaskStatus.board)
-                    PopupMenuItem<TaskStatus>(value: s, child: Text(s.label)),
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  for (final WorkflowStatus s in statuses)
+                    PopupMenuItem<String>(value: s.key, child: Text(s.label)),
                 ],
-                child: const _BulkChip(icon: Icons.flag_outlined, label: 'Status'),
+                child: const _BulkChip(
+                  icon: Icons.flag_outlined,
+                  label: 'Status',
+                ),
               ),
               PopupMenuButton<TaskPriority>(
                 onSelected: onPriority,
                 itemBuilder: (BuildContext context) =>
                     <PopupMenuEntry<TaskPriority>>[
-                  for (final TaskPriority p in TaskPriority.values)
-                    PopupMenuItem<TaskPriority>(
-                        value: p, child: Text(p.label)),
-                ],
+                      for (final TaskPriority p in TaskPriority.values)
+                        PopupMenuItem<TaskPriority>(
+                          value: p,
+                          child: Text(p.label),
+                        ),
+                    ],
                 child: const _BulkChip(
-                    icon: Icons.priority_high, label: 'Priority'),
+                  icon: Icons.priority_high,
+                  label: 'Priority',
+                ),
               ),
               TextButton.icon(
                 onPressed: onDelete,
                 icon: Icon(Icons.delete_outline, color: scheme.error, size: 18),
-                label: Text('Delete',
-                    style: TextStyle(color: scheme.error)),
+                label: Text('Delete', style: TextStyle(color: scheme.error)),
               ),
               IconButton(
                 tooltip: 'Clear selection',
@@ -498,9 +525,14 @@ class _Chip extends StatelessWidget {
         children: <Widget>[
           Icon(icon, size: 13, color: color),
           const SizedBox(width: 4),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
         ],
       ),
     );

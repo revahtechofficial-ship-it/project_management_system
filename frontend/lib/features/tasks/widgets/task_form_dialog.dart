@@ -7,15 +7,16 @@ import '../../../core/widgets/user_avatar.dart';
 import '../../../data/enums/dependency_type.dart';
 import '../../../data/enums/recurrence_type.dart';
 import '../../../data/enums/task_priority.dart';
-import '../../../data/enums/task_status.dart';
 import '../../../data/models/checklist_item.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_dependency.dart';
 import '../../../data/models/team_member.dart';
+import '../../../data/models/workflow_status.dart';
 import '../../projects/providers/projects_providers.dart';
 import '../../team/providers/team_providers.dart';
 import '../providers/dependencies_providers.dart';
+import '../providers/statuses_providers.dart';
 import '../providers/subtask_providers.dart';
 import '../providers/tasks_providers.dart';
 import 'task_attachments.dart';
@@ -41,7 +42,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
   late List<int> _assigneeIds;
   DateTime? _start;
   DateTime? _due;
-  TaskStatus _status = TaskStatus.todo;
+  late String _statusKey;
   RecurrenceType _recurrence = RecurrenceType.none;
   TaskPriority _priority = TaskPriority.none;
   final TextEditingController _tagInput = TextEditingController();
@@ -65,9 +66,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
     );
     _start = t?.startDate;
     _due = t?.dueDate;
-    _status = t == null || t.status == TaskStatus.other
-        ? TaskStatus.todo
-        : t.status;
+    _statusKey = t?.statusKey ?? 'todo';
     _recurrence = t == null || t.recurrence == RecurrenceType.other
         ? RecurrenceType.none
         : t.recurrence;
@@ -145,7 +144,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           assigneeIds: _assigneeIds,
           startDate: _start,
           dueDate: _due,
-          status: _status,
+          statusKey: _statusKey,
           recurrence: _recurrence,
           priority: _priority,
           tags: _tags,
@@ -159,7 +158,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           assigneeIds: _assigneeIds,
           startDate: _start,
           dueDate: _due,
-          status: _status,
+          statusKey: _statusKey,
           recurrence: _recurrence,
           priority: _priority,
           tags: _tags,
@@ -198,6 +197,11 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
         ref.watch(projectsProvider).asData?.value ?? const <Project>[];
     final List<TeamMember> members =
         ref.watch(teamMembersProvider).asData?.value ?? const <TeamMember>[];
+    final List<WorkflowStatus> loadedStatuses =
+        ref.watch(statusesProvider).asData?.value ?? const <WorkflowStatus>[];
+    final List<WorkflowStatus> statuses = loadedStatuses.isEmpty
+        ? WorkflowStatus.defaults
+        : loadedStatuses;
 
     return AlertDialog(
       title: Text(_isEdit ? 'Edit task' : 'New task'),
@@ -224,19 +228,42 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                   decoration: const InputDecoration(labelText: 'Description'),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<TaskStatus>(
-                  initialValue: _status,
-                  decoration: const InputDecoration(labelText: 'Status'),
-                  items: <DropdownMenuItem<TaskStatus>>[
-                    for (final TaskStatus s in TaskStatus.board)
-                      DropdownMenuItem<TaskStatus>(
-                        value: s,
-                        child: Text(s.label),
-                      ),
-                  ],
-                  onChanged: (TaskStatus? v) =>
-                      setState(() => _status = v ?? TaskStatus.todo),
-                ),
+                if (statuses.isEmpty)
+                  const InputDecorator(
+                    decoration: InputDecoration(labelText: 'Status'),
+                    child: Text('Loading…'),
+                  )
+                else
+                  DropdownButtonFormField<String>(
+                    initialValue:
+                        statuses.any((WorkflowStatus s) => s.key == _statusKey)
+                        ? _statusKey
+                        : statuses.first.key,
+                    decoration: const InputDecoration(labelText: 'Status'),
+                    items: <DropdownMenuItem<String>>[
+                      for (final WorkflowStatus s in statuses)
+                        DropdownMenuItem<String>(
+                          value: s.key,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: s.color,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(s.label),
+                            ],
+                          ),
+                        ),
+                    ],
+                    onChanged: (String? v) =>
+                        setState(() => _statusKey = v ?? _statusKey),
+                  ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<TaskPriority>(
                   initialValue: _priority,
