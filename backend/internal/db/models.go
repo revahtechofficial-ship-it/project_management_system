@@ -187,6 +187,21 @@ type TaskStatus struct {
 	Protected bool   `json:"protected"`
 }
 
+type TaskTemplate struct {
+	ID              int64     `json:"id"`
+	Name            string    `json:"name"`
+	Title           string    `json:"title"`
+	Description     string    `json:"description"`
+	Status          string    `json:"status"`
+	Priority        string    `json:"priority"`
+	Recurrence      string    `json:"recurrence"`
+	EstimateMinutes int32     `json:"estimate_minutes"`
+	Tags            []string  `json:"tags"`
+	ProjectID       *int64    `json:"project_id"`
+	CreatedBy       *int64    `json:"created_by"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
 type User struct {
 	ID            int64              `json:"id"`
 	Email         string             `json:"email"`

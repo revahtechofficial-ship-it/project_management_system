@@ -11,6 +11,7 @@ import '../../../data/models/checklist_item.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_dependency.dart';
+import '../../../data/models/task_template.dart';
 import '../../../data/models/team_member.dart';
 import '../../../data/models/workflow_status.dart';
 import '../../projects/providers/projects_providers.dart';
@@ -18,6 +19,7 @@ import '../../team/providers/team_providers.dart';
 import '../providers/dependencies_providers.dart';
 import '../providers/statuses_providers.dart';
 import '../providers/subtask_providers.dart';
+import '../providers/task_templates_providers.dart';
 import '../providers/tasks_providers.dart';
 import 'task_attachments.dart';
 import 'task_comments.dart';
@@ -26,9 +28,12 @@ import 'task_custom_fields.dart';
 /// Create/edit dialog for a task, with project, assignee and schedule pickers
 /// fed by the live providers. Pops `true` on a successful save.
 class TaskFormDialog extends ConsumerStatefulWidget {
-  const TaskFormDialog({super.key, this.task});
+  const TaskFormDialog({super.key, this.task, this.template});
 
   final Task? task;
+
+  /// When creating (task == null), pre-fills the form from this template.
+  final TaskTemplate? template;
 
   @override
   ConsumerState<TaskFormDialog> createState() => _TaskFormDialogState();
@@ -57,22 +62,27 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
   void initState() {
     super.initState();
     final Task? t = widget.task;
-    _title = TextEditingController(text: t?.title ?? '');
-    _description = TextEditingController(text: t?.description ?? '');
-    _projectId = t?.projectId;
+    final TaskTemplate? tmpl = widget.template;
+    _title = TextEditingController(text: t?.title ?? tmpl?.title ?? '');
+    _description = TextEditingController(
+      text: t?.description ?? tmpl?.description ?? '',
+    );
+    _projectId = t?.projectId ?? tmpl?.projectId;
     _assigneeIds = List<int>.of(
       t?.assigneeIds ??
           (t?.assigneeId != null ? <int>[t!.assigneeId!] : const <int>[]),
     );
     _start = t?.startDate;
     _due = t?.dueDate;
-    _statusKey = t?.statusKey ?? 'todo';
-    _recurrence = t == null || t.recurrence == RecurrenceType.other
-        ? RecurrenceType.none
-        : t.recurrence;
-    _priority = t?.priority ?? TaskPriority.none;
-    _tags = List<String>.of(t?.tags ?? const <String>[]);
-    final int est = t?.estimateMinutes ?? 0;
+    _statusKey = t?.statusKey ?? tmpl?.statusKey ?? 'todo';
+    _recurrence = t != null
+        ? (t.recurrence == RecurrenceType.other
+              ? RecurrenceType.none
+              : t.recurrence)
+        : (tmpl?.recurrence ?? RecurrenceType.none);
+    _priority = t?.priority ?? tmpl?.priority ?? TaskPriority.none;
+    _tags = List<String>.of(t?.tags ?? tmpl?.tags ?? const <String>[]);
+    final int est = t?.estimateMinutes ?? tmpl?.estimateMinutes ?? 0;
     _estimate = TextEditingController(text: est > 0 ? _hoursLabel(est) : '');
   }
 
@@ -173,6 +183,66 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
         _saving = false;
         _error = '$e';
       });
+    }
+  }
+
+  /// Saves the current field values as a reusable named template.
+  Future<void> _saveAsTemplate() async {
+    final TextEditingController nameCtrl = TextEditingController(
+      text: _title.text.trim(),
+    );
+    final String? name = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Save as template'),
+        content: TextField(
+          controller: nameCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Template name'),
+          onSubmitted: (String v) => Navigator.pop(context, v.trim()),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, nameCtrl.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    nameCtrl.dispose();
+    if (name == null || name.isEmpty || !mounted) {
+      return;
+    }
+    try {
+      await ref
+          .read(taskTemplatesRepositoryProvider)
+          .create(
+            name: name,
+            title: _title.text.trim(),
+            description: _description.text.trim(),
+            statusKey: _statusKey,
+            priority: _priority,
+            recurrence: _recurrence,
+            estimateMinutes: _estimateMinutes(),
+            tags: _tags,
+            projectId: _projectId,
+          );
+      ref.invalidate(taskTemplatesProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Saved template "$name"')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not save template')),
+        );
+      }
     }
   }
 
@@ -536,20 +606,32 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           ),
         ),
       ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: <Widget>[
-        TextButton(
-          onPressed: _saving ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+        TextButton.icon(
+          onPressed: _saving ? null : _saveAsTemplate,
+          icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+          label: const Text('Save as template'),
         ),
-        FilledButton(
-          onPressed: _saving ? null : _save,
-          child: _saving
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(_isEdit ? 'Save' : 'Create'),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            TextButton(
+              onPressed: _saving ? null : () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(_isEdit ? 'Save' : 'Create'),
+            ),
+          ],
         ),
       ],
     );
@@ -684,8 +766,13 @@ class _DependencySectionState extends ConsumerState<_DependencySection> {
         const <TaskDependency>[];
     final List<Task> tasks =
         ref.watch(tasksProvider).asData?.value ?? const <Task>[];
+    // Include the project name so dependencies across projects are clear.
+    String taskLabel(Task t) =>
+        (t.projectName != null && t.projectName!.isNotEmpty)
+        ? '${t.title}  ·  ${t.projectName}'
+        : t.title;
     final Map<int, String> titleById = <int, String>{
-      for (final Task t in tasks) t.id: t.title,
+      for (final Task t in tasks) t.id: taskLabel(t),
     };
     final List<TaskDependency> preds = deps
         .where((TaskDependency d) => d.successorId == widget.taskId)
@@ -751,7 +838,10 @@ class _DependencySectionState extends ConsumerState<_DependencySection> {
                   for (final Task t in candidates)
                     DropdownMenuItem<int?>(
                       value: t.id,
-                      child: Text(t.title, overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        taskLabel(t),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                 ],
                 onChanged: (int? v) => setState(() => _predId = v),

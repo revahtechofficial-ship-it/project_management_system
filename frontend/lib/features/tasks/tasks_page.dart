@@ -9,8 +9,10 @@ import '../../core/widgets/user_avatar.dart';
 import '../../data/enums/task_priority.dart';
 import '../../data/enums/task_view.dart';
 import '../../data/models/task.dart';
+import '../../data/models/task_template.dart';
 import '../../data/models/workflow_status.dart';
 import 'providers/statuses_providers.dart';
+import 'providers/task_templates_providers.dart';
 import 'providers/tasks_providers.dart';
 import 'widgets/task_board_view.dart';
 import 'widgets/task_calendar_view.dart';
@@ -118,6 +120,16 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     }
   }
 
+  Future<void> _newFromTemplate(TaskTemplate template) async {
+    final bool? saved = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => TaskFormDialog(template: template),
+    );
+    if (saved ?? false) {
+      ref.invalidate(tasksProvider);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final AsyncValue<List<Task>> tasks = ref.watch(tasksProvider);
@@ -174,6 +186,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                       icon: const Icon(Icons.refresh),
                       onPressed: () => ref.invalidate(tasksProvider),
                     ),
+                    _TemplatesButton(onSelected: _newFromTemplate),
                     FilledButton.icon(
                       onPressed: _newTask,
                       icon: const Icon(Icons.add, size: 18),
@@ -472,6 +485,47 @@ class _BulkBar extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A "From template" menu shown beside "New task" when any templates exist.
+class _TemplatesButton extends ConsumerWidget {
+  const _TemplatesButton({required this.onSelected});
+  final ValueChanged<TaskTemplate> onSelected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final List<TaskTemplate> templates =
+        ref.watch(taskTemplatesProvider).asData?.value ??
+        const <TaskTemplate>[];
+    if (templates.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return PopupMenuButton<TaskTemplate>(
+      tooltip: 'New from template',
+      onSelected: onSelected,
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<TaskTemplate>>[
+        for (final TaskTemplate t in templates)
+          PopupMenuItem<TaskTemplate>(value: t, child: Text(t.name)),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          border: Border.all(color: scheme.outline),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.bookmark_outline, size: 18),
+            SizedBox(width: 8),
+            Text('From template'),
+            Icon(Icons.arrow_drop_down, size: 18),
+          ],
         ),
       ),
     );

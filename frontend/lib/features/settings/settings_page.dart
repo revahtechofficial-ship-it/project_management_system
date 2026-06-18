@@ -11,11 +11,13 @@ import '../../core/widgets/user_avatar.dart';
 import '../../data/enums/custom_field_type.dart';
 import '../../data/models/auth_user.dart';
 import '../../data/models/custom_field.dart';
+import '../../data/models/task_template.dart';
 import '../../data/models/workflow_status.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../tasks/providers/custom_fields_providers.dart';
 import '../tasks/providers/statuses_providers.dart';
+import '../tasks/providers/task_templates_providers.dart';
 import 'providers/settings_providers.dart';
 import 'widgets/change_password_dialog.dart';
 import 'widgets/custom_field_dialog.dart';
@@ -51,6 +53,8 @@ class SettingsPage extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             _NotificationsCard(settings: settings),
+            const SizedBox(height: 16),
+            const _TaskTemplatesCard(),
             if (user?.isAdmin ?? false) ...<Widget>[
               const SizedBox(height: 16),
               const _StatusesCard(),
@@ -462,6 +466,92 @@ class _AboutRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Lists saved task templates with delete. Templates are created from any task
+/// via the form's "Save as template" and used via "From template" on Tasks.
+class _TaskTemplatesCard extends ConsumerWidget {
+  const _TaskTemplatesCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final List<TaskTemplate> templates =
+        ref.watch(taskTemplatesProvider).asData?.value ??
+        const <TaskTemplate>[];
+    return DashboardCard(
+      title: 'Task templates',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Reusable task blueprints. Save one from any task via "Save as '
+            'template", then pick it from "From template" on the Tasks page.',
+            style: TextStyle(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 8),
+          if (templates.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'No templates yet.',
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
+            ),
+          for (final TaskTemplate t in templates)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                Icons.bookmark_outline,
+                color: scheme.onSurfaceVariant,
+              ),
+              title: Text(t.name),
+              subtitle: t.title.isEmpty
+                  ? null
+                  : Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+              trailing: IconButton(
+                tooltip: 'Delete template',
+                icon: Icon(Icons.delete_outline, color: scheme.error),
+                onPressed: () => _delete(context, ref, t),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    TaskTemplate t,
+  ) async {
+    final bool ok =
+        await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: Text('Delete "${t.name}"?'),
+            content: const Text(
+              'This removes the template. Existing tasks are unaffected.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!ok) {
+      return;
+    }
+    await ref.read(taskTemplatesRepositoryProvider).delete(t.id);
+    ref.invalidate(taskTemplatesProvider);
   }
 }
 
