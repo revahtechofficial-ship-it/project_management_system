@@ -71,6 +71,14 @@ func (h *TaskHandler) bulk(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		err = h.q.BulkSetTaskAssignee(ctx, db.BulkSetTaskAssigneeParams{Assignee: assignee, Ids: b.IDs})
+		// Keep the assignee join table in sync (replace with the single value).
+		var ids []int64
+		if assignee != nil {
+			ids = []int64{*assignee}
+		}
+		for _, tid := range b.IDs {
+			h.setAssignees(ctx, tid, ids)
+		}
 
 	case "delete":
 		err = h.q.BulkDeleteTasks(ctx, b.IDs)

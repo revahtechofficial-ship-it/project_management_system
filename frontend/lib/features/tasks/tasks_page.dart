@@ -284,10 +284,10 @@ class _TaskTile extends ConsumerWidget {
                   icon: Icons.folder_outlined,
                   label: task.projectName!,
                   color: AppColors.brand),
-            if (task.assigneeName != null)
+            if (task.assigneeNames.isNotEmpty)
               _Chip(
                   icon: Icons.person_outline,
-                  label: task.assigneeName!,
+                  label: task.assigneeLabel,
                   color: AppColors.teal),
             if (task.dueDate != null)
               _Chip(

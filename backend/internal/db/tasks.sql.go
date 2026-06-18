@@ -12,6 +12,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addTaskAssignee = `-- name: AddTaskAssignee :exec
+INSERT INTO task_assignees (task_id, user_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING
+`
+
+type AddTaskAssigneeParams struct {
+	TaskID int64 `json:"task_id"`
+	UserID int64 `json:"user_id"`
+}
+
+func (q *Queries) AddTaskAssignee(ctx context.Context, arg AddTaskAssigneeParams) error {
+	_, err := q.db.Exec(ctx, addTaskAssignee, arg.TaskID, arg.UserID)
+	return err
+}
+
 const bulkDeleteTasks = `-- name: BulkDeleteTasks :exec
 DELETE FROM tasks
 WHERE id = ANY($1::bigint[])
@@ -90,6 +106,15 @@ type BulkSetTaskStatusParams struct {
 
 func (q *Queries) BulkSetTaskStatus(ctx context.Context, arg BulkSetTaskStatusParams) error {
 	_, err := q.db.Exec(ctx, bulkSetTaskStatus, arg.Status, arg.Ids)
+	return err
+}
+
+const clearTaskAssignees = `-- name: ClearTaskAssignees :exec
+DELETE FROM task_assignees WHERE task_id = $1
+`
+
+func (q *Queries) ClearTaskAssignees(ctx context.Context, taskID int64) error {
+	_, err := q.db.Exec(ctx, clearTaskAssignees, taskID)
 	return err
 }
 
@@ -283,12 +308,47 @@ func (q *Queries) ListSubtasks(ctx context.Context, parentID *int64) ([]Task, er
 	return items, nil
 }
 
+const listTaskAssignees = `-- name: ListTaskAssignees :many
+SELECT ta.user_id, u.full_name
+FROM task_assignees ta
+JOIN users u ON u.id = ta.user_id
+WHERE ta.task_id = $1
+ORDER BY u.full_name
+`
+
+type ListTaskAssigneesRow struct {
+	UserID   int64  `json:"user_id"`
+	FullName string `json:"full_name"`
+}
+
+func (q *Queries) ListTaskAssignees(ctx context.Context, taskID int64) ([]ListTaskAssigneesRow, error) {
+	rows, err := q.db.Query(ctx, listTaskAssignees, taskID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListTaskAssigneesRow{}
+	for rows.Next() {
+		var i ListTaskAssigneesRow
+		if err := rows.Scan(&i.UserID, &i.FullName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTasks = `-- name: ListTasks :many
 SELECT t.id, t.title, t.description, t.done, t.created_at, t.updated_at, t.project_id, t.assignee_id, t.start_date, t.due_date, t.status, t.parent_id, t.recurrence, t.baseline_start, t.baseline_due, t.priority, t.tags, t.reminder_sent, t.estimate_minutes,
        p.name      AS project_name,
        u.full_name AS assignee_name,
        COALESCE(st.total, 0)::int AS subtask_count,
-       COALESCE(st.done, 0)::int  AS subtask_done_count
+       COALESCE(st.done, 0)::int  AS subtask_done_count,
+       COALESCE(a.ids, ARRAY[]::bigint[])::bigint[] AS assignee_ids,
+       COALESCE(a.names, ARRAY[]::text[])::text[]   AS assignee_names
 FROM tasks t
 LEFT JOIN projects p ON p.id = t.project_id
 LEFT JOIN users u ON u.id = t.assignee_id
@@ -300,6 +360,14 @@ LEFT JOIN (
     WHERE parent_id IS NOT NULL
     GROUP BY parent_id
 ) st ON st.parent_id = t.id
+LEFT JOIN (
+    SELECT ta.task_id,
+           array_agg(ta.user_id ORDER BY au.full_name) AS ids,
+           array_agg(au.full_name ORDER BY au.full_name) AS names
+    FROM task_assignees ta
+    JOIN users au ON au.id = ta.user_id
+    GROUP BY ta.task_id
+) a ON a.task_id = t.id
 WHERE t.parent_id IS NULL
 ORDER BY t.created_at DESC
 `
@@ -328,6 +396,8 @@ type ListTasksRow struct {
 	AssigneeName     *string            `json:"assignee_name"`
 	SubtaskCount     int32              `json:"subtask_count"`
 	SubtaskDoneCount int32              `json:"subtask_done_count"`
+	AssigneeIds      []int64            `json:"assignee_ids"`
+	AssigneeNames    []string           `json:"assignee_names"`
 }
 
 func (q *Queries) ListTasks(ctx context.Context) ([]ListTasksRow, error) {
@@ -363,6 +433,8 @@ func (q *Queries) ListTasks(ctx context.Context) ([]ListTasksRow, error) {
 			&i.AssigneeName,
 			&i.SubtaskCount,
 			&i.SubtaskDoneCount,
+			&i.AssigneeIds,
+			&i.AssigneeNames,
 		); err != nil {
 			return nil, err
 		}

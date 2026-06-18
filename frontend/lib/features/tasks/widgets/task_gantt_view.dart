@@ -72,7 +72,7 @@ class _TaskGanttViewState extends ConsumerState<TaskGanttView> {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final List<TaskDependency> deps =
         ref.watch(dependenciesProvider).asData?.value ??
-            const <TaskDependency>[];
+        const <TaskDependency>[];
     final List<Task> scheduled = widget.tasks
         .where((Task t) => t.startDate != null || t.dueDate != null)
         .toList();
@@ -80,7 +80,8 @@ class _TaskGanttViewState extends ConsumerState<TaskGanttView> {
     if (scheduled.isEmpty) {
       return const EmptyState(
         icon: Icons.view_timeline_outlined,
-        message: 'No scheduled tasks yet.\n'
+        message:
+            'No scheduled tasks yet.\n'
             'Add a start or due date to a task to see it here.',
       );
     }
@@ -147,8 +148,7 @@ class _TaskGanttViewState extends ConsumerState<TaskGanttView> {
                 label: const Text('Milestones'),
               ),
               const SizedBox(width: 4),
-              const _LegendSwatch(
-                  color: AppColors.amber, label: 'Critical'),
+              const _LegendSwatch(color: AppColors.amber, label: 'Critical'),
               _LegendLine(color: scheme.onSurfaceVariant),
               const _LegendBaseline(),
               const _LegendMilestone(),
@@ -186,8 +186,7 @@ class _TaskGanttViewState extends ConsumerState<TaskGanttView> {
                           ),
                           Column(
                             children: <Widget>[
-                              _DateHeader(
-                                  days: days, rangeStart: rangeStart),
+                              _DateHeader(days: days, rangeStart: rangeStart),
                               for (final Task t in scheduled)
                                 _BarRow(
                                   task: t,
@@ -239,7 +238,8 @@ class _TaskGanttViewState extends ConsumerState<TaskGanttView> {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Baseline saved — planned dates snapshotted')),
+          content: Text('Baseline saved — planned dates snapshotted'),
+        ),
       );
     }
   }
@@ -268,18 +268,23 @@ class _TaskGanttViewState extends ConsumerState<TaskGanttView> {
       final double pRight = pLeft + p.span * _dayWidth - 4;
       final double sLeft = s.startOffset * _dayWidth + 2;
       final double sRight = sLeft + s.span * _dayWidth - 4;
-      final bool fromFinish = d.type == DependencyType.finishToStart ||
+      final bool fromFinish =
+          d.type == DependencyType.finishToStart ||
           d.type == DependencyType.finishToFinish;
-      final bool toStart = d.type == DependencyType.finishToStart ||
+      final bool toStart =
+          d.type == DependencyType.finishToStart ||
           d.type == DependencyType.startToStart;
-      out.add(_Arrow(
-        fromX: fromFinish ? pRight : pLeft,
-        fromY: _headerHeight + p.row * _rowHeight + _rowHeight / 2,
-        toX: toStart ? sLeft : sRight,
-        toY: _headerHeight + s.row * _rowHeight + _rowHeight / 2,
-        critical: critical.contains(d.predecessorId) &&
-            critical.contains(d.successorId),
-      ));
+      out.add(
+        _Arrow(
+          fromX: fromFinish ? pRight : pLeft,
+          fromY: _headerHeight + p.row * _rowHeight + _rowHeight / 2,
+          toX: toStart ? sLeft : sRight,
+          toY: _headerHeight + s.row * _rowHeight + _rowHeight / 2,
+          critical:
+              critical.contains(d.predecessorId) &&
+              critical.contains(d.successorId),
+        ),
+      );
     }
     return out;
   }
@@ -295,25 +300,28 @@ class _TaskGanttViewState extends ConsumerState<TaskGanttView> {
     }
     final Duration shift = Duration(days: delta);
     try {
-      await ref.read(tasksRepositoryProvider).update(
+      await ref
+          .read(tasksRepositoryProvider)
+          .update(
             t.id,
             title: t.title,
             description: t.description,
             projectId: t.projectId,
-            assigneeId: t.assigneeId,
+            assigneeIds: t.assigneeIds,
             startDate: t.startDate?.add(shift),
             dueDate: t.dueDate?.add(shift),
             status: t.status,
             recurrence: t.recurrence,
             priority: t.priority,
             tags: t.tags,
+            estimateMinutes: t.estimateMinutes,
           );
       ref.invalidate(tasksProvider);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Reschedule failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Reschedule failed: $e')));
       }
     }
   }
@@ -340,8 +348,7 @@ Set<int> _criticalPath(
   }
   final Map<int, int> dur = <int, int>{
     for (final int id in ids)
-      id: math.max(
-          1, spanById[id]!.end.difference(spanById[id]!.start).inDays),
+      id: math.max(1, spanById[id]!.end.difference(spanById[id]!.start).inDays),
   };
   final Map<int, List<int>> succs = <int, List<int>>{};
   final Map<int, List<int>> preds = <int, List<int>>{};
@@ -356,7 +363,7 @@ Set<int> _criticalPath(
   }
   final List<int> queue = <int>[
     for (final int id in ids)
-      if (indeg[id] == 0) id
+      if (indeg[id] == 0) id,
   ];
   final List<int> order = <int>[];
   final Map<int, int> ind = Map<int, int>.of(indeg);
@@ -383,8 +390,10 @@ Set<int> _criticalPath(
     es[n] = s;
     ef[n] = s + dur[n]!;
   }
-  final int projectEnd =
-      ef.values.fold<int>(0, (int a, int b) => math.max(a, b));
+  final int projectEnd = ef.values.fold<int>(
+    0,
+    (int a, int b) => math.max(a, b),
+  );
   final Map<int, int> ls = <int, int>{};
   for (final int n in order.reversed) {
     int f = projectEnd;
@@ -396,7 +405,7 @@ Set<int> _criticalPath(
   }
   return <int>{
     for (final int n in ids)
-      if (ls[n]! - es[n]! <= 0) n
+      if (ls[n]! - es[n]! <= 0) n,
   };
 }
 
@@ -436,9 +445,10 @@ class _LegendSwatch extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        Text(label,
-            style: TextStyle(
-                fontSize: 12, color: scheme.onSurfaceVariant)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+        ),
       ],
     );
   }
@@ -456,9 +466,10 @@ class _LegendLine extends StatelessWidget {
       children: <Widget>[
         Icon(Icons.arrow_right_alt, size: 18, color: color),
         const SizedBox(width: 4),
-        Text('Dependency',
-            style: TextStyle(
-                fontSize: 12, color: scheme.onSurfaceVariant)),
+        Text(
+          'Dependency',
+          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+        ),
       ],
     );
   }
@@ -498,16 +509,19 @@ class _LabelColumn extends StatelessWidget {
                 child: Row(
                   children: <Widget>[
                     if (critical.contains(t.id)) ...<Widget>[
-                      const Icon(Icons.bolt,
-                          size: 14, color: AppColors.amber),
+                      const Icon(Icons.bolt, size: 14, color: AppColors.amber),
                       const SizedBox(width: 2),
                     ],
                     Expanded(
-                      child: Text(t.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w500)),
+                      child: Text(
+                        t.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -538,14 +552,19 @@ class _DateHeader extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   Text(
-                    weekdayShort(
-                            rangeStart.add(Duration(days: i)).weekday)[0],
+                    weekdayShort(rangeStart.add(Duration(days: i)).weekday)[0],
                     style: TextStyle(
-                        fontSize: 9, color: scheme.onSurfaceVariant),
+                      fontSize: 9,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
-                  Text('${rangeStart.add(Duration(days: i)).day}',
-                      style: const TextStyle(
-                          fontSize: 11, fontWeight: FontWeight.w600)),
+                  Text(
+                    '${rangeStart.add(Duration(days: i)).day}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -590,14 +609,15 @@ class _BarRow extends StatelessWidget {
     final double left = startOffset * _dayWidth + 2 + dragDx;
     final double width = spanDays * _dayWidth - 4;
 
-    final bool overdue = !task.done &&
+    final bool overdue =
+        !task.done &&
         task.dueDate != null &&
         _dateOnly(task.dueDate!).isBefore(_dateOnly(DateTime.now()));
     final Color color = task.done
         ? AppColors.green
         : overdue
-            ? AppColors.rose
-            : AppColors.brand;
+        ? AppColors.rose
+        : AppColors.brand;
 
     return SizedBox(
       height: _rowHeight,
@@ -631,9 +651,10 @@ class _BarRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600),
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -672,25 +693,31 @@ class _BarRow extends StatelessWidget {
 /// Builds the vertical line + flag for each milestone in range (as `Positioned`
 /// children of the timeline `Stack`).
 List<Widget> _milestoneMarkers(
-    List<Milestone> milestones, DateTime rangeStart) {
+  List<Milestone> milestones,
+  DateTime rangeStart,
+) {
   final List<Widget> out = <Widget>[];
   for (final Milestone m in milestones) {
     final int offset = _dateOnly(m.dueDate).difference(rangeStart).inDays;
     final double x = offset * _dayWidth + _dayWidth / 2;
     final Color color = m.done ? AppColors.green : AppColors.rose;
-    out.add(Positioned(
-      left: x - 1,
-      top: _headerHeight,
-      bottom: 0,
-      child: IgnorePointer(
-        child: Container(width: 2, color: color.withValues(alpha: 0.55)),
+    out.add(
+      Positioned(
+        left: x - 1,
+        top: _headerHeight,
+        bottom: 0,
+        child: IgnorePointer(
+          child: Container(width: 2, color: color.withValues(alpha: 0.55)),
+        ),
       ),
-    ));
-    out.add(Positioned(
-      left: x + 3,
-      top: 3,
-      child: _MilestoneFlag(name: m.name, color: color),
-    ));
+    );
+    out.add(
+      Positioned(
+        left: x + 3,
+        top: 3,
+        child: _MilestoneFlag(name: m.name, color: color),
+      ),
+    );
   }
   return out;
 }
@@ -716,13 +743,16 @@ class _MilestoneFlag extends StatelessWidget {
             Icon(Icons.flag, size: 12, color: color),
             const SizedBox(width: 3),
             Flexible(
-              child: Text(name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: color)),
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
             ),
           ],
         ),
@@ -749,9 +779,10 @@ class _LegendBaseline extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        Text('Baseline',
-            style: TextStyle(
-                fontSize: 12, color: scheme.onSurfaceVariant)),
+        Text(
+          'Baseline',
+          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+        ),
       ],
     );
   }
@@ -768,9 +799,10 @@ class _LegendMilestone extends StatelessWidget {
       children: <Widget>[
         const Icon(Icons.flag, size: 14, color: AppColors.rose),
         const SizedBox(width: 4),
-        Text('Milestone',
-            style: TextStyle(
-                fontSize: 12, color: scheme.onSurfaceVariant)),
+        Text(
+          'Milestone',
+          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+        ),
       ],
     );
   }
@@ -811,8 +843,11 @@ class _GridPainter extends CustomPainter {
       final double x = i * _dayWidth;
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), linePaint);
     }
-    canvas.drawLine(Offset(0, _headerHeight),
-        Offset(size.width, _headerHeight), linePaint);
+    canvas.drawLine(
+      Offset(0, _headerHeight),
+      Offset(size.width, _headerHeight),
+      linePaint,
+    );
     for (int r = 1; r <= rows; r++) {
       final double y = _headerHeight + r * _rowHeight;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);

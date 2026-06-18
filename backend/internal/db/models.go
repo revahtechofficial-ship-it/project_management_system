@@ -159,6 +159,11 @@ type Task struct {
 	EstimateMinutes int32              `json:"estimate_minutes"`
 }
 
+type TaskAssignee struct {
+	TaskID int64 `json:"task_id"`
+	UserID int64 `json:"user_id"`
+}
+
 type TaskDependency struct {
 	ID            int64     `json:"id"`
 	PredecessorID int64     `json:"predecessor_id"`

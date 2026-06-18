@@ -241,10 +241,10 @@ class _CardBody extends StatelessWidget {
                                   icon: Icons.folder_outlined,
                                   label: task.projectName!,
                                   color: AppColors.brand),
-                            if (task.assigneeName != null)
+                            if (task.assigneeNames.isNotEmpty)
                               _MiniChip(
                                   icon: Icons.person_outline,
-                                  label: task.assigneeName!,
+                                  label: task.assigneeLabel,
                                   color: AppColors.teal),
                             if (task.dueDate != null)
                               _MiniChip(

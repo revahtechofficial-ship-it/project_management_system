@@ -39,6 +39,7 @@ class TasksRepository {
     TaskPriority priority = TaskPriority.none,
     List<String> tags = const <String>[],
     int estimateMinutes = 0,
+    List<int>? assigneeIds,
   }) async {
     final Response<Map<String, dynamic>> res = await _dio
         .post<Map<String, dynamic>>(
@@ -48,6 +49,7 @@ class TasksRepository {
             'description': description,
             'project_id': projectId,
             'assignee_id': assigneeId,
+            'assignee_ids': ?assigneeIds,
             'start_date': dateParam(startDate),
             'due_date': dateParam(dueDate),
             'status': status.toJson(),
@@ -76,6 +78,7 @@ class TasksRepository {
     TaskPriority priority = TaskPriority.none,
     List<String> tags = const <String>[],
     int estimateMinutes = 0,
+    List<int>? assigneeIds,
   }) async {
     final Response<Map<String, dynamic>> res = await _dio
         .put<Map<String, dynamic>>(
@@ -85,6 +88,7 @@ class TasksRepository {
             'description': description,
             'project_id': projectId,
             'assignee_id': assigneeId,
+            'assignee_ids': ?assigneeIds,
             'start_date': dateParam(startDate),
             'due_date': dateParam(dueDate),
             'status': status.toJson(),

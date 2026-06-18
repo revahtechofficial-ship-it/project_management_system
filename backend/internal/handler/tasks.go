@@ -81,6 +81,8 @@ type taskResponse struct {
 	Priority         string     `json:"priority"`
 	Tags             []string   `json:"tags"`
 	EstimateMinutes  int32      `json:"estimate_minutes"`
+	AssigneeIDs      []int64    `json:"assignee_ids"`
+	AssigneeNames    []string   `json:"assignee_names"`
 }
 
 func taskFromModel(t db.Task) taskResponse {
@@ -103,6 +105,8 @@ func taskFromModel(t db.Task) taskResponse {
 		Priority:        t.Priority,
 		Tags:            t.Tags,
 		EstimateMinutes: t.EstimateMinutes,
+		AssigneeIDs:     []int64{},
+		AssigneeNames:   []string{},
 	}
 }
 
@@ -130,6 +134,57 @@ func taskFromRow(r db.ListTasksRow) taskResponse {
 		Priority:         r.Priority,
 		Tags:             r.Tags,
 		EstimateMinutes:  r.EstimateMinutes,
+		AssigneeIDs:      r.AssigneeIds,
+		AssigneeNames:    r.AssigneeNames,
+	}
+}
+
+// taskWithAssignees builds a single-task response and fills its full assignee
+// list (ids + names) from the join table.
+func (h *TaskHandler) taskWithAssignees(ctx context.Context, t db.Task) taskResponse {
+	resp := taskFromModel(t)
+	if rows, err := h.q.ListTaskAssignees(ctx, t.ID); err == nil {
+		ids := make([]int64, 0, len(rows))
+		names := make([]string, 0, len(rows))
+		for _, a := range rows {
+			ids = append(ids, a.UserID)
+			names = append(names, a.FullName)
+		}
+		resp.AssigneeIDs = ids
+		resp.AssigneeNames = names
+	}
+	return resp
+}
+
+// resolveAssignees derives the full (deduped, positive) assignee list and the
+// denormalized primary from a request body. The new assignee_ids field wins;
+// assignee_id is a single-value fallback for older callers. A present-but-empty
+// assignee_ids explicitly clears all assignees.
+func resolveAssignees(b taskBody) (primary *int64, ids []int64) {
+	src := b.AssigneeIDs
+	if src == nil && b.AssigneeID != nil {
+		src = []int64{*b.AssigneeID}
+	}
+	seen := make(map[int64]bool)
+	for _, id := range src {
+		if id <= 0 || seen[id] {
+			continue
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	if len(ids) > 0 {
+		p := ids[0]
+		primary = &p
+	}
+	return primary, ids
+}
+
+// setAssignees replaces a task's assignee join rows with ids.
+func (h *TaskHandler) setAssignees(ctx context.Context, taskID int64, ids []int64) {
+	_ = h.q.ClearTaskAssignees(ctx, taskID)
+	for _, id := range ids {
+		_ = h.q.AddTaskAssignee(ctx, db.AddTaskAssigneeParams{TaskID: taskID, UserID: id})
 	}
 }
 
@@ -269,18 +324,19 @@ func (h *TaskHandler) spawnNext(ctx context.Context, t db.Task) {
 		Tags:            t.Tags,
 		EstimateMinutes: t.EstimateMinutes,
 	})
-	if err == nil && next.AssigneeID != nil {
-		notifyUser(ctx, h.q, *next.AssigneeID, "assigned",
-			"Recurring task scheduled", next.Title)
+	if err != nil {
+		return
 	}
-}
-
-// assigneeChanged reports whether a task was (re)assigned to a real user.
-func assigneeChanged(prior, next *int64) bool {
-	if next == nil {
-		return false
+	// Carry over every assignee to the new occurrence and notify them.
+	if rows, e := h.q.ListTaskAssignees(ctx, t.ID); e == nil {
+		for _, a := range rows {
+			_ = h.q.AddTaskAssignee(ctx, db.AddTaskAssigneeParams{
+				TaskID: next.ID, UserID: a.UserID,
+			})
+			notifyUser(ctx, h.q, a.UserID, "assigned",
+				"Recurring task scheduled", next.Title)
+		}
 	}
-	return prior == nil || *prior != *next
 }
 
 func (h *TaskHandler) list(w http.ResponseWriter, r *http.Request) {
@@ -301,6 +357,7 @@ type taskBody struct {
 	Description     string   `json:"description"`
 	ProjectID       *int64   `json:"project_id"`
 	AssigneeID      *int64   `json:"assignee_id"`
+	AssigneeIDs     []int64  `json:"assignee_ids"`
 	StartDate       *string  `json:"start_date"`
 	DueDate         *string  `json:"due_date"`
 	Status          string   `json:"status"`
@@ -341,11 +398,12 @@ func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, errors.New("invalid priority"))
 		return
 	}
+	primary, assignees := resolveAssignees(body)
 	task, err := h.q.CreateTask(r.Context(), db.CreateTaskParams{
 		Title:           body.Title,
 		Description:     body.Description,
 		ProjectID:       body.ProjectID,
-		AssigneeID:      body.AssigneeID,
+		AssigneeID:      primary,
 		StartDate:       start,
 		DueDate:         due,
 		Status:          status,
@@ -359,11 +417,14 @@ func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	h.setAssignees(r.Context(), task.ID, assignees)
 	if task.ParentID == nil {
 		logActivity(r.Context(), h.q, task.ID, "created", "")
 	}
-	notifyAssigned(r.Context(), h.q, task.AssigneeID, task.Title)
-	writeJSON(w, http.StatusCreated, taskFromModel(task))
+	for i := range assignees {
+		notifyAssigned(r.Context(), h.q, &assignees[i], task.Title)
+	}
+	writeJSON(w, http.StatusCreated, h.taskWithAssignees(r.Context(), task))
 }
 
 func (h *TaskHandler) update(w http.ResponseWriter, r *http.Request) {
@@ -401,13 +462,18 @@ func (h *TaskHandler) update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, errors.New("invalid priority"))
 		return
 	}
-	prior, _ := h.q.GetTask(r.Context(), id)
+	priorRows, _ := h.q.ListTaskAssignees(r.Context(), id)
+	priorSet := make(map[int64]bool, len(priorRows))
+	for _, a := range priorRows {
+		priorSet[a.UserID] = true
+	}
+	primary, assignees := resolveAssignees(body)
 	task, err := h.q.UpdateTask(r.Context(), db.UpdateTaskParams{
 		ID:              id,
 		Title:           body.Title,
 		Description:     body.Description,
 		ProjectID:       body.ProjectID,
-		AssigneeID:      body.AssigneeID,
+		AssigneeID:      primary,
 		StartDate:       start,
 		DueDate:         due,
 		Status:          status,
@@ -424,16 +490,19 @@ func (h *TaskHandler) update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	h.setAssignees(r.Context(), id, assignees)
 	// A date change may ripple to dependent tasks; keep the schedule valid.
 	if err := rescheduleAll(r.Context(), h.q); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 	logActivity(r.Context(), h.q, id, "updated", "")
-	if assigneeChanged(prior.AssigneeID, task.AssigneeID) {
-		notifyAssigned(r.Context(), h.q, task.AssigneeID, task.Title)
+	for i := range assignees {
+		if !priorSet[assignees[i]] {
+			notifyAssigned(r.Context(), h.q, &assignees[i], task.Title)
+		}
 	}
-	writeJSON(w, http.StatusOK, taskFromModel(task))
+	writeJSON(w, http.StatusOK, h.taskWithAssignees(r.Context(), task))
 }
 
 func (h *TaskHandler) get(w http.ResponseWriter, r *http.Request) {
@@ -451,7 +520,7 @@ func (h *TaskHandler) get(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, taskFromModel(task))
+	writeJSON(w, http.StatusOK, h.taskWithAssignees(r.Context(), task))
 }
 
 type setDoneBody struct {
@@ -493,7 +562,7 @@ func (h *TaskHandler) setDone(w http.ResponseWriter, r *http.Request) {
 			logActivity(r.Context(), h.q, id, "reopened", "")
 		}
 	}
-	writeJSON(w, http.StatusOK, taskFromModel(task))
+	writeJSON(w, http.StatusOK, h.taskWithAssignees(r.Context(), task))
 }
 
 type setStatusBody struct {
@@ -539,7 +608,7 @@ func (h *TaskHandler) setStatus(w http.ResponseWriter, r *http.Request) {
 	} else {
 		logActivity(r.Context(), h.q, id, "status", body.Status)
 	}
-	writeJSON(w, http.StatusOK, taskFromModel(task))
+	writeJSON(w, http.StatusOK, h.taskWithAssignees(r.Context(), task))
 }
 
 func (h *TaskHandler) delete(w http.ResponseWriter, r *http.Request) {

@@ -38,7 +38,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
   late final TextEditingController _title;
   late final TextEditingController _description;
   int? _projectId;
-  int? _assigneeId;
+  late List<int> _assigneeIds;
   DateTime? _start;
   DateTime? _due;
   TaskStatus _status = TaskStatus.todo;
@@ -59,7 +59,10 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
     _title = TextEditingController(text: t?.title ?? '');
     _description = TextEditingController(text: t?.description ?? '');
     _projectId = t?.projectId;
-    _assigneeId = t?.assigneeId;
+    _assigneeIds = List<int>.of(
+      t?.assigneeIds ??
+          (t?.assigneeId != null ? <int>[t!.assigneeId!] : const <int>[]),
+    );
     _start = t?.startDate;
     _due = t?.dueDate;
     _status = t == null || t.status == TaskStatus.other
@@ -98,6 +101,16 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
     return (hours * 60).round();
   }
 
+  /// Display name for a member id (falls back to email, then a placeholder).
+  String _assigneeName(List<TeamMember> members, int id) {
+    for (final TeamMember m in members) {
+      if (m.id == id) {
+        return m.name.isEmpty ? m.email : m.name;
+      }
+    }
+    return 'User $id';
+  }
+
   void _addTag(String raw) {
     final String tag = raw.trim();
     if (tag.isEmpty ||
@@ -129,7 +142,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           title: _title.text.trim(),
           description: _description.text.trim(),
           projectId: _projectId,
-          assigneeId: _assigneeId,
+          assigneeIds: _assigneeIds,
           startDate: _start,
           dueDate: _due,
           status: _status,
@@ -143,7 +156,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           title: _title.text.trim(),
           description: _description.text.trim(),
           projectId: _projectId,
-          assigneeId: _assigneeId,
+          assigneeIds: _assigneeIds,
           startDate: _start,
           dueDate: _due,
           status: _status,
@@ -283,22 +296,81 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                   ],
                   onChanged: (int? v) => setState(() => _projectId = v),
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<int?>(
-                  initialValue: _assigneeId,
-                  decoration: const InputDecoration(labelText: 'Assignee'),
-                  items: <DropdownMenuItem<int?>>[
-                    const DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text('Unassigned'),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Assignees',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
                     ),
-                    for (final TeamMember m in members)
-                      DropdownMenuItem<int?>(
-                        value: m.id,
-                        child: Text(m.name.isEmpty ? m.email : m.name),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (_assigneeIds.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: <Widget>[
+                        for (final int id in _assigneeIds)
+                          _PersonChip(
+                            label: _assigneeName(members, id),
+                            onRemove: () =>
+                                setState(() => _assigneeIds.remove(id)),
+                          ),
+                      ],
+                    ),
+                  ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: PopupMenuButton<int>(
+                    tooltip: 'Add assignee',
+                    enabled: members.any(
+                      (TeamMember m) => !_assigneeIds.contains(m.id),
+                    ),
+                    onSelected: (int id) =>
+                        setState(() => _assigneeIds.add(id)),
+                    itemBuilder: (BuildContext context) =>
+                        <PopupMenuEntry<int>>[
+                          for (final TeamMember m in members.where(
+                            (TeamMember m) => !_assigneeIds.contains(m.id),
+                          ))
+                            PopupMenuItem<int>(
+                              value: m.id,
+                              child: Text(m.name.isEmpty ? m.email : m.name),
+                            ),
+                        ],
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
                       ),
-                  ],
-                  onChanged: (int? v) => setState(() => _assigneeId = v),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: scheme.outline),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Icon(
+                            Icons.person_add_alt,
+                            size: 18,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _assigneeIds.isEmpty
+                                ? 'Add assignee'
+                                : 'Add another',
+                            style: TextStyle(color: scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -699,6 +771,43 @@ class _DependencySectionState extends ConsumerState<_DependencySection> {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// A small chip showing an assignee (avatar + name) with a remove button.
+class _PersonChip extends StatelessWidget {
+  const _PersonChip({required this.label, required this.onRemove});
+
+  final String label;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(6, 4, 6, 4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          UserAvatar(name: label, radius: 10),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(width: 4),
+          InkWell(
+            onTap: onRemove,
+            borderRadius: BorderRadius.circular(20),
+            child: Icon(Icons.close, size: 14, color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
     );
   }
 }

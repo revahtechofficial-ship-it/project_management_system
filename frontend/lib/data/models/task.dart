@@ -32,6 +32,8 @@ class Task {
   final TaskPriority priority;
   final List<String> tags;
   final int estimateMinutes;
+  final List<int> assigneeIds;
+  final List<String> assigneeNames;
 
   const Task({
     required this.id,
@@ -56,7 +58,20 @@ class Task {
     this.priority = TaskPriority.none,
     this.tags = const <String>[],
     this.estimateMinutes = 0,
+    this.assigneeIds = const <int>[],
+    this.assigneeNames = const <String>[],
   });
+
+  /// Compact assignee summary for cards, e.g. "Alice" or "Alice +2".
+  String get assigneeLabel {
+    if (assigneeNames.isEmpty) {
+      return '';
+    }
+    if (assigneeNames.length == 1) {
+      return assigneeNames.first;
+    }
+    return '${assigneeNames.first} +${assigneeNames.length - 1}';
+  }
 
   /// Human-readable estimate (e.g. "2h 30m", "45m"), or '' when unset.
   String get estimateLabel {
@@ -109,6 +124,16 @@ class Task {
             .toList(growable: false) ??
         const <String>[],
     estimateMinutes: json['estimate_minutes'] as int? ?? 0,
+    assigneeIds:
+        (json['assignee_ids'] as List<dynamic>?)
+            ?.map((dynamic e) => (e as num).toInt())
+            .toList(growable: false) ??
+        const <int>[],
+    assigneeNames:
+        (json['assignee_names'] as List<dynamic>?)
+            ?.map((dynamic e) => e as String)
+            .toList(growable: false) ??
+        const <String>[],
   );
 
   /// Serializes this task to a JSON map with snake_case keys.
@@ -135,6 +160,8 @@ class Task {
     'priority': priority.toJson(),
     'tags': tags,
     'estimate_minutes': estimateMinutes,
+    'assignee_ids': assigneeIds,
+    'assignee_names': assigneeNames,
   };
 
   @override
@@ -175,6 +202,8 @@ class Task {
           other.baselineDue == baselineDue &&
           other.priority == priority &&
           other.estimateMinutes == estimateMinutes &&
+          listEquals(other.assigneeIds, assigneeIds) &&
+          listEquals(other.assigneeNames, assigneeNames) &&
           listEquals(other.tags, tags);
 
   @override
@@ -200,6 +229,8 @@ class Task {
     baselineDue,
     priority,
     estimateMinutes,
+    Object.hashAll(assigneeIds),
+    Object.hashAll(assigneeNames),
     Object.hashAll(tags),
   ]);
 }

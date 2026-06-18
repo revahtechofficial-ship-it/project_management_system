@@ -3,7 +3,9 @@ SELECT t.*,
        p.name      AS project_name,
        u.full_name AS assignee_name,
        COALESCE(st.total, 0)::int AS subtask_count,
-       COALESCE(st.done, 0)::int  AS subtask_done_count
+       COALESCE(st.done, 0)::int  AS subtask_done_count,
+       COALESCE(a.ids, ARRAY[]::bigint[])::bigint[] AS assignee_ids,
+       COALESCE(a.names, ARRAY[]::text[])::text[]   AS assignee_names
 FROM tasks t
 LEFT JOIN projects p ON p.id = t.project_id
 LEFT JOIN users u ON u.id = t.assignee_id
@@ -15,8 +17,31 @@ LEFT JOIN (
     WHERE parent_id IS NOT NULL
     GROUP BY parent_id
 ) st ON st.parent_id = t.id
+LEFT JOIN (
+    SELECT ta.task_id,
+           array_agg(ta.user_id ORDER BY au.full_name) AS ids,
+           array_agg(au.full_name ORDER BY au.full_name) AS names
+    FROM task_assignees ta
+    JOIN users au ON au.id = ta.user_id
+    GROUP BY ta.task_id
+) a ON a.task_id = t.id
 WHERE t.parent_id IS NULL
 ORDER BY t.created_at DESC;
+
+-- name: ListTaskAssignees :many
+SELECT ta.user_id, u.full_name
+FROM task_assignees ta
+JOIN users u ON u.id = ta.user_id
+WHERE ta.task_id = $1
+ORDER BY u.full_name;
+
+-- name: ClearTaskAssignees :exec
+DELETE FROM task_assignees WHERE task_id = $1;
+
+-- name: AddTaskAssignee :exec
+INSERT INTO task_assignees (task_id, user_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING;
 
 -- name: ListSubtasks :many
 SELECT * FROM tasks
