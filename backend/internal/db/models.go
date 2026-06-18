@@ -137,6 +137,16 @@ type Project struct {
 	UpdatedAt   time.Time          `json:"updated_at"`
 }
 
+type ProjectTemplate struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	ProjectName string    `json:"project_name"`
+	Description string    `json:"description"`
+	Status      string    `json:"status"`
+	CreatedBy   *int64    `json:"created_by"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type Task struct {
 	ID              int64              `json:"id"`
 	Title           string             `json:"title"`

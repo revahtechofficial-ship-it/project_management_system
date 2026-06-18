@@ -11,7 +11,9 @@ import '../../core/widgets/status_pill.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../data/enums/project_status.dart';
 import '../../data/models/project.dart';
+import '../../data/models/project_template.dart';
 import '../../providers/auth_provider.dart';
+import 'providers/project_templates_providers.dart';
 import 'providers/projects_providers.dart';
 import 'widgets/project_form_dialog.dart';
 
@@ -22,8 +24,7 @@ class ProjectsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Project>> projectsAsync =
-        ref.watch(projectsProvider);
+    final AsyncValue<List<Project>> projectsAsync = ref.watch(projectsProvider);
     final List<Project> projects =
         projectsAsync.asData?.value ?? const <Project>[];
     final int active = projects
@@ -35,7 +36,17 @@ class ProjectsPage extends ConsumerWidget {
     final double avg = projects.isEmpty
         ? 0
         : projects.fold<double>(0, (double s, Project p) => s + p.progress) /
-            projects.length;
+              projects.length;
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final int overdue = projects
+        .where(
+          (Project p) =>
+              p.status != ProjectStatus.completed &&
+              p.dueDate != null &&
+              p.dueDate!.toLocal().isBefore(today),
+        )
+        .length;
 
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -48,6 +59,10 @@ class ProjectsPage extends ConsumerWidget {
               onPressed: () => ref.invalidate(projectsProvider),
               icon: const Icon(Icons.refresh, size: 18),
               label: const Text('Refresh'),
+            ),
+            _ProjectTemplatesButton(
+              onSelected: (ProjectTemplate t) =>
+                  _openForm(context, ref, template: t),
             ),
             FilledButton.icon(
               onPressed: () => _openForm(context, ref),
@@ -93,6 +108,13 @@ class ProjectsPage extends ConsumerWidget {
               value: '${(avg * 100).round()}%',
               progress: avg,
             ),
+            StatCard(
+              icon: Icons.warning_amber_rounded,
+              color: AppColors.rose,
+              label: 'Overdue',
+              value: '$overdue',
+              footer: 'past due date',
+            ),
           ],
         ),
         const SizedBox(height: 20),
@@ -126,11 +148,16 @@ class ProjectsPage extends ConsumerWidget {
   }
 }
 
-Future<void> _openForm(BuildContext context, WidgetRef ref,
-    {Project? project}) async {
+Future<void> _openForm(
+  BuildContext context,
+  WidgetRef ref, {
+  Project? project,
+  ProjectTemplate? template,
+}) async {
   final bool? saved = await showDialog<bool>(
     context: context,
-    builder: (BuildContext context) => ProjectFormDialog(project: project),
+    builder: (BuildContext context) =>
+        ProjectFormDialog(project: project, template: template),
   );
   if (saved ?? false) {
     ref.invalidate(projectsProvider);
@@ -151,57 +178,74 @@ class _ProjectCard extends ConsumerWidget {
           Row(
             children: <Widget>[
               StatusPill(
-                  label: project.status.label, color: project.status.color),
+                label: project.status.label,
+                color: project.status.color,
+              ),
+              const SizedBox(width: 6),
+              _HealthBadge(project: project),
               const Spacer(),
               PopupMenuButton<String>(
                 tooltip: 'Project actions',
                 padding: EdgeInsets.zero,
-                icon: Icon(Icons.more_horiz,
-                    size: 20, color: scheme.onSurfaceVariant),
+                icon: Icon(
+                  Icons.more_horiz,
+                  size: 20,
+                  color: scheme.onSurfaceVariant,
+                ),
                 onSelected: (String v) => _onAction(context, ref, v),
-                itemBuilder: (BuildContext context) =>
-                    <PopupMenuEntry<String>>[
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                   const PopupMenuItem<String>(
-                      value: 'edit', child: Text('Edit')),
-                  if (ref.watch(authControllerProvider).asData?.value
-                          .isAdmin ??
+                    value: 'edit',
+                    child: Text('Edit'),
+                  ),
+                  if (ref.watch(authControllerProvider).asData?.value.isAdmin ??
                       false)
                     const PopupMenuItem<String>(
-                        value: 'delete', child: Text('Delete')),
+                      value: 'delete',
+                      child: Text('Delete'),
+                    ),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(project.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w700)),
+          Text(
+            project.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 6),
           SizedBox(
             height: 38,
             child: Text(
-                project.description.isEmpty
-                    ? 'No description'
-                    : project.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 13,
-                    height: 1.35,
-                    color: scheme.onSurfaceVariant)),
+              project.description.isEmpty
+                  ? 'No description'
+                  : project.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.35,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           Row(
             children: <Widget>[
-              Text('${project.doneTasks}/${project.totalTasks} tasks',
-                  style: TextStyle(
-                      fontSize: 12, color: scheme.onSurfaceVariant)),
+              Text(
+                '${project.doneTasks}/${project.totalTasks} tasks',
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
               const Spacer(),
-              Text('${(project.progress * 100).round()}%',
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w700)),
+              Text(
+                '${(project.progress * 100).round()}%',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -218,9 +262,13 @@ class _ProjectCard extends ConsumerWidget {
           Row(
             children: <Widget>[
               if (project.memberNames.isEmpty)
-                Text('No members',
-                    style: TextStyle(
-                        fontSize: 12, color: scheme.onSurfaceVariant))
+                Text(
+                  'No members',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                )
               else
                 _AvatarStack(names: project.memberNames),
               const Spacer(),
@@ -233,7 +281,10 @@ class _ProjectCard extends ConsumerWidget {
   }
 
   Future<void> _onAction(
-      BuildContext context, WidgetRef ref, String action) async {
+    BuildContext context,
+    WidgetRef ref,
+    String action,
+  ) async {
     if (action == 'edit') {
       await _openForm(context, ref, project: project);
       return;
@@ -245,12 +296,14 @@ class _ProjectCard extends ConsumerWidget {
         content: Text('"${project.name}" will be permanently removed.'),
         actions: <Widget>[
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: AppColors.rose),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete')),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.rose),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -262,11 +315,95 @@ class _ProjectCard extends ConsumerWidget {
       ref.invalidate(projectsProvider);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Delete failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
       }
     }
+  }
+}
+
+/// A "From template" menu shown beside "New project" when templates exist.
+class _ProjectTemplatesButton extends ConsumerWidget {
+  const _ProjectTemplatesButton({required this.onSelected});
+  final ValueChanged<ProjectTemplate> onSelected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final List<ProjectTemplate> templates =
+        ref.watch(projectTemplatesProvider).asData?.value ??
+        const <ProjectTemplate>[];
+    if (templates.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return PopupMenuButton<ProjectTemplate>(
+      tooltip: 'New from template',
+      onSelected: onSelected,
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<ProjectTemplate>>[
+        for (final ProjectTemplate t in templates)
+          PopupMenuItem<ProjectTemplate>(value: t, child: Text(t.name)),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          border: Border.all(color: scheme.outline),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.bookmark_outline, size: 18),
+            SizedBox(width: 8),
+            Text('From template'),
+            Icon(Icons.arrow_drop_down, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A schedule-health chip (On track / At risk / Overdue) for an open project.
+class _HealthBadge extends StatelessWidget {
+  const _HealthBadge({required this.project});
+  final Project project;
+
+  @override
+  Widget build(BuildContext context) {
+    if (project.status == ProjectStatus.completed || project.dueDate == null) {
+      return const SizedBox.shrink();
+    }
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final DateTime due = project.dueDate!.toLocal();
+    final String label;
+    final Color color;
+    if (due.isBefore(today)) {
+      label = 'Overdue';
+      color = AppColors.rose;
+    } else if (due.difference(today).inDays <= 7 && project.progress < 0.9) {
+      label = 'At risk';
+      color = AppColors.amber;
+    } else {
+      label = 'On track';
+      color = AppColors.teal;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
   }
 }
 
@@ -304,11 +441,14 @@ class _AvatarStack extends StatelessWidget {
               child: CircleAvatar(
                 radius: 15,
                 backgroundColor: scheme.surfaceContainerHighest,
-                child: Text('+$extra',
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurfaceVariant)),
+                child: Text(
+                  '+$extra',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             ),
         ],
@@ -333,9 +473,14 @@ class _DueChip extends StatelessWidget {
       children: <Widget>[
         Icon(Icons.event_rounded, size: 15, color: color),
         const SizedBox(width: 4),
-        Text(shortDate(due),
-            style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+        Text(
+          shortDate(due),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
       ],
     );
   }

@@ -4,18 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../data/enums/project_status.dart';
 import '../../../data/models/project.dart';
+import '../../../data/models/project_template.dart';
+import '../providers/project_templates_providers.dart';
 import '../providers/projects_providers.dart';
 
 /// Create/edit dialog for a [Project]. Pops `true` on a successful save so the
 /// caller can refresh the list.
 class ProjectFormDialog extends ConsumerStatefulWidget {
-  const ProjectFormDialog({super.key, this.project});
+  const ProjectFormDialog({super.key, this.project, this.template});
 
   final Project? project;
 
+  /// When creating (project == null), pre-fills the form from this template.
+  final ProjectTemplate? template;
+
   @override
-  ConsumerState<ProjectFormDialog> createState() =>
-      _ProjectFormDialogState();
+  ConsumerState<ProjectFormDialog> createState() => _ProjectFormDialogState();
 }
 
 class _ProjectFormDialogState extends ConsumerState<ProjectFormDialog> {
@@ -33,11 +37,16 @@ class _ProjectFormDialogState extends ConsumerState<ProjectFormDialog> {
   void initState() {
     super.initState();
     final Project? p = widget.project;
-    _name = TextEditingController(text: p?.name ?? '');
-    _description = TextEditingController(text: p?.description ?? '');
-    _status = p == null || p.status == ProjectStatus.other
-        ? ProjectStatus.active
-        : p.status;
+    final ProjectTemplate? tmpl = widget.template;
+    _name = TextEditingController(text: p?.name ?? tmpl?.projectName ?? '');
+    _description = TextEditingController(
+      text: p?.description ?? tmpl?.description ?? '',
+    );
+    _status = p != null
+        ? (p.status == ProjectStatus.other ? ProjectStatus.active : p.status)
+        : (tmpl != null && tmpl.status != ProjectStatus.other
+              ? tmpl.status
+              : ProjectStatus.active);
     _dueDate = p?.dueDate;
   }
 
@@ -85,6 +94,61 @@ class _ProjectFormDialogState extends ConsumerState<ProjectFormDialog> {
     }
   }
 
+  /// Saves the current field values as a reusable named project template.
+  Future<void> _saveAsTemplate() async {
+    final TextEditingController nameCtrl = TextEditingController(
+      text: _name.text.trim(),
+    );
+    final String? name = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Save as template'),
+        content: TextField(
+          controller: nameCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Template name'),
+          onSubmitted: (String v) => Navigator.pop(context, v.trim()),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, nameCtrl.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    nameCtrl.dispose();
+    if (name == null || name.isEmpty || !mounted) {
+      return;
+    }
+    try {
+      await ref
+          .read(projectTemplatesRepositoryProvider)
+          .create(
+            name: name,
+            projectName: _name.text.trim(),
+            description: _description.text.trim(),
+            status: _status,
+          );
+      ref.invalidate(projectTemplatesProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Saved template "$name"')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not save template')),
+        );
+      }
+    }
+  }
+
   Future<void> _pickDate() async {
     final DateTime now = DateTime.now();
     final DateTime? picked = await showDatePicker(
@@ -122,8 +186,7 @@ class _ProjectFormDialogState extends ConsumerState<ProjectFormDialog> {
                 controller: _description,
                 minLines: 2,
                 maxLines: 4,
-                decoration:
-                    const InputDecoration(labelText: 'Description'),
+                decoration: const InputDecoration(labelText: 'Description'),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<ProjectStatus>(
@@ -170,20 +233,32 @@ class _ProjectFormDialogState extends ConsumerState<ProjectFormDialog> {
           ),
         ),
       ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: <Widget>[
-        TextButton(
-          onPressed: _saving ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+        TextButton.icon(
+          onPressed: _saving ? null : _saveAsTemplate,
+          icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+          label: const Text('Save as template'),
         ),
-        FilledButton(
-          onPressed: _saving ? null : _save,
-          child: _saving
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(_isEdit ? 'Save' : 'Create'),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            TextButton(
+              onPressed: _saving ? null : () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(_isEdit ? 'Save' : 'Create'),
+            ),
+          ],
         ),
       ],
     );

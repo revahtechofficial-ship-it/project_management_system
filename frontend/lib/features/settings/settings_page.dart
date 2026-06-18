@@ -11,10 +11,12 @@ import '../../core/widgets/user_avatar.dart';
 import '../../data/enums/custom_field_type.dart';
 import '../../data/models/auth_user.dart';
 import '../../data/models/custom_field.dart';
+import '../../data/models/project_template.dart';
 import '../../data/models/task_template.dart';
 import '../../data/models/workflow_status.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../projects/providers/project_templates_providers.dart';
 import '../tasks/providers/custom_fields_providers.dart';
 import '../tasks/providers/statuses_providers.dart';
 import '../tasks/providers/task_templates_providers.dart';
@@ -55,6 +57,8 @@ class SettingsPage extends ConsumerWidget {
             _NotificationsCard(settings: settings),
             const SizedBox(height: 16),
             const _TaskTemplatesCard(),
+            const SizedBox(height: 16),
+            const _ProjectTemplatesCard(),
             if (user?.isAdmin ?? false) ...<Widget>[
               const SizedBox(height: 16),
               const _StatusesCard(),
@@ -552,6 +556,96 @@ class _TaskTemplatesCard extends ConsumerWidget {
     }
     await ref.read(taskTemplatesRepositoryProvider).delete(t.id);
     ref.invalidate(taskTemplatesProvider);
+  }
+}
+
+/// Lists saved project templates with delete. Created from a project via the
+/// project form's "Save as template", used from "From template" on Projects.
+class _ProjectTemplatesCard extends ConsumerWidget {
+  const _ProjectTemplatesCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final List<ProjectTemplate> templates =
+        ref.watch(projectTemplatesProvider).asData?.value ??
+        const <ProjectTemplate>[];
+    return DashboardCard(
+      title: 'Project templates',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Reusable project blueprints. Save one from any project, then '
+            'pick it from "From template" on the Projects page.',
+            style: TextStyle(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 8),
+          if (templates.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'No templates yet.',
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
+            ),
+          for (final ProjectTemplate t in templates)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                Icons.bookmark_outline,
+                color: scheme.onSurfaceVariant,
+              ),
+              title: Text(t.name),
+              subtitle: t.projectName.isEmpty
+                  ? null
+                  : Text(
+                      t.projectName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+              trailing: IconButton(
+                tooltip: 'Delete template',
+                icon: Icon(Icons.delete_outline, color: scheme.error),
+                onPressed: () => _delete(context, ref, t),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    ProjectTemplate t,
+  ) async {
+    final bool ok =
+        await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: Text('Delete "${t.name}"?'),
+            content: const Text(
+              'This removes the template. Existing projects are unaffected.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!ok) {
+      return;
+    }
+    await ref.read(projectTemplatesRepositoryProvider).delete(t.id);
+    ref.invalidate(projectTemplatesProvider);
   }
 }
 
