@@ -9,6 +9,7 @@ import '../../data/enums/page_type.dart';
 import '../../data/models/workspace_page.dart';
 import 'providers/pages_providers.dart';
 import 'widgets/doc_editor_screen.dart';
+import 'widgets/whiteboard_editor_screen.dart';
 
 /// The Pages workspace: collaborative Docs (live), plus Whiteboard and Form
 /// tabs (coming soon). The selected tab is ephemeral UI state (AGENTS.md §1).
@@ -25,7 +26,10 @@ class _PagesPageState extends ConsumerState<PagesPage> {
   Future<void> _openPage(int id, PageType type) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (BuildContext context) => DocEditorScreen(pageId: id),
+        builder: (BuildContext context) => switch (type) {
+          PageType.whiteboard => WhiteboardEditorScreen(pageId: id),
+          _ => DocEditorScreen(pageId: id),
+        },
       ),
     );
     ref.invalidate(pagesByTypeProvider(type));
@@ -101,6 +105,12 @@ class _PagesPageState extends ConsumerState<PagesPage> {
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('New SOP'),
                 ),
+              if (_tab == PageType.whiteboard)
+                FilledButton.icon(
+                  onPressed: () => _create(PageType.whiteboard),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('New whiteboard'),
+                ),
             ],
           ),
           const SizedBox(height: 20),
@@ -117,6 +127,13 @@ class _PagesPageState extends ConsumerState<PagesPage> {
       case PageType.sop:
         return _SopList(onOpen: (int id) => _openPage(id, PageType.sop));
       case PageType.whiteboard:
+        return _FlatPageList(
+          type: PageType.whiteboard,
+          icon: Icons.gesture_outlined,
+          color: AppColors.violet,
+          emptyMessage: 'No whiteboards yet. Create one to start sketching.',
+          onOpen: (int id) => _openPage(id, PageType.whiteboard),
+        );
       case PageType.form:
         return _ComingSoon(type: _tab);
     }
@@ -503,6 +520,75 @@ class _ReviewBadge extends StatelessWidget {
           color: color,
         ),
       ),
+    );
+  }
+}
+
+/// A simple flat list of pages of one [type] (used for whiteboards and forms).
+class _FlatPageList extends ConsumerWidget {
+  const _FlatPageList({
+    required this.type,
+    required this.icon,
+    required this.color,
+    required this.emptyMessage,
+    required this.onOpen,
+  });
+
+  final PageType type;
+  final IconData icon;
+  final Color color;
+  final String emptyMessage;
+  final ValueChanged<int> onOpen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<WorkspacePage>> async = ref.watch(
+      pagesByTypeProvider(type),
+    );
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (Object e, _) => Center(child: Text('Failed to load:\n$e')),
+      data: (List<WorkspacePage> items) {
+        if (items.isEmpty) {
+          return EmptyState(icon: icon, message: emptyMessage);
+        }
+        return ListView.separated(
+          itemCount: items.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 8),
+          itemBuilder: (BuildContext context, int i) {
+            final WorkspacePage p = items[i];
+            return Material(
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(12),
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                onTap: () => onOpen(p.id),
+                leading: CircleAvatar(
+                  backgroundColor: color.withValues(alpha: 0.15),
+                  child: Icon(icon, color: color),
+                ),
+                title: Text(
+                  p.displayTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  'Edited ${relativeTime(p.updatedAt)}'
+                  '${p.updatedByName.isEmpty ? '' : ' by ${p.updatedByName}'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: const Icon(Icons.chevron_right),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
