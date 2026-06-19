@@ -448,8 +448,9 @@ func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var b struct {
-		Body    string `json:"body"`
-		ReplyTo *int64 `json:"reply_to"`
+		Body     string  `json:"body"`
+		ReplyTo  *int64  `json:"reply_to"`
+		Mentions []int64 `json:"mentions"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 		writeError(w, http.StatusBadRequest, err)
@@ -471,7 +472,30 @@ func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	h.notifyMentions(r.Context(), convID, actor, b.Mentions, body)
 	h.finishMessage(w, r, convID, created.ID)
+}
+
+// notifyMentions sends a "mention" notification to each mentioned user who is a
+// member of the conversation (and isn't the sender).
+func (h *ChatHandler) notifyMentions(ctx context.Context, convID, actor int64, mentions []int64, body string) {
+	if len(mentions) == 0 {
+		return
+	}
+	ids, err := h.q.ConversationMemberIDs(ctx, convID)
+	if err != nil {
+		return
+	}
+	member := make(map[int64]bool, len(ids))
+	for _, id := range ids {
+		member[id] = true
+	}
+	for _, uid := range mentions {
+		if uid == actor || !member[uid] {
+			continue
+		}
+		notifyUser(ctx, h.q, uid, "mention", "You were mentioned in a chat", body)
+	}
 }
 
 func (h *ChatHandler) uploadMessage(w http.ResponseWriter, r *http.Request) {

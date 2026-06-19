@@ -79,11 +79,16 @@ class ChatRepository {
     int conversationId,
     String body, {
     int? replyTo,
+    List<int> mentions = const <int>[],
   }) async {
     final Response<Map<String, dynamic>> res = await _dio
         .post<Map<String, dynamic>>(
           '/api/v1/chat/conversations/$conversationId/messages',
-          data: <String, dynamic>{'body': body, 'reply_to': replyTo},
+          data: <String, dynamic>{
+            'body': body,
+            'reply_to': replyTo,
+            'mentions': mentions,
+          },
         );
     return ChatMessage.fromJson(res.data ?? const <String, dynamic>{});
   }

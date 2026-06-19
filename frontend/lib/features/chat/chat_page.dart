@@ -14,6 +14,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/utils/mentions.dart';
 import '../../core/widgets/avatar_crop_dialog.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../data/models/chat_member.dart';
@@ -22,9 +23,11 @@ import '../../data/models/chat_message.dart';
 import '../../data/models/chat_reaction.dart';
 import '../../data/models/conversation.dart';
 import '../../data/models/link_preview.dart';
+import '../../data/models/team_member.dart';
 import '../../data/models/user_presence.dart';
 import '../../data/repositories/chat_repository.dart';
 import '../../providers/auth_provider.dart';
+import '../team/providers/team_providers.dart';
 import 'call/call_actions.dart';
 import 'providers/chat_providers.dart';
 import 'screen_capture/screen_capture.dart';
@@ -633,13 +636,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       return;
     }
     final int? replyTo = _replyTarget?.id;
+    final List<TeamMember> team =
+        ref.read(teamMembersProvider).asData?.value ?? const <TeamMember>[];
+    final List<int> mentions = parseMentions(body, mentionTokenMap(team));
     _composer.clear();
     setState(() {
       _sending = true;
       _replyTarget = null;
     });
     try {
-      _appendMine(await _repo.sendText(_selectedId!, body, replyTo: replyTo));
+      _appendMine(
+        await _repo.sendText(
+          _selectedId!,
+          body,
+          replyTo: replyTo,
+          mentions: mentions,
+        ),
+      );
     } catch (e) {
       _err('Could not send: $e');
     } finally {
@@ -647,6 +660,57 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         setState(() => _sending = false);
       }
     }
+  }
+
+  /// Inserts an @mention token at the composer's cursor, picked from the team.
+  Future<void> _insertMention() async {
+    final List<TeamMember> team =
+        ref.read(teamMembersProvider).asData?.value ?? const <TeamMember>[];
+    if (team.isEmpty) {
+      return;
+    }
+    final TeamMember? picked = await showDialog<TeamMember>(
+      context: context,
+      builder: (BuildContext context) => SimpleDialog(
+        title: const Text('Mention someone'),
+        children: <Widget>[
+          for (final TeamMember m in team)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, m),
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: UserAvatar(
+                  name: m.name.isEmpty ? m.email : m.name,
+                  radius: 16,
+                  imageUrl: m.avatarUrl,
+                ),
+                title: Text(m.name.isEmpty ? m.email : m.name),
+              ),
+            ),
+        ],
+      ),
+    );
+    if (picked == null) {
+      return;
+    }
+    final List<String> parts = picked.name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((String s) => s.isNotEmpty)
+        .toList();
+    final String token = parts.isNotEmpty
+        ? parts.first.toLowerCase()
+        : picked.email.split('@').first.toLowerCase();
+    final TextSelection sel = _composer.selection;
+    final String base = _composer.text;
+    final int start = sel.start >= 0 ? sel.start : base.length;
+    final int end = sel.end >= 0 ? sel.end : base.length;
+    final String insert = '@$token ';
+    _composer.text = base.replaceRange(start, end, insert);
+    _composer.selection = TextSelection.collapsed(
+      offset: start + insert.length,
+    );
+    setState(() {});
   }
 
   void _startReply(ChatMessage m) {
@@ -1474,6 +1538,11 @@ class _Composer extends StatelessWidget {
             icon: const Icon(Icons.attach_file),
             onPressed: state._sending ? null : state._openAttachMenu,
           ),
+          IconButton(
+            tooltip: 'Mention',
+            icon: const Icon(Icons.alternate_email),
+            onPressed: state._sending ? null : state._insertMention,
+          ),
           Expanded(
             child: TextField(
               controller: state._composer,
@@ -1574,6 +1643,36 @@ class _PulsingDotState extends State<_PulsingDot>
           shape: BoxShape.circle,
         ),
       ),
+    );
+  }
+}
+
+/// Renders a message body with valid @mentions highlighted.
+class _MentionBody extends ConsumerWidget {
+  const _MentionBody({
+    required this.body,
+    required this.color,
+    required this.mine,
+  });
+
+  final String body;
+  final Color color;
+  final bool mine;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final List<TeamMember> team =
+        ref.watch(teamMembersProvider).asData?.value ?? const <TeamMember>[];
+    if (!body.contains('@') || team.isEmpty) {
+      return Text(body, style: TextStyle(color: color));
+    }
+    final Set<String> tokens = mentionTokenMap(team).keys.toSet();
+    // On own (colored) bubbles keep the text colour but bold the mention;
+    // otherwise use the brand accent.
+    final Color highlight = mine ? color : AppColors.brand;
+    return Text.rich(
+      TextSpan(children: mentionSpans(body, tokens, highlight)),
+      style: TextStyle(color: color),
     );
   }
 }
@@ -1787,7 +1886,11 @@ class _MessageBubble extends StatelessWidget {
                     padding: EdgeInsets.only(
                       top: message.hasAttachment ? 6 : 0,
                     ),
-                    child: Text(message.body, style: TextStyle(color: fg)),
+                    child: _MentionBody(
+                      body: message.body,
+                      color: fg,
+                      mine: isMine,
+                    ),
                   ),
                 if (!message.hasAttachment) _linkOrLocation(context, fg),
                 const SizedBox(height: 2),
