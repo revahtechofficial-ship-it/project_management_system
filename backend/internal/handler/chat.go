@@ -67,6 +67,7 @@ func (h *ChatHandler) Routes() http.Handler {
 	r.Get("/conversations/{id}/members", h.listMembers)
 	r.Post("/conversations/{id}/members", h.addMembers)
 	r.Delete("/conversations/{id}/members/{userId}", h.removeMember)
+	r.Patch("/conversations/{id}/members/{userId}/role", h.setMemberRole)
 	r.Post("/conversations/{id}/call-token", h.callToken)
 	r.Delete("/messages/{messageId}", h.deleteMessage)
 	r.Patch("/messages/{messageId}", h.editMessage)
@@ -636,6 +637,17 @@ func (h *ChatHandler) removeMember(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// Don't let the last admin leave a group that still has other members — it
+	// would be left with nobody able to manage it. They must promote someone
+	// else first.
+	if role, _ := h.memberRole(r.Context(), convID, target); role == "admin" {
+		admins, _ := h.q.CountConversationAdmins(r.Context(), convID)
+		members, _ := h.q.ConversationMemberIDs(r.Context(), convID)
+		if admins <= 1 && len(members) > 1 {
+			writeError(w, http.StatusBadRequest, errors.New("assign another admin before leaving the group"))
+			return
+		}
+	}
 	if err := h.q.RemoveConversationMember(r.Context(), db.RemoveConversationMemberParams{
 		ConversationID: convID, UserID: target,
 	}); err != nil {
@@ -643,6 +655,55 @@ func (h *ChatHandler) removeMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.broadcastMembers(r.Context(), convID, target)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// setMemberRole promotes a member to admin or demotes an admin back to member.
+// Admin-only, and the group's last admin can't be demoted away.
+func (h *ChatHandler) setMemberRole(w http.ResponseWriter, r *http.Request) {
+	convID, actor, ok := h.authConv(w, r)
+	if !ok {
+		return
+	}
+	if role, _ := h.memberRole(r.Context(), convID, actor); role != "admin" {
+		writeError(w, http.StatusForbidden, errors.New("only an admin can change roles"))
+		return
+	}
+	target, err := strconv.ParseInt(chi.URLParam(r, "userId"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid user id"))
+		return
+	}
+	var b struct {
+		Role string `json:"role"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if b.Role != "admin" && b.Role != "member" {
+		writeError(w, http.StatusBadRequest, errors.New("role must be admin or member"))
+		return
+	}
+	current, member := h.memberRole(r.Context(), convID, target)
+	if !member {
+		writeError(w, http.StatusNotFound, errors.New("not a member of this group"))
+		return
+	}
+	if b.Role == "member" && current == "admin" {
+		admins, _ := h.q.CountConversationAdmins(r.Context(), convID)
+		if admins <= 1 {
+			writeError(w, http.StatusBadRequest, errors.New("the group needs at least one admin"))
+			return
+		}
+	}
+	if err := h.q.SetConversationMemberRole(r.Context(), db.SetConversationMemberRoleParams{
+		ConversationID: convID, UserID: target, Role: b.Role,
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	h.broadcastMembers(r.Context(), convID)
 	w.WriteHeader(http.StatusNoContent)
 }
 

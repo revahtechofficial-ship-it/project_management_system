@@ -128,9 +128,46 @@ class _GroupMembersDialogState extends ConsumerState<_GroupMembersDialog> {
     }
   }
 
+  /// Promotes a member to admin (`role` = 'admin') or demotes them ('member').
+  Future<void> _setRole(ChatMember m, String role) async {
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(chatRepositoryProvider)
+          .setMemberRole(_conv.id, m.userId, role);
+      ref.invalidate(conversationMembersProvider(_conv.id));
+      ref.invalidate(conversationsProvider);
+      final String name = m.fullName.isEmpty ? m.email : m.fullName;
+      _snack(
+        role == 'admin'
+            ? '$name is now an admin'
+            : '$name is no longer an admin',
+      );
+    } catch (e) {
+      _snack('Could not update role: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
   Future<void> _leave() async {
     final int? me = ref.read(authControllerProvider).asData?.value.user?.id;
     if (me == null) {
+      return;
+    }
+    final List<ChatMember> members =
+        ref.read(conversationMembersProvider(_conv.id)).asData?.value ??
+        const <ChatMember>[];
+    final int admins = members.where((ChatMember m) => m.isAdmin).length;
+    final bool iAmAdmin = members.any(
+      (ChatMember m) => m.userId == me && m.isAdmin,
+    );
+    if (iAmAdmin && admins <= 1 && members.length > 1) {
+      _snack(
+        'You are the only admin. Make someone else an admin before leaving.',
+      );
       return;
     }
     final String label = _conv.name.isEmpty ? 'this group' : '"${_conv.name}"';
@@ -224,8 +261,10 @@ class _GroupMembersDialogState extends ConsumerState<_GroupMembersDialog> {
                       _MemberTile(
                         member: m,
                         isMe: m.userId == me,
-                        canRemove: iAmAdmin && m.userId != me && !m.isAdmin,
-                        onRemove: _busy ? null : () => _remove(m),
+                        showActions: iAmAdmin && m.userId != me && !_busy,
+                        onMakeAdmin: () => _setRole(m, 'admin'),
+                        onDismissAdmin: () => _setRole(m, 'member'),
+                        onRemove: () => _remove(m),
                       ),
                   ],
                 ),
@@ -247,20 +286,24 @@ class _GroupMembersDialogState extends ConsumerState<_GroupMembersDialog> {
   }
 }
 
-/// A single row in the member list, with a role badge and an optional remove
-/// button (shown only to an admin for other non-admin members).
+/// A single row in the member list, with a role badge and — for an admin
+/// viewing another member — a menu to promote/demote or remove them.
 class _MemberTile extends StatelessWidget {
   const _MemberTile({
     required this.member,
     required this.isMe,
-    required this.canRemove,
+    required this.showActions,
+    required this.onMakeAdmin,
+    required this.onDismissAdmin,
     required this.onRemove,
   });
 
   final ChatMember member;
   final bool isMe;
-  final bool canRemove;
-  final VoidCallback? onRemove;
+  final bool showActions;
+  final VoidCallback onMakeAdmin;
+  final VoidCallback onDismissAdmin;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -284,12 +327,54 @@ class _MemberTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           if (member.isAdmin) const _RoleBadge(label: 'Admin'),
-          if (canRemove)
-            IconButton(
-              tooltip: 'Remove from group',
-              icon: const Icon(Icons.remove_circle_outline),
-              color: AppColors.rose,
-              onPressed: onRemove,
+          if (showActions)
+            PopupMenuButton<String>(
+              tooltip: 'Manage member',
+              icon: const Icon(Icons.more_vert),
+              onSelected: (String value) {
+                switch (value) {
+                  case 'make_admin':
+                    onMakeAdmin();
+                  case 'dismiss_admin':
+                    onDismissAdmin();
+                  case 'remove':
+                    onRemove();
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                if (member.isAdmin)
+                  const PopupMenuItem<String>(
+                    value: 'dismiss_admin',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.remove_moderator_outlined),
+                      title: Text('Dismiss as admin'),
+                    ),
+                  )
+                else
+                  const PopupMenuItem<String>(
+                    value: 'make_admin',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.shield_outlined),
+                      title: Text('Make admin'),
+                    ),
+                  ),
+                const PopupMenuItem<String>(
+                  value: 'remove',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      Icons.person_remove_outlined,
+                      color: AppColors.rose,
+                    ),
+                    title: Text(
+                      'Remove from group',
+                      style: TextStyle(color: AppColors.rose),
+                    ),
+                  ),
+                ),
+              ],
             ),
         ],
       ),

@@ -13,6 +13,15 @@ DELETE FROM conversation_members
 WHERE conversation_id = sqlc.arg(conversation_id)
   AND user_id = sqlc.arg(user_id);
 
+-- name: SetConversationMemberRole :exec
+UPDATE conversation_members SET role = sqlc.arg(role)
+WHERE conversation_id = sqlc.arg(conversation_id)
+  AND user_id = sqlc.arg(user_id);
+
+-- name: CountConversationAdmins :one
+SELECT COUNT(*) FROM conversation_members
+WHERE conversation_id = $1 AND role = 'admin';
+
 -- name: RenameConversation :exec
 UPDATE conversations SET name = sqlc.arg(name)
 WHERE id = sqlc.arg(id);

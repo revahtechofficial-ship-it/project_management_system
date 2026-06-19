@@ -71,6 +71,18 @@ func (q *Queries) ConversationMemberIDs(ctx context.Context, conversationID int6
 	return items, nil
 }
 
+const countConversationAdmins = `-- name: CountConversationAdmins :one
+SELECT COUNT(*) FROM conversation_members
+WHERE conversation_id = $1 AND role = 'admin'
+`
+
+func (q *Queries) CountConversationAdmins(ctx context.Context, conversationID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countConversationAdmins, conversationID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createConversation = `-- name: CreateConversation :one
 INSERT INTO conversations (type, name, created_by)
 VALUES ($1, $2, $3)
@@ -695,6 +707,23 @@ type SetConversationAvatarParams struct {
 
 func (q *Queries) SetConversationAvatar(ctx context.Context, arg SetConversationAvatarParams) error {
 	_, err := q.db.Exec(ctx, setConversationAvatar, arg.Avatar, arg.ID)
+	return err
+}
+
+const setConversationMemberRole = `-- name: SetConversationMemberRole :exec
+UPDATE conversation_members SET role = $1
+WHERE conversation_id = $2
+  AND user_id = $3
+`
+
+type SetConversationMemberRoleParams struct {
+	Role           string `json:"role"`
+	ConversationID int64  `json:"conversation_id"`
+	UserID         int64  `json:"user_id"`
+}
+
+func (q *Queries) SetConversationMemberRole(ctx context.Context, arg SetConversationMemberRoleParams) error {
+	_, err := q.db.Exec(ctx, setConversationMemberRole, arg.Role, arg.ConversationID, arg.UserID)
 	return err
 }
 

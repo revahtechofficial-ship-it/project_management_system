@@ -22,8 +22,9 @@ class ChatRepository {
 
   /// The current user's conversations, most-recent first.
   Future<List<Conversation>> conversations() async {
-    final Response<List<dynamic>> res = await _dio
-        .get<List<dynamic>>('/api/v1/chat/conversations');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/chat/conversations',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => Conversation.fromJson(e as Map<String, dynamic>))
@@ -32,25 +33,28 @@ class ChatRepository {
 
   /// Finds or creates a 1:1 conversation with [userId]; returns its id.
   Future<int> createDm(int userId) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.post<Map<String, dynamic>>(
-      '/api/v1/chat/conversations',
-      data: <String, dynamic>{'type': 'dm', 'member_ids': <int>[userId]},
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/chat/conversations',
+          data: <String, dynamic>{
+            'type': 'dm',
+            'member_ids': <int>[userId],
+          },
+        );
     return (res.data ?? const <String, dynamic>{})['id'] as int;
   }
 
   /// Creates a group conversation; returns its id.
   Future<int> createGroup(String name, List<int> memberIds) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.post<Map<String, dynamic>>(
-      '/api/v1/chat/conversations',
-      data: <String, dynamic>{
-        'type': 'group',
-        'name': name,
-        'member_ids': memberIds,
-      },
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/chat/conversations',
+          data: <String, dynamic>{
+            'type': 'group',
+            'name': name,
+            'member_ids': memberIds,
+          },
+        );
     return (res.data ?? const <String, dynamic>{})['id'] as int;
   }
 
@@ -71,27 +75,30 @@ class ChatRepository {
   }
 
   /// Sends a text message (optionally a reply to [replyTo]) and returns it.
-  Future<ChatMessage> sendText(int conversationId, String body,
-      {int? replyTo}) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.post<Map<String, dynamic>>(
-      '/api/v1/chat/conversations/$conversationId/messages',
-      data: <String, dynamic>{'body': body, 'reply_to': replyTo},
-    );
+  Future<ChatMessage> sendText(
+    int conversationId,
+    String body, {
+    int? replyTo,
+  }) async {
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/chat/conversations/$conversationId/messages',
+          data: <String, dynamic>{'body': body, 'reply_to': replyTo},
+        );
     return ChatMessage.fromJson(res.data ?? const <String, dynamic>{});
   }
 
   /// Pins or unpins a message.
-  Future<void> setPin(int messageId, {required bool pinned}) =>
-      _dio.post<void>(
-        '/api/v1/chat/messages/$messageId/pin',
-        data: <String, dynamic>{'pinned': pinned},
-      );
+  Future<void> setPin(int messageId, {required bool pinned}) => _dio.post<void>(
+    '/api/v1/chat/messages/$messageId/pin',
+    data: <String, dynamic>{'pinned': pinned},
+  );
 
   /// The pinned messages of a conversation, newest first.
   Future<List<ChatMessage>> pinned(int conversationId) async {
     final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
-        '/api/v1/chat/conversations/$conversationId/pinned');
+      '/api/v1/chat/conversations/$conversationId/pinned',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => ChatMessage.fromJson(e as Map<String, dynamic>))
@@ -100,9 +107,9 @@ class ChatRepository {
 
   /// Forwards a message into another conversation.
   Future<void> forward(int messageId, int conversationId) => _dio.post<void>(
-        '/api/v1/chat/messages/$messageId/forward',
-        data: <String, dynamic>{'conversation_id': conversationId},
-      );
+    '/api/v1/chat/messages/$messageId/forward',
+    data: <String, dynamic>{'conversation_id': conversationId},
+  );
 
   /// Uploads a file/image/voice as a message and returns the stored message.
   /// Pass [contentType] to force a MIME type (e.g. `audio/webm` for voice).
@@ -117,16 +124,15 @@ class ChatRepository {
       'file': MultipartFile.fromBytes(
         bytes,
         filename: filename,
-        contentType:
-            contentType == null ? null : MediaType.parse(contentType),
+        contentType: contentType == null ? null : MediaType.parse(contentType),
       ),
       'caption': caption,
     });
-    final Response<Map<String, dynamic>> res =
-        await _dio.post<Map<String, dynamic>>(
-      '/api/v1/chat/conversations/$conversationId/upload',
-      data: form,
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/chat/conversations/$conversationId/upload',
+          data: form,
+        );
     return ChatMessage.fromJson(res.data ?? const <String, dynamic>{});
   }
 
@@ -137,7 +143,8 @@ class ChatRepository {
   /// Lists the members of a conversation.
   Future<List<ChatMember>> members(int conversationId) async {
     final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
-        '/api/v1/chat/conversations/$conversationId/members');
+      '/api/v1/chat/conversations/$conversationId/members',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => ChatMember.fromJson(e as Map<String, dynamic>))
@@ -152,27 +159,34 @@ class ChatRepository {
       );
 
   /// Removes a member (self-leave, or admin removing another).
-  Future<void> removeMember(int conversationId, int userId) => _dio.delete<void>(
-      '/api/v1/chat/conversations/$conversationId/members/$userId');
-
-  /// Renames a group conversation.
-  Future<void> rename(int conversationId, String name) =>
-      _dio.patch<void>(
-        '/api/v1/chat/conversations/$conversationId',
-        data: <String, dynamic>{'name': name},
+  Future<void> removeMember(int conversationId, int userId) =>
+      _dio.delete<void>(
+        '/api/v1/chat/conversations/$conversationId/members/$userId',
       );
 
+  /// Promotes a member to `admin` or demotes them to `member` (admin only).
+  Future<void> setMemberRole(int conversationId, int userId, String role) =>
+      _dio.patch<void>(
+        '/api/v1/chat/conversations/$conversationId/members/$userId/role',
+        data: <String, dynamic>{'role': role},
+      );
+
+  /// Renames a group conversation.
+  Future<void> rename(int conversationId, String name) => _dio.patch<void>(
+    '/api/v1/chat/conversations/$conversationId',
+    data: <String, dynamic>{'name': name},
+  );
+
   /// Uploads a group conversation's photo and returns its URL.
-  Future<String?> uploadGroupAvatar(
-      int conversationId, Uint8List bytes) async {
+  Future<String?> uploadGroupAvatar(int conversationId, Uint8List bytes) async {
     final FormData form = FormData.fromMap(<String, dynamic>{
       'file': MultipartFile.fromBytes(bytes, filename: 'group.png'),
     });
-    final Response<Map<String, dynamic>> res =
-        await _dio.post<Map<String, dynamic>>(
-      '/api/v1/chat/conversations/$conversationId/avatar',
-      data: form,
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/chat/conversations/$conversationId/avatar',
+          data: form,
+        );
     return (res.data ?? const <String, dynamic>{})['group_avatar_url']
         as String?;
   }
@@ -183,25 +197,25 @@ class ChatRepository {
 
   /// Edits a text message's body (sender only).
   Future<ChatMessage> editMessage(int messageId, String body) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.patch<Map<String, dynamic>>(
-      '/api/v1/chat/messages/$messageId',
-      data: <String, dynamic>{'body': body},
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .patch<Map<String, dynamic>>(
+          '/api/v1/chat/messages/$messageId',
+          data: <String, dynamic>{'body': body},
+        );
     return ChatMessage.fromJson(res.data ?? const <String, dynamic>{});
   }
 
   /// Toggles the current user's [emoji] reaction on a message.
-  Future<void> toggleReaction(int messageId, String emoji) =>
-      _dio.post<void>(
-        '/api/v1/chat/messages/$messageId/reactions',
-        data: <String, dynamic>{'emoji': emoji},
-      );
+  Future<void> toggleReaction(int messageId, String emoji) => _dio.post<void>(
+    '/api/v1/chat/messages/$messageId/reactions',
+    data: <String, dynamic>{'emoji': emoji},
+  );
 
   /// All reactions on a conversation's messages.
   Future<List<ChatReaction>> reactions(int conversationId) async {
     final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
-        '/api/v1/chat/conversations/$conversationId/reactions');
+      '/api/v1/chat/conversations/$conversationId/reactions',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => ChatReaction.fromJson(e as Map<String, dynamic>))
@@ -210,8 +224,9 @@ class ChatRepository {
 
   /// Every user's presence/status.
   Future<List<UserPresence>> presence() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/chat/presence');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/chat/presence',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => UserPresence.fromJson(e as Map<String, dynamic>))
@@ -219,14 +234,13 @@ class ChatRepository {
   }
 
   /// Sets the current user's status and optional custom message.
-  Future<void> setStatus(UserStatus status, String message) =>
-      _dio.post<void>(
-        '/api/v1/chat/status',
-        data: <String, dynamic>{
-          'status': status.toJson(),
-          'status_message': message,
-        },
-      );
+  Future<void> setStatus(UserStatus status, String message) => _dio.post<void>(
+    '/api/v1/chat/status',
+    data: <String, dynamic>{
+      'status': status.toJson(),
+      'status_message': message,
+    },
+  );
 
   /// The authenticated URL to download/preview a message attachment.
   String attachmentUrl(int messageId, String token) =>
@@ -236,13 +250,14 @@ class ChatRepository {
   /// Fetches Open Graph metadata for [url] (server-side, avoiding CORS).
   Future<LinkPreview?> linkPreview(String url) async {
     try {
-      final Response<Map<String, dynamic>> res =
-          await _dio.get<Map<String, dynamic>>(
-        '/api/v1/link-preview',
-        queryParameters: <String, dynamic>{'url': url},
+      final Response<Map<String, dynamic>> res = await _dio
+          .get<Map<String, dynamic>>(
+            '/api/v1/link-preview',
+            queryParameters: <String, dynamic>{'url': url},
+          );
+      final LinkPreview pv = LinkPreview.fromJson(
+        res.data ?? const <String, dynamic>{},
       );
-      final LinkPreview pv =
-          LinkPreview.fromJson(res.data ?? const <String, dynamic>{});
       return pv.hasContent ? pv : null;
     } catch (_) {
       return null;
@@ -256,11 +271,11 @@ class ChatRepository {
     required String mode,
     required bool ring,
   }) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.post<Map<String, dynamic>>(
-      '/api/v1/chat/conversations/$conversationId/call-token',
-      data: <String, dynamic>{'mode': mode, 'ring': ring},
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/chat/conversations/$conversationId/call-token',
+          data: <String, dynamic>{'mode': mode, 'ring': ring},
+        );
     return CallCredentials.fromJson(res.data ?? const <String, dynamic>{});
   }
 }
