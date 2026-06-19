@@ -22,9 +22,9 @@ func (q *Queries) CountUnreadNotifications(ctx context.Context, userID *int64) (
 }
 
 const createNotification = `-- name: CreateNotification :one
-INSERT INTO notifications (user_id, type, title, body)
-VALUES ($1, $2, $3, $4)
-RETURNING id, type, title, body, read, created_at, user_id
+INSERT INTO notifications (user_id, type, title, body, link)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, type, title, body, read, created_at, user_id, link
 `
 
 type CreateNotificationParams struct {
@@ -32,6 +32,7 @@ type CreateNotificationParams struct {
 	Type   string `json:"type"`
 	Title  string `json:"title"`
 	Body   string `json:"body"`
+	Link   string `json:"link"`
 }
 
 func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error) {
@@ -40,6 +41,7 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		arg.Type,
 		arg.Title,
 		arg.Body,
+		arg.Link,
 	)
 	var i Notification
 	err := row.Scan(
@@ -50,12 +52,13 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		&i.Read,
 		&i.CreatedAt,
 		&i.UserID,
+		&i.Link,
 	)
 	return i, err
 }
 
 const listNotifications = `-- name: ListNotifications :many
-SELECT id, type, title, body, read, created_at, user_id FROM notifications
+SELECT id, type, title, body, read, created_at, user_id, link FROM notifications
 WHERE user_id = $1
 ORDER BY created_at DESC
 LIMIT 50
@@ -78,6 +81,7 @@ func (q *Queries) ListNotifications(ctx context.Context, userID *int64) ([]Notif
 			&i.Read,
 			&i.CreatedAt,
 			&i.UserID,
+			&i.Link,
 		); err != nil {
 			return nil, err
 		}

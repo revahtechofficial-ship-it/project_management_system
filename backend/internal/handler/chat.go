@@ -494,7 +494,7 @@ func (h *ChatHandler) notifyMentions(ctx context.Context, convID, actor int64, m
 		if uid == actor || !member[uid] {
 			continue
 		}
-		notifyUser(ctx, h.q, uid, "mention", "You were mentioned in a chat", body)
+		notifyUser(ctx, h.q, uid, "mention", "You were mentioned in a chat", body, "/chat")
 	}
 }
 

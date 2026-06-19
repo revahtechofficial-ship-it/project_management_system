@@ -85,9 +85,9 @@ void main() {
     expect(find.text('Appearance'), findsOneWidget);
   });
 
-  testWidgets('Notifications renders', (WidgetTester tester) async {
+  testWidgets('Inbox renders', (WidgetTester tester) async {
     await _pump(tester, const NotificationsPage());
-    expect(find.text('Notifications'), findsOneWidget);
+    expect(find.text('Inbox'), findsOneWidget);
   });
 
   testWidgets('Tasks page renders (empty)', (WidgetTester tester) async {

@@ -122,6 +122,7 @@ type Notification struct {
 	Read      bool      `json:"read"`
 	CreatedAt time.Time `json:"created_at"`
 	UserID    *int64    `json:"user_id"`
+	Link      string    `json:"link"`
 }
 
 type OtpCode struct {

@@ -109,7 +109,7 @@ func recipientOf(ctx context.Context) (*int64, bool) {
 // basis; failures are swallowed so they never break the triggering action.
 // Recipients in Do Not Disturb mode are skipped.
 func notifyUser(ctx context.Context, q *db.Queries, userID int64,
-	typ, title, body string) {
+	typ, title, body, link string) {
 	if u, err := q.GetUserByID(ctx, userID); err == nil && u.Status == "dnd" {
 		return
 	}
@@ -119,6 +119,7 @@ func notifyUser(ctx context.Context, q *db.Queries, userID int64,
 		Type:   typ,
 		Title:  title,
 		Body:   body,
+		Link:   link,
 	})
 }
 
@@ -132,5 +133,5 @@ func notifyAssigned(ctx context.Context, q *db.Queries, assignee *int64,
 	if actor := actorOf(ctx); actor != nil && *actor == *assignee {
 		return
 	}
-	notifyUser(ctx, q, *assignee, "assigned", "You were assigned a task", title)
+	notifyUser(ctx, q, *assignee, "assigned", "You were assigned a task", title, "/tasks")
 }

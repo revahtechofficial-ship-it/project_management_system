@@ -351,7 +351,7 @@ func (h *TaskHandler) spawnNext(ctx context.Context, t db.Task) {
 				TaskID: next.ID, UserID: a.UserID,
 			})
 			notifyUser(ctx, h.q, a.UserID, "assigned",
-				"Recurring task scheduled", next.Title)
+				"Recurring task scheduled", next.Title, "/tasks")
 		}
 	}
 }
