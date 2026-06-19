@@ -222,7 +222,8 @@ func (q *Queries) GetConversationMemberRole(ctx context.Context, arg GetConversa
 const getMessageWithSender = `-- name: GetMessageWithSender :one
 SELECT m.id, m.conversation_id, m.sender_id, m.kind, m.body, m.attachment_name, m.attachment_stored, m.attachment_type, m.attachment_size, m.created_at, m.edited, m.reply_to_id, m.pinned, m.forwarded, u.full_name AS sender_name, u.avatar AS sender_avatar,
        r.body AS reply_body, r.kind AS reply_kind,
-       ru.full_name AS reply_sender_name
+       ru.full_name AS reply_sender_name,
+       (SELECT COUNT(*) FROM messages c WHERE c.reply_to_id = m.id)::int AS reply_count
 FROM messages m
 LEFT JOIN users u ON u.id = m.sender_id
 LEFT JOIN messages r ON r.id = m.reply_to_id
@@ -250,6 +251,7 @@ type GetMessageWithSenderRow struct {
 	ReplyBody        *string   `json:"reply_body"`
 	ReplyKind        *string   `json:"reply_kind"`
 	ReplySenderName  *string   `json:"reply_sender_name"`
+	ReplyCount       int32     `json:"reply_count"`
 }
 
 func (q *Queries) GetMessageWithSender(ctx context.Context, id int64) (GetMessageWithSenderRow, error) {
@@ -275,6 +277,7 @@ func (q *Queries) GetMessageWithSender(ctx context.Context, id int64) (GetMessag
 		&i.ReplyBody,
 		&i.ReplyKind,
 		&i.ReplySenderName,
+		&i.ReplyCount,
 	)
 	return i, err
 }
@@ -446,7 +449,8 @@ func (q *Queries) ListConversationsForUser(ctx context.Context, userID *int64) (
 const listMessages = `-- name: ListMessages :many
 SELECT m.id, m.conversation_id, m.sender_id, m.kind, m.body, m.attachment_name, m.attachment_stored, m.attachment_type, m.attachment_size, m.created_at, m.edited, m.reply_to_id, m.pinned, m.forwarded, u.full_name AS sender_name, u.avatar AS sender_avatar,
        r.body AS reply_body, r.kind AS reply_kind,
-       ru.full_name AS reply_sender_name
+       ru.full_name AS reply_sender_name,
+       (SELECT COUNT(*) FROM messages c WHERE c.reply_to_id = m.id)::int AS reply_count
 FROM messages m
 LEFT JOIN users u ON u.id = m.sender_id
 LEFT JOIN messages r ON r.id = m.reply_to_id
@@ -482,6 +486,7 @@ type ListMessagesRow struct {
 	ReplyBody        *string   `json:"reply_body"`
 	ReplyKind        *string   `json:"reply_kind"`
 	ReplySenderName  *string   `json:"reply_sender_name"`
+	ReplyCount       int32     `json:"reply_count"`
 }
 
 func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]ListMessagesRow, error) {
@@ -513,6 +518,7 @@ func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]L
 			&i.ReplyBody,
 			&i.ReplyKind,
 			&i.ReplySenderName,
+			&i.ReplyCount,
 		); err != nil {
 			return nil, err
 		}
@@ -622,6 +628,80 @@ func (q *Queries) ListReactionsForConversation(ctx context.Context, conversation
 	for rows.Next() {
 		var i ListReactionsForConversationRow
 		if err := rows.Scan(&i.MessageID, &i.Emoji, &i.UserID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listThreadReplies = `-- name: ListThreadReplies :many
+SELECT m.id, m.conversation_id, m.sender_id, m.kind, m.body, m.attachment_name, m.attachment_stored, m.attachment_type, m.attachment_size, m.created_at, m.edited, m.reply_to_id, m.pinned, m.forwarded, u.full_name AS sender_name, u.avatar AS sender_avatar,
+       r.body AS reply_body, r.kind AS reply_kind,
+       ru.full_name AS reply_sender_name
+FROM messages m
+LEFT JOIN users u ON u.id = m.sender_id
+LEFT JOIN messages r ON r.id = m.reply_to_id
+LEFT JOIN users ru ON ru.id = r.sender_id
+WHERE m.reply_to_id = $1
+ORDER BY m.created_at ASC
+`
+
+type ListThreadRepliesRow struct {
+	ID               int64     `json:"id"`
+	ConversationID   int64     `json:"conversation_id"`
+	SenderID         *int64    `json:"sender_id"`
+	Kind             string    `json:"kind"`
+	Body             string    `json:"body"`
+	AttachmentName   string    `json:"attachment_name"`
+	AttachmentStored string    `json:"attachment_stored"`
+	AttachmentType   string    `json:"attachment_type"`
+	AttachmentSize   int64     `json:"attachment_size"`
+	CreatedAt        time.Time `json:"created_at"`
+	Edited           bool      `json:"edited"`
+	ReplyToID        *int64    `json:"reply_to_id"`
+	Pinned           bool      `json:"pinned"`
+	Forwarded        bool      `json:"forwarded"`
+	SenderName       *string   `json:"sender_name"`
+	SenderAvatar     *string   `json:"sender_avatar"`
+	ReplyBody        *string   `json:"reply_body"`
+	ReplyKind        *string   `json:"reply_kind"`
+	ReplySenderName  *string   `json:"reply_sender_name"`
+}
+
+func (q *Queries) ListThreadReplies(ctx context.Context, replyToID *int64) ([]ListThreadRepliesRow, error) {
+	rows, err := q.db.Query(ctx, listThreadReplies, replyToID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListThreadRepliesRow{}
+	for rows.Next() {
+		var i ListThreadRepliesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ConversationID,
+			&i.SenderID,
+			&i.Kind,
+			&i.Body,
+			&i.AttachmentName,
+			&i.AttachmentStored,
+			&i.AttachmentType,
+			&i.AttachmentSize,
+			&i.CreatedAt,
+			&i.Edited,
+			&i.ReplyToID,
+			&i.Pinned,
+			&i.Forwarded,
+			&i.SenderName,
+			&i.SenderAvatar,
+			&i.ReplyBody,
+			&i.ReplyKind,
+			&i.ReplySenderName,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

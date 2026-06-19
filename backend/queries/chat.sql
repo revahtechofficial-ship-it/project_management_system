@@ -73,7 +73,8 @@ RETURNING *;
 -- name: GetMessageWithSender :one
 SELECT m.*, u.full_name AS sender_name, u.avatar AS sender_avatar,
        r.body AS reply_body, r.kind AS reply_kind,
-       ru.full_name AS reply_sender_name
+       ru.full_name AS reply_sender_name,
+       (SELECT COUNT(*) FROM messages c WHERE c.reply_to_id = m.id)::int AS reply_count
 FROM messages m
 LEFT JOIN users u ON u.id = m.sender_id
 LEFT JOIN messages r ON r.id = m.reply_to_id
@@ -83,7 +84,8 @@ WHERE m.id = $1;
 -- name: ListMessages :many
 SELECT m.*, u.full_name AS sender_name, u.avatar AS sender_avatar,
        r.body AS reply_body, r.kind AS reply_kind,
-       ru.full_name AS reply_sender_name
+       ru.full_name AS reply_sender_name,
+       (SELECT COUNT(*) FROM messages c WHERE c.reply_to_id = m.id)::int AS reply_count
 FROM messages m
 LEFT JOIN users u ON u.id = m.sender_id
 LEFT JOIN messages r ON r.id = m.reply_to_id
@@ -91,6 +93,17 @@ LEFT JOIN users ru ON ru.id = r.sender_id
 WHERE m.conversation_id = sqlc.arg(conversation_id)
 ORDER BY m.created_at DESC
 LIMIT sqlc.arg(lim) OFFSET sqlc.arg(off);
+
+-- name: ListThreadReplies :many
+SELECT m.*, u.full_name AS sender_name, u.avatar AS sender_avatar,
+       r.body AS reply_body, r.kind AS reply_kind,
+       ru.full_name AS reply_sender_name
+FROM messages m
+LEFT JOIN users u ON u.id = m.sender_id
+LEFT JOIN messages r ON r.id = m.reply_to_id
+LEFT JOIN users ru ON ru.id = r.sender_id
+WHERE m.reply_to_id = $1
+ORDER BY m.created_at ASC;
 
 -- name: ListPinnedMessages :many
 SELECT m.*, u.full_name AS sender_name, u.avatar AS sender_avatar,

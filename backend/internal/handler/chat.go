@@ -75,6 +75,7 @@ func (h *ChatHandler) Routes() http.Handler {
 	r.Get("/conversations/{id}/reactions", h.listReactions)
 	r.Post("/messages/{messageId}/pin", h.setPin)
 	r.Post("/messages/{messageId}/forward", h.forwardMessage)
+	r.Get("/messages/{messageId}/thread", h.listThread)
 	r.Get("/conversations/{id}/pinned", h.listPinned)
 	r.Get("/presence", h.presence)
 	r.Post("/status", h.setMyStatus)
@@ -117,6 +118,7 @@ type messageResponse struct {
 	AttachmentName  string    `json:"attachment_name"`
 	AttachmentType  string    `json:"attachment_type"`
 	AttachmentSize  int64     `json:"attachment_size"`
+	ReplyCount      int32     `json:"reply_count"`
 	CreatedAt       time.Time `json:"created_at"`
 }
 
@@ -188,11 +190,36 @@ func messageFromGet(r db.GetMessageWithSenderRow) messageResponse {
 		AttachmentName:  r.AttachmentName,
 		AttachmentType:  r.AttachmentType,
 		AttachmentSize:  r.AttachmentSize,
+		ReplyCount:      r.ReplyCount,
 		CreatedAt:       r.CreatedAt,
 	}
 }
 
 func messageFromList(r db.ListMessagesRow) messageResponse {
+	return messageResponse{
+		ID:              r.ID,
+		ConversationID:  r.ConversationID,
+		SenderID:        r.SenderID,
+		SenderName:      r.SenderName,
+		SenderAvatarURL: avatarPtrFrom(r.SenderAvatar),
+		Kind:            r.Kind,
+		Body:            r.Body,
+		Edited:          r.Edited,
+		Pinned:          r.Pinned,
+		Forwarded:       r.Forwarded,
+		ReplyToID:       r.ReplyToID,
+		ReplyBody:       r.ReplyBody,
+		ReplyKind:       r.ReplyKind,
+		ReplySenderName: r.ReplySenderName,
+		AttachmentName:  r.AttachmentName,
+		AttachmentType:  r.AttachmentType,
+		AttachmentSize:  r.AttachmentSize,
+		ReplyCount:      r.ReplyCount,
+		CreatedAt:       r.CreatedAt,
+	}
+}
+
+func messageFromThread(r db.ListThreadRepliesRow) messageResponse {
 	return messageResponse{
 		ID:              r.ID,
 		ConversationID:  r.ConversationID,
@@ -729,6 +756,44 @@ func (h *ChatHandler) setMemberRole(w http.ResponseWriter, r *http.Request) {
 	}
 	h.broadcastMembers(r.Context(), convID)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// listThread returns the replies to a message (its thread), oldest first. The
+// caller must be a member of the message's conversation.
+func (h *ChatHandler) listThread(w http.ResponseWriter, r *http.Request) {
+	actor, ok := chatActor(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, errors.New("unauthenticated"))
+		return
+	}
+	rootID, err := strconv.ParseInt(chi.URLParam(r, "messageId"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid message id"))
+		return
+	}
+	root, err := h.q.GetMessageWithSender(r.Context(), rootID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, errors.New("message not found"))
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if _, member := h.memberRole(r.Context(), root.ConversationID, actor); !member {
+		writeError(w, http.StatusForbidden, errors.New("not a member of this conversation"))
+		return
+	}
+	rows, err := h.q.ListThreadReplies(r.Context(), &rootID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	out := make([]messageResponse, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, messageFromThread(row))
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 // authConv resolves the {id} conversation, confirms the caller is a member, and

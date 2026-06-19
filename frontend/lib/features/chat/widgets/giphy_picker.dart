@@ -113,9 +113,13 @@ class _GiphyPickerState extends ConsumerState<_GiphyPicker> {
                       SegmentedButton<bool>(
                         segments: const <ButtonSegment<bool>>[
                           ButtonSegment<bool>(
-                              value: false, label: Text('GIFs')),
+                            value: false,
+                            label: Text('GIFs'),
+                          ),
                           ButtonSegment<bool>(
-                              value: true, label: Text('Stickers')),
+                            value: true,
+                            label: Text('Stickers'),
+                          ),
                         ],
                         selected: <bool>{_stickers},
                         showSelectedIcon: false,
@@ -129,44 +133,49 @@ class _GiphyPickerState extends ConsumerState<_GiphyPicker> {
                     child: _loading
                         ? const Center(child: CircularProgressIndicator())
                         : _items.isEmpty
-                            ? Center(
-                                child: Text('No results',
-                                    style: TextStyle(
-                                        color: scheme.onSurfaceVariant)))
-                            : GridView.builder(
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                        ? Center(
+                            child: Text(
+                              'No results',
+                              style: TextStyle(color: scheme.onSurfaceVariant),
+                            ),
+                          )
+                        : GridView.builder(
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 3,
                                   mainAxisSpacing: 6,
                                   crossAxisSpacing: 6,
                                 ),
-                                itemCount: _items.length,
-                                itemBuilder: (BuildContext context, int i) {
-                                  final GiphyItem g = _items[i];
-                                  return GestureDetector(
-                                    onTap: () =>
-                                        Navigator.of(context).pop(g.url),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Container(
-                                        color: scheme.surfaceContainerHighest,
-                                        child: Image.network(
-                                          g.preview,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, _, _) =>
-                                              const Icon(Icons.broken_image),
-                                        ),
-                                      ),
+                            itemCount: _items.length,
+                            itemBuilder: (BuildContext context, int i) {
+                              final GiphyItem g = _items[i];
+                              return GestureDetector(
+                                onTap: () => Navigator.of(context).pop(g.url),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    color: scheme.surfaceContainerHighest,
+                                    child: Image.network(
+                                      g.preview,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, _, _) =>
+                                          const Icon(Icons.broken_image),
                                     ),
-                                  );
-                                },
-                              ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                   ),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: Text('Powered by GIPHY',
-                        style: TextStyle(
-                            fontSize: 10, color: scheme.onSurfaceVariant)),
+                    child: Text(
+                      'Powered by GIPHY',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 ],
               ),

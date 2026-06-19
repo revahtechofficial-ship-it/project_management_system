@@ -24,8 +24,9 @@ Future<void> startCall(
     await _openCall(context, creds, title);
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Call failed: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Call failed: $e')));
     }
   }
 }
@@ -40,11 +41,11 @@ Future<void> showIncomingCall(
   final String fromName = event['from_name'] as String? ?? 'Someone';
   final String mode = event['mode'] as String? ?? 'video';
 
-  final bool join = await showDialog<bool>(
+  final bool join =
+      await showDialog<bool>(
         context: context,
         builder: (BuildContext context) => AlertDialog(
-          icon: Icon(mode == 'video' ? Icons.videocam : Icons.call,
-              size: 36),
+          icon: Icon(mode == 'video' ? Icons.videocam : Icons.call, size: 36),
           title: Text('Incoming ${mode == 'video' ? 'video ' : ''}call'),
           content: Text('$fromName is calling…'),
           actions: <Widget>[
@@ -75,14 +76,18 @@ Future<void> showIncomingCall(
     await _openCall(context, creds, fromName);
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Could not join: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not join: $e')));
     }
   }
 }
 
 Future<void> _openCall(
-    BuildContext context, CallCredentials creds, String title) {
+  BuildContext context,
+  CallCredentials creds,
+  String title,
+) {
   return Navigator.of(context).push(
     MaterialPageRoute<void>(
       fullscreenDialog: true,

@@ -29,12 +29,12 @@ class _StatusPickerState extends ConsumerState<_StatusPicker> {
   @override
   void initState() {
     super.initState();
-    final int? myId =
-        ref.read(authControllerProvider).asData?.value.user?.id;
-    final Map<int, UserPresence>? map =
-        ref.read(presenceProvider).asData?.value;
-    final UserPresence? mine =
-        (map != null && myId != null) ? map[myId] : null;
+    final int? myId = ref.read(authControllerProvider).asData?.value.user?.id;
+    final Map<int, UserPresence>? map = ref
+        .read(presenceProvider)
+        .asData
+        ?.value;
+    final UserPresence? mine = (map != null && myId != null) ? map[myId] : null;
     _status = mine?.status ?? UserStatus.active;
     _message = TextEditingController(text: mine?.statusMessage ?? '');
   }
@@ -57,9 +57,9 @@ class _StatusPickerState extends ConsumerState<_StatusPicker> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not update status: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not update status: $e')));
       }
     }
   }
@@ -109,8 +109,9 @@ class _StatusPickerState extends ConsumerState<_StatusPicker> {
       ),
       actions: <Widget>[
         TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel')),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: _saving ? null : _save,
           child: Text(_saving ? 'Saving…' : 'Save'),

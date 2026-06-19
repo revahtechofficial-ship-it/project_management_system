@@ -108,9 +108,9 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   List<Participant> get _participants => <Participant>[
-        if (_room.localParticipant != null) _room.localParticipant!,
-        ..._room.remoteParticipants.values,
-      ];
+    if (_room.localParticipant != null) _room.localParticipant!,
+    ..._room.remoteParticipants.values,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -129,25 +129,28 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Widget _header() => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: <Widget>[
-            const Icon(Icons.videocam, color: Colors.white70, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                widget.title.isEmpty ? 'Call' : widget.title,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700),
-              ),
+    padding: const EdgeInsets.all(16),
+    child: Row(
+      children: <Widget>[
+        const Icon(Icons.videocam, color: Colors.white70, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            widget.title.isEmpty ? 'Call' : widget.title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
             ),
-            Text('${_participants.length} in call',
-                style: const TextStyle(color: Colors.white54, fontSize: 12)),
-          ],
+          ),
         ),
-      );
+        Text(
+          '${_participants.length} in call',
+          style: const TextStyle(color: Colors.white54, fontSize: 12),
+        ),
+      ],
+    ),
+  );
 
   Widget _grid() {
     if (_connecting) {
@@ -157,9 +160,11 @@ class _CallScreenState extends State<CallScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text('Could not join the call.\n$_error',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70)),
+          child: Text(
+            'Could not join the call.\n$_error',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70),
+          ),
         ),
       );
     }
@@ -167,8 +172,8 @@ class _CallScreenState extends State<CallScreen> {
     final int cols = people.length <= 1
         ? 1
         : people.length <= 4
-            ? 2
-            : 3;
+        ? 2
+        : 3;
     return Padding(
       padding: const EdgeInsets.all(12),
       child: GridView.count(
@@ -237,8 +242,9 @@ class _ParticipantTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final VideoTrack? video = _videoTrack;
-    final String name =
-        participant.name.isNotEmpty ? participant.name : participant.identity;
+    final String name = participant.name.isNotEmpty
+        ? participant.name
+        : participant.identity;
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -270,12 +276,16 @@ class _ParticipantTile extends StatelessWidget {
                   if (participant.isMuted)
                     const Padding(
                       padding: EdgeInsets.only(right: 4),
-                      child: Icon(Icons.mic_off,
-                          color: Colors.redAccent, size: 14),
+                      child: Icon(
+                        Icons.mic_off,
+                        color: Colors.redAccent,
+                        size: 14,
+                      ),
                     ),
-                  Text(name,
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 12)),
+                  Text(
+                    name,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -303,8 +313,8 @@ class _RoundButton extends StatelessWidget {
     final Color bg = danger
         ? Colors.red
         : active
-            ? Colors.white
-            : Colors.white24;
+        ? Colors.white
+        : Colors.white24;
     final Color fg = danger || !active ? Colors.white : Colors.black87;
     return Material(
       color: bg,

@@ -93,6 +93,17 @@ class ChatRepository {
     return ChatMessage.fromJson(res.data ?? const <String, dynamic>{});
   }
 
+  /// The replies that form a message's thread, oldest first.
+  Future<List<ChatMessage>> threadReplies(int messageId) async {
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/chat/messages/$messageId/thread',
+    );
+    final List<dynamic> data = res.data ?? <dynamic>[];
+    return data
+        .map((dynamic e) => ChatMessage.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
   /// Pins or unpins a message.
   Future<void> setPin(int messageId, {required bool pinned}) => _dio.post<void>(
     '/api/v1/chat/messages/$messageId/pin',

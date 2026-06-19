@@ -34,6 +34,7 @@ import 'screen_capture/screen_capture.dart';
 import 'widgets/giphy_picker.dart';
 import 'widgets/group_members_dialog.dart';
 import 'widgets/new_conversation_dialog.dart';
+import 'widgets/thread_sheet.dart';
 
 /// Emojis offered in the quick-reaction row of the message action sheet.
 const List<String> _quickReactions = <String>[
@@ -721,6 +722,21 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     });
   }
 
+  /// Opens [m]'s thread; refreshes its reply count from the sheet on close.
+  Future<void> _openThread(ChatMessage m) async {
+    final int? count = await showThreadSheet(context, m);
+    if (count != null && mounted) {
+      setState(() {
+        _messages = _messages
+            .map(
+              (ChatMessage x) =>
+                  x.id == m.id ? x.copyWith(replyCount: count) : x,
+            )
+            .toList();
+      });
+    }
+  }
+
   void _cancelReply() => setState(() => _replyTarget = null);
 
   Future<void> _setPin(ChatMessage m) async {
@@ -838,6 +854,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               onTap: () {
                 Navigator.pop(sheet);
                 _startReply(m);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.forum_outlined),
+              title: Text(m.hasThread ? 'Open thread' : 'Reply in thread'),
+              onTap: () {
+                Navigator.pop(sheet);
+                _openThread(m);
               },
             ),
             ListTile(
@@ -1366,6 +1390,7 @@ class _ThreadPane extends StatelessWidget {
                         onReact: (String emoji) =>
                             state._toggleReaction(m.id, emoji),
                         onLongPress: () => state._showMessageActions(m, isMine),
+                        onOpenThread: () => state._openThread(m),
                       );
                     },
                   ),
@@ -1687,6 +1712,7 @@ class _MessageBubble extends StatelessWidget {
     required this.myId,
     required this.onReact,
     required this.onLongPress,
+    required this.onOpenThread,
     this.seen = false,
     this.otherOnline = false,
     this.reactions,
@@ -1702,6 +1728,7 @@ class _MessageBubble extends StatelessWidget {
   final Map<String, Set<int>>? reactions;
   final ValueChanged<String> onReact;
   final VoidCallback onLongPress;
+  final VoidCallback onOpenThread;
 
   String get _url => repo.attachmentUrl(message.id, token ?? '');
 
@@ -1893,6 +1920,41 @@ class _MessageBubble extends StatelessWidget {
                     ),
                   ),
                 if (!message.hasAttachment) _linkOrLocation(context, fg),
+                if (message.hasThread)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: InkWell(
+                      onTap: onOpenThread,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(
+                              Icons.forum_outlined,
+                              size: 14,
+                              color: fg.withValues(alpha: 0.85),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              message.replyCount == 1
+                                  ? '1 reply'
+                                  : '${message.replyCount} replies',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: fg.withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 2),
                 Row(
                   mainAxisSize: MainAxisSize.min,

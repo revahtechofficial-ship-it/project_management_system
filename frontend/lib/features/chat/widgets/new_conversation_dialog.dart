@@ -30,7 +30,8 @@ class _DirectMessageDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final int? me = ref.watch(authControllerProvider).asData?.value.user?.id;
-    final List<TeamMember> members = ref
+    final List<TeamMember> members =
+        ref
             .watch(teamMembersProvider)
             .asData
             ?.value
@@ -49,10 +50,16 @@ class _DirectMessageDialog extends ConsumerWidget {
                   for (final TeamMember m in members)
                     ListTile(
                       leading: UserAvatar(
-                          name: m.name, radius: 18, imageUrl: m.avatarUrl),
+                        name: m.name,
+                        radius: 18,
+                        imageUrl: m.avatarUrl,
+                      ),
                       title: Text(m.name),
-                      subtitle: Text(m.email,
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(
+                        m.email,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       onTap: () async {
                         final int id = await ref
                             .read(chatRepositoryProvider)
@@ -67,8 +74,9 @@ class _DirectMessageDialog extends ConsumerWidget {
       ),
       actions: <Widget>[
         TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel')),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
       ],
     );
   }
@@ -108,9 +116,9 @@ class _GroupDialogState extends ConsumerState<_GroupDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not create group: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not create group: $e')));
       }
     }
   }
@@ -118,7 +126,8 @@ class _GroupDialogState extends ConsumerState<_GroupDialog> {
   @override
   Widget build(BuildContext context) {
     final int? me = ref.watch(authControllerProvider).asData?.value.user?.id;
-    final List<TeamMember> members = ref
+    final List<TeamMember> members =
+        ref
             .watch(teamMembersProvider)
             .asData
             ?.value
@@ -142,15 +151,18 @@ class _GroupDialogState extends ConsumerState<_GroupDialog> {
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerLeft,
-              child: Text('Add members',
-                  style: Theme.of(context).textTheme.labelLarge),
+              child: Text(
+                'Add members',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
             ),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 280),
               child: members.isEmpty
                   ? const Padding(
                       padding: EdgeInsets.all(16),
-                      child: Text('No other members yet.'))
+                      child: Text('No other members yet.'),
+                    )
                   : ListView(
                       shrinkWrap: true,
                       children: <Widget>[
@@ -159,7 +171,10 @@ class _GroupDialogState extends ConsumerState<_GroupDialog> {
                             value: _selected.contains(m.id),
                             title: Text(m.name),
                             secondary: UserAvatar(
-                                name: m.name, radius: 16, imageUrl: m.avatarUrl),
+                              name: m.name,
+                              radius: 16,
+                              imageUrl: m.avatarUrl,
+                            ),
                             onChanged: (bool? v) => setState(() {
                               if (v ?? false) {
                                 _selected.add(m.id);
@@ -176,8 +191,9 @@ class _GroupDialogState extends ConsumerState<_GroupDialog> {
       ),
       actions: <Widget>[
         TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel')),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: _saving ? null : _create,
           child: Text(_saving ? 'Creating…' : 'Create'),

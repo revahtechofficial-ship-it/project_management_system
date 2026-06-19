@@ -33,8 +33,9 @@ class ChatSocket {
       return;
     }
     try {
-      final WebSocketChannel channel =
-          WebSocketChannel.connect(Uri.parse(_url));
+      final WebSocketChannel channel = WebSocketChannel.connect(
+        Uri.parse(_url),
+      );
       _channel = channel;
       _sub = channel.stream.listen(
         (dynamic data) {

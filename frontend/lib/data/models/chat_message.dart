@@ -18,6 +18,7 @@ class ChatMessage {
   final String attachmentName;
   final String attachmentType;
   final int attachmentSize;
+  final int replyCount;
   final DateTime createdAt;
 
   const ChatMessage({
@@ -39,37 +40,42 @@ class ChatMessage {
     this.attachmentName = '',
     this.attachmentType = '',
     this.attachmentSize = 0,
+    this.replyCount = 0,
   });
 
   bool get isReply => replyToId != null;
 
+  /// Whether this message has a thread (one or more replies).
+  bool get hasThread => replyCount > 0;
+
   /// A one-line preview for a message of [kind] with [body].
   static String previewFor(String? kind, String? body) => switch (kind) {
-        'image' => '📷 Photo',
-        'file' => '📎 Attachment',
-        _ => body ?? '',
-      };
+    'image' => '📷 Photo',
+    'file' => '📎 Attachment',
+    _ => body ?? '',
+  };
 
-  ChatMessage copyWith({bool? pinned}) => ChatMessage(
-        id: id,
-        conversationId: conversationId,
-        createdAt: createdAt,
-        senderId: senderId,
-        senderName: senderName,
-        senderAvatarUrl: senderAvatarUrl,
-        kind: kind,
-        body: body,
-        edited: edited,
-        pinned: pinned ?? this.pinned,
-        forwarded: forwarded,
-        replyToId: replyToId,
-        replyBody: replyBody,
-        replyKind: replyKind,
-        replySenderName: replySenderName,
-        attachmentName: attachmentName,
-        attachmentType: attachmentType,
-        attachmentSize: attachmentSize,
-      );
+  ChatMessage copyWith({bool? pinned, int? replyCount}) => ChatMessage(
+    id: id,
+    conversationId: conversationId,
+    createdAt: createdAt,
+    senderId: senderId,
+    senderName: senderName,
+    senderAvatarUrl: senderAvatarUrl,
+    kind: kind,
+    body: body,
+    edited: edited,
+    pinned: pinned ?? this.pinned,
+    forwarded: forwarded,
+    replyToId: replyToId,
+    replyBody: replyBody,
+    replyKind: replyKind,
+    replySenderName: replySenderName,
+    attachmentName: attachmentName,
+    attachmentType: attachmentType,
+    attachmentSize: attachmentSize,
+    replyCount: replyCount ?? this.replyCount,
+  );
 
   bool get isImage => kind == 'image';
   bool get hasAttachment => attachmentName.isNotEmpty;
@@ -119,54 +125,55 @@ class ChatMessage {
   }
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
-        id: json['id'] as int,
-        conversationId: json['conversation_id'] as int,
-        senderId: json['sender_id'] as int?,
-        senderName: json['sender_name'] as String?,
-        senderAvatarUrl: json['sender_avatar_url'] as String?,
-        kind: json['kind'] as String? ?? 'text',
-        body: json['body'] as String? ?? '',
-        edited: json['edited'] as bool? ?? false,
-        pinned: json['pinned'] as bool? ?? false,
-        forwarded: json['forwarded'] as bool? ?? false,
-        replyToId: json['reply_to_id'] as int?,
-        replyBody: json['reply_body'] as String?,
-        replyKind: json['reply_kind'] as String?,
-        replySenderName: json['reply_sender_name'] as String?,
-        attachmentName: json['attachment_name'] as String? ?? '',
-        attachmentType: json['attachment_type'] as String? ?? '',
-        attachmentSize: json['attachment_size'] as int? ?? 0,
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    conversationId: json['conversation_id'] as int,
+    senderId: json['sender_id'] as int?,
+    senderName: json['sender_name'] as String?,
+    senderAvatarUrl: json['sender_avatar_url'] as String?,
+    kind: json['kind'] as String? ?? 'text',
+    body: json['body'] as String? ?? '',
+    edited: json['edited'] as bool? ?? false,
+    pinned: json['pinned'] as bool? ?? false,
+    forwarded: json['forwarded'] as bool? ?? false,
+    replyToId: json['reply_to_id'] as int?,
+    replyBody: json['reply_body'] as String?,
+    replyKind: json['reply_kind'] as String?,
+    replySenderName: json['reply_sender_name'] as String?,
+    attachmentName: json['attachment_name'] as String? ?? '',
+    attachmentType: json['attachment_type'] as String? ?? '',
+    attachmentSize: json['attachment_size'] as int? ?? 0,
+    replyCount: json['reply_count'] as int? ?? 0,
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'conversation_id': conversationId,
-        'sender_id': senderId,
-        'sender_name': senderName,
-        'sender_avatar_url': senderAvatarUrl,
-        'kind': kind,
-        'body': body,
-        'edited': edited,
-        'pinned': pinned,
-        'forwarded': forwarded,
-        'reply_to_id': replyToId,
-        'reply_body': replyBody,
-        'reply_kind': replyKind,
-        'reply_sender_name': replySenderName,
-        'attachment_name': attachmentName,
-        'attachment_type': attachmentType,
-        'attachment_size': attachmentSize,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'conversation_id': conversationId,
+    'sender_id': senderId,
+    'sender_name': senderName,
+    'sender_avatar_url': senderAvatarUrl,
+    'kind': kind,
+    'body': body,
+    'edited': edited,
+    'pinned': pinned,
+    'forwarded': forwarded,
+    'reply_to_id': replyToId,
+    'reply_body': replyBody,
+    'reply_kind': replyKind,
+    'reply_sender_name': replySenderName,
+    'attachment_name': attachmentName,
+    'attachment_type': attachmentType,
+    'attachment_size': attachmentSize,
+    'reply_count': replyCount,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'ChatMessage(id: $id, kind: $kind)';
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ChatMessage && other.id == id;
+      identical(this, other) || other is ChatMessage && other.id == id;
 
   @override
   int get hashCode => id.hashCode;
