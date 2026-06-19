@@ -202,6 +202,12 @@ class _GroupMembersDialogState extends ConsumerState<_GroupMembersDialog> {
     final bool iAmAdmin = members.any(
       (ChatMember m) => m.userId == me && m.isAdmin,
     );
+    final List<ChatMember> admins = members
+        .where((ChatMember m) => m.isAdmin)
+        .toList(growable: false);
+    final List<ChatMember> regular = members
+        .where((ChatMember m) => !m.isAdmin)
+        .toList(growable: false);
 
     return AlertDialog(
       title: Row(
@@ -257,7 +263,20 @@ class _GroupMembersDialogState extends ConsumerState<_GroupMembersDialog> {
                 child: ListView(
                   shrinkWrap: true,
                   children: <Widget>[
-                    for (final ChatMember m in members)
+                    if (admins.isNotEmpty)
+                      _SectionLabel(label: 'Admins · ${admins.length}'),
+                    for (final ChatMember m in admins)
+                      _MemberTile(
+                        member: m,
+                        isMe: m.userId == me,
+                        showActions: iAmAdmin && m.userId != me && !_busy,
+                        onMakeAdmin: () => _setRole(m, 'admin'),
+                        onDismissAdmin: () => _setRole(m, 'member'),
+                        onRemove: () => _remove(m),
+                      ),
+                    if (regular.isNotEmpty)
+                      _SectionLabel(label: 'Members · ${regular.length}'),
+                    for (final ChatMember m in regular)
                       _MemberTile(
                         member: m,
                         isMe: m.userId == me,
@@ -377,6 +396,32 @@ class _MemberTile extends StatelessWidget {
               ],
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// A small uppercase section header inside the member list.
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 2),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
       ),
     );
   }
