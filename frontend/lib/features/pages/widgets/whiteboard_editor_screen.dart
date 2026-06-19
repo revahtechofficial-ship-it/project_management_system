@@ -4,7 +4,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/enums/page_type.dart';
 import '../../../data/models/workspace_page.dart';
+import '../../../providers/auth_provider.dart';
+import '../../chat/providers/chat_providers.dart';
 import '../../tasks/providers/tasks_providers.dart';
 import '../providers/pages_providers.dart';
 
@@ -186,6 +189,81 @@ class _WhiteboardEditorScreenState
     }
   }
 
+  /// Saves the current board as a reusable whiteboard template.
+  Future<void> _saveAsTemplate() async {
+    try {
+      await ref
+          .read(pagesRepositoryProvider)
+          .create(
+            type: PageType.whiteboard,
+            title: _title.text.trim(),
+            body: _serialize(),
+            isTemplate: true,
+          );
+      ref.invalidate(pageTemplatesProvider(PageType.whiteboard));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Saved as template')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not save template: $e')));
+      }
+    }
+  }
+
+  /// Re-reads the board after a remote edit (only when not mid-edit).
+  Future<void> _reload({String? toastFrom}) async {
+    try {
+      final WorkspacePage page = await ref
+          .read(pagesRepositoryProvider)
+          .get(widget.pageId);
+      if (!mounted) {
+        return;
+      }
+      _title.text = page.title;
+      _elements.clear();
+      _strokes.clear();
+      _connectors.clear();
+      _seq = 0;
+      _parse(page.body);
+      setState(() {
+        _page = page;
+        _dirty = false;
+      });
+      if (toastFrom != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Updated by $toastFrom')));
+      }
+    } catch (_) {}
+  }
+
+  /// Live collaboration: react to another user's save of this board.
+  void _onPageEvent(Map<String, dynamic> e) {
+    if (e['type'] != 'page' || e['page_id'] != widget.pageId) {
+      return;
+    }
+    final int? by = e['updated_by'] as int?;
+    final int? me = ref.read(authControllerProvider).asData?.value.user?.id;
+    if (by != null && by == me) {
+      return;
+    }
+    final String name = e['updated_by_name'] as String? ?? 'Someone';
+    if (_dirty || _saving) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$name updated this board — your edits are kept'),
+        ),
+      );
+    } else {
+      _reload(toastFrom: name);
+    }
+  }
+
   void _add(String type) {
     setState(() {
       _elements.add(
@@ -354,6 +432,12 @@ class _WhiteboardEditorScreenState
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<Map<String, dynamic>>>(chatEventsProvider, (
+      AsyncValue<Map<String, dynamic>>? _,
+      AsyncValue<Map<String, dynamic>> next,
+    ) {
+      next.whenData(_onPageEvent);
+    });
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (bool didPop, _) async {
@@ -402,6 +486,12 @@ class _WhiteboardEditorScreenState
                 onPressed: _dirty ? () => _save() : null,
                 icon: const Icon(Icons.save_outlined, size: 18),
                 label: const Text('Save'),
+              ),
+            if (_canEdit && !_loading)
+              IconButton(
+                tooltip: 'Save as template',
+                icon: const Icon(Icons.bookmark_add_outlined),
+                onPressed: _saveAsTemplate,
               ),
           ],
         ),

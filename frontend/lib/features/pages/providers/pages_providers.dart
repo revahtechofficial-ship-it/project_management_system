@@ -24,6 +24,12 @@ final docTemplatesProvider = FutureProvider<List<WorkspacePage>>((ref) {
   return ref.watch(pagesRepositoryProvider).list(PageType.doc, templates: true);
 });
 
+/// Reusable templates of a given type (e.g. whiteboards). Invalidate to refresh.
+final pageTemplatesProvider =
+    FutureProvider.family<List<WorkspacePage>, PageType>((ref, PageType type) {
+      return ref.watch(pagesRepositoryProvider).list(type, templates: true);
+    });
+
 /// The users a (private) page is shared with. Invalidate after changing shares.
 final pageSharesProvider = FutureProvider.family<List<PageShare>, int>((
   ref,

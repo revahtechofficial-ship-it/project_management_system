@@ -93,6 +93,7 @@ class _PagesPageState extends ConsumerState<PagesPage> {
               ),
               if (_tab == PageType.doc)
                 _TemplateMenu(
+                  type: PageType.doc,
                   onPick: (WorkspacePage t) => _create(PageType.doc, from: t),
                 ),
               if (_tab == PageType.doc)
@@ -106,6 +107,12 @@ class _PagesPageState extends ConsumerState<PagesPage> {
                   onPressed: () => _create(PageType.sop),
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('New SOP'),
+                ),
+              if (_tab == PageType.whiteboard)
+                _TemplateMenu(
+                  type: PageType.whiteboard,
+                  onPick: (WorkspacePage t) =>
+                      _create(PageType.whiteboard, from: t),
                 ),
               if (_tab == PageType.whiteboard)
                 FilledButton.icon(
@@ -395,15 +402,20 @@ class _DocTreeRow extends StatelessWidget {
 
 /// A "From template" menu beside "New doc", shown only when templates exist.
 class _TemplateMenu extends ConsumerWidget {
-  const _TemplateMenu({required this.onPick});
+  const _TemplateMenu({required this.type, required this.onPick});
 
+  final PageType type;
   final ValueChanged<WorkspacePage> onPick;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final List<WorkspacePage> templates =
-        ref.watch(docTemplatesProvider).asData?.value ??
+        (type == PageType.doc
+                ? ref.watch(docTemplatesProvider)
+                : ref.watch(pageTemplatesProvider(type)))
+            .asData
+            ?.value ??
         const <WorkspacePage>[];
     if (templates.isEmpty) {
       return const SizedBox.shrink();
