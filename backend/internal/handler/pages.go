@@ -17,13 +17,34 @@ import (
 
 // PageHandler serves /api/v1/pages — collaborative Docs, Whiteboards and Forms.
 // One table backs all three; the `type` field selects the editor on the client.
+// The shared chat Hub is reused to push live edit notifications.
 type PageHandler struct {
-	q *db.Queries
+	q   *db.Queries
+	hub *Hub
 }
 
-// NewPageHandler wires the handler to the query layer.
-func NewPageHandler(q *db.Queries) *PageHandler {
-	return &PageHandler{q: q}
+// NewPageHandler wires the handler to the query layer and the real-time hub.
+func NewPageHandler(q *db.Queries, hub *Hub) *PageHandler {
+	return &PageHandler{q: q, hub: hub}
+}
+
+// broadcastPageSaved tells every connected client that a page changed, so an
+// editor with that page open can refresh. The body is not included — clients
+// re-fetch (which re-checks access), keeping private content private.
+func (h *PageHandler) broadcastPageSaved(pageID int64, by *int64, byName string) {
+	if h.hub == nil {
+		return
+	}
+	payload, err := json.Marshal(map[string]any{
+		"type":            "page",
+		"page_id":         pageID,
+		"updated_by":      by,
+		"updated_by_name": byName,
+	})
+	if err != nil {
+		return
+	}
+	h.hub.broadcastAll(payload)
 }
 
 // Routes builds the sub-router mounted at /api/v1/pages.
@@ -312,6 +333,7 @@ func (h *PageHandler) update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	h.broadcastPageSaved(id, actorOf(r.Context()), row.UpdatedByName)
 	writeJSON(w, http.StatusOK, pageFromGet(row, "edit", h.canManage(r.Context(), row)))
 }
 

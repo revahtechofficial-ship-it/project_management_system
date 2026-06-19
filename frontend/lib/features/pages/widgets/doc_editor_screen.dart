@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/markdown_view.dart';
 import '../../../data/enums/page_type.dart';
 import '../../../data/models/team_member.dart';
 import '../../../data/models/workspace_page.dart';
+import '../../../providers/auth_provider.dart';
+import '../../chat/providers/chat_providers.dart';
 import '../../team/providers/team_providers.dart';
 import '../providers/pages_providers.dart';
 import 'share_dialog.dart';
@@ -32,7 +35,9 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _dirty = false;
+  bool _preview = false;
   String? _error;
+  String? _incomingFrom;
 
   bool get _isSop => _page?.type == PageType.sop;
   bool get _canEdit => _page?.canEdit ?? true;
@@ -68,6 +73,8 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
       setState(() {
         _page = page;
         _loading = false;
+        // Viewers (and anyone opening a non-empty doc) start in preview.
+        _preview = !page.canEdit;
       });
     } catch (e) {
       if (mounted) {
@@ -164,6 +171,52 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('Could not save template: $e')));
       }
+    }
+  }
+
+  /// Re-fetches the page after a remote edit, replacing the local text. Only
+  /// called when the user has no unsaved changes (or chose to reload).
+  Future<void> _reloadBody({String? toastFrom}) async {
+    try {
+      final WorkspacePage p = await ref
+          .read(pagesRepositoryProvider)
+          .get(widget.pageId);
+      if (!mounted) {
+        return;
+      }
+      _title.text = p.title;
+      _body.text = p.body;
+      _category.text = p.category;
+      _ownerId = p.ownerId;
+      _reviewAt = p.reviewAt;
+      setState(() {
+        _page = p;
+        _dirty = false;
+        _incomingFrom = null;
+      });
+      if (toastFrom != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Updated by $toastFrom')));
+      }
+    } catch (_) {}
+  }
+
+  /// Handles a live "page changed" event from the chat socket.
+  void _onPageEvent(Map<String, dynamic> e) {
+    if (e['type'] != 'page' || e['page_id'] != widget.pageId) {
+      return;
+    }
+    final int? by = e['updated_by'] as int?;
+    final int? me = ref.read(authControllerProvider).asData?.value.user?.id;
+    if (by != null && by == me) {
+      return; // our own save echoed back
+    }
+    final String name = e['updated_by_name'] as String? ?? 'Someone';
+    if (_dirty || _saving) {
+      setState(() => _incomingFrom = name); // let the user choose to reload
+    } else {
+      _reloadBody(toastFrom: name);
     }
   }
 
@@ -406,6 +459,12 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    ref.listen<AsyncValue<Map<String, dynamic>>>(chatEventsProvider, (
+      AsyncValue<Map<String, dynamic>>? _,
+      AsyncValue<Map<String, dynamic>> next,
+    ) {
+      next.whenData(_onPageEvent);
+    });
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (bool didPop, _) async {
@@ -424,6 +483,17 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
         appBar: AppBar(
           title: const Text('Document'),
           actions: <Widget>[
+            if (_page != null)
+              IconButton(
+                tooltip: _preview ? 'Edit' : 'Preview',
+                isSelected: _preview,
+                icon: Icon(
+                  _preview ? Icons.edit_note : Icons.visibility_outlined,
+                ),
+                onPressed: _canEdit
+                    ? () => setState(() => _preview = !_preview)
+                    : null,
+              ),
             if (_saving)
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
@@ -479,6 +549,13 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
+                        if (_incomingFrom != null)
+                          _ReloadBanner(
+                            name: _incomingFrom!,
+                            onReload: () => _reloadBody(),
+                            onDismiss: () =>
+                                setState(() => _incomingFrom = null),
+                          ),
                         _Breadcrumb(ancestors: _ancestors(), onTap: _openPage),
                         if (_page != null) _statusChips(scheme),
                         TextField(
@@ -509,27 +586,75 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
                         if (_isSop && _canEdit) _sopBar(),
                         const Divider(),
                         Expanded(
-                          child: TextField(
-                            controller: _body,
-                            readOnly: !_canEdit,
-                            onChanged: (_) => setState(() => _dirty = true),
-                            maxLines: null,
-                            expands: true,
-                            textAlignVertical: TextAlignVertical.top,
-                            keyboardType: TextInputType.multiline,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: _canEdit
-                                  ? 'Write in plain text or Markdown…'
-                                  : null,
-                            ),
-                          ),
+                          child: _preview
+                              ? SingleChildScrollView(
+                                  child: MarkdownView(data: _body.text),
+                                )
+                              : TextField(
+                                  controller: _body,
+                                  readOnly: !_canEdit,
+                                  onChanged: (_) =>
+                                      setState(() => _dirty = true),
+                                  maxLines: null,
+                                  expands: true,
+                                  textAlignVertical: TextAlignVertical.top,
+                                  keyboardType: TextInputType.multiline,
+                                  decoration: InputDecoration(
+                                    border: InputBorder.none,
+                                    hintText: _canEdit
+                                        ? 'Write in plain text or Markdown…'
+                                        : null,
+                                  ),
+                                ),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
+      ),
+    );
+  }
+}
+
+/// Shown when another user edits this page while you have unsaved changes.
+class _ReloadBanner extends StatelessWidget {
+  const _ReloadBanner({
+    required this.name,
+    required this.onReload,
+    required this.onDismiss,
+  });
+
+  final String name;
+  final VoidCallback onReload;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.amber.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: <Widget>[
+          const Icon(
+            Icons.sync_problem_outlined,
+            size: 18,
+            color: AppColors.amber,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '$name edited this page. Reloading will discard your unsaved '
+              'changes.',
+            ),
+          ),
+          TextButton(onPressed: onDismiss, child: const Text('Keep mine')),
+          FilledButton(onPressed: onReload, child: const Text('Reload')),
+        ],
       ),
     );
   }
