@@ -37,16 +37,21 @@ func (h *PageHandler) Routes() http.Handler {
 }
 
 type pageResponse struct {
-	ID            int64     `json:"id"`
-	Type          string    `json:"type"`
-	Title         string    `json:"title"`
-	Icon          string    `json:"icon"`
-	Body          string    `json:"body"`
-	ParentID      *int64    `json:"parent_id"`
-	CreatedByName string    `json:"created_by_name"`
-	UpdatedByName string    `json:"updated_by_name"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID            int64      `json:"id"`
+	Type          string     `json:"type"`
+	Title         string     `json:"title"`
+	Icon          string     `json:"icon"`
+	Body          string     `json:"body"`
+	ParentID      *int64     `json:"parent_id"`
+	IsTemplate    bool       `json:"is_template"`
+	Category      string     `json:"category"`
+	OwnerID       *int64     `json:"owner_id"`
+	OwnerName     string     `json:"owner_name"`
+	ReviewAt      *time.Time `json:"review_at"`
+	CreatedByName string     `json:"created_by_name"`
+	UpdatedByName string     `json:"updated_by_name"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 func pageFromList(p db.ListPagesRow) pageResponse {
@@ -56,6 +61,11 @@ func pageFromList(p db.ListPagesRow) pageResponse {
 		Title:         p.Title,
 		Icon:          p.Icon,
 		ParentID:      p.ParentID,
+		IsTemplate:    p.IsTemplate,
+		Category:      p.Category,
+		OwnerID:       p.OwnerID,
+		OwnerName:     p.OwnerName,
+		ReviewAt:      tsPtr(p.ReviewAt),
 		CreatedByName: p.CreatedByName,
 		UpdatedByName: p.UpdatedByName,
 		CreatedAt:     p.CreatedAt,
@@ -71,6 +81,11 @@ func pageFromGet(p db.GetPageRow) pageResponse {
 		Icon:          p.Icon,
 		Body:          p.Body,
 		ParentID:      p.ParentID,
+		IsTemplate:    p.IsTemplate,
+		Category:      p.Category,
+		OwnerID:       p.OwnerID,
+		OwnerName:     p.OwnerName,
+		ReviewAt:      tsPtr(p.ReviewAt),
 		CreatedByName: p.CreatedByName,
 		UpdatedByName: p.UpdatedByName,
 		CreatedAt:     p.CreatedAt,
@@ -78,10 +93,10 @@ func pageFromGet(p db.GetPageRow) pageResponse {
 	}
 }
 
-// normPageType keeps the type to the three supported kinds, defaulting to doc.
+// normPageType keeps the type to the supported kinds, defaulting to doc.
 func normPageType(t string) string {
 	switch t {
-	case "doc", "whiteboard", "form":
+	case "doc", "sop", "whiteboard", "form":
 		return t
 	default:
 		return "doc"
@@ -90,7 +105,11 @@ func normPageType(t string) string {
 
 func (h *PageHandler) list(w http.ResponseWriter, r *http.Request) {
 	pageType := normPageType(r.URL.Query().Get("type"))
-	rows, err := h.q.ListPages(r.Context(), pageType)
+	isTemplate := r.URL.Query().Get("template") == "true"
+	rows, err := h.q.ListPages(r.Context(), db.ListPagesParams{
+		Type:       pageType,
+		IsTemplate: isTemplate,
+	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -121,11 +140,15 @@ func (h *PageHandler) get(w http.ResponseWriter, r *http.Request) {
 }
 
 type pageBody struct {
-	Type     string `json:"type"`
-	Title    string `json:"title"`
-	Icon     string `json:"icon"`
-	Body     string `json:"body"`
-	ParentID *int64 `json:"parent_id"`
+	Type       string  `json:"type"`
+	Title      string  `json:"title"`
+	Icon       string  `json:"icon"`
+	Body       string  `json:"body"`
+	ParentID   *int64  `json:"parent_id"`
+	IsTemplate bool    `json:"is_template"`
+	Category   string  `json:"category"`
+	OwnerID    *int64  `json:"owner_id"`
+	ReviewAt   *string `json:"review_at"`
 }
 
 func (h *PageHandler) create(w http.ResponseWriter, r *http.Request) {
@@ -134,15 +157,24 @@ func (h *PageHandler) create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
+	review, err := parseDue(b.ReviewAt)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid review date"))
+		return
+	}
 	actor := actorOf(r.Context())
 	p, err := h.q.CreatePage(r.Context(), db.CreatePageParams{
-		Type:      normPageType(b.Type),
-		Title:     strings.TrimSpace(b.Title),
-		Icon:      strings.TrimSpace(b.Icon),
-		Body:      b.Body,
-		ParentID:  b.ParentID,
-		CreatedBy: actor,
-		UpdatedBy: actor,
+		Type:       normPageType(b.Type),
+		Title:      strings.TrimSpace(b.Title),
+		Icon:       strings.TrimSpace(b.Icon),
+		Body:       b.Body,
+		ParentID:   b.ParentID,
+		IsTemplate: b.IsTemplate,
+		Category:   strings.TrimSpace(b.Category),
+		OwnerID:    b.OwnerID,
+		ReviewAt:   review,
+		CreatedBy:  actor,
+		UpdatedBy:  actor,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -168,11 +200,19 @@ func (h *PageHandler) update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
+	review, err := parseDue(b.ReviewAt)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid review date"))
+		return
+	}
 	if err := h.q.UpdatePage(r.Context(), db.UpdatePageParams{
 		ID:        id,
 		Title:     strings.TrimSpace(b.Title),
 		Icon:      strings.TrimSpace(b.Icon),
 		Body:      b.Body,
+		Category:  strings.TrimSpace(b.Category),
+		OwnerID:   b.OwnerID,
+		ReviewAt:  review,
 		UpdatedBy: actorOf(r.Context()),
 	}); err != nil {
 		writeError(w, http.StatusInternalServerError, err)

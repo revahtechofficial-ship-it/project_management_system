@@ -135,16 +135,20 @@ type OtpCode struct {
 }
 
 type Page struct {
-	ID        int64     `json:"id"`
-	Type      string    `json:"type"`
-	Title     string    `json:"title"`
-	Icon      string    `json:"icon"`
-	Body      string    `json:"body"`
-	CreatedBy *int64    `json:"created_by"`
-	UpdatedBy *int64    `json:"updated_by"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	ParentID  *int64    `json:"parent_id"`
+	ID         int64              `json:"id"`
+	Type       string             `json:"type"`
+	Title      string             `json:"title"`
+	Icon       string             `json:"icon"`
+	Body       string             `json:"body"`
+	CreatedBy  *int64             `json:"created_by"`
+	UpdatedBy  *int64             `json:"updated_by"`
+	CreatedAt  time.Time          `json:"created_at"`
+	UpdatedAt  time.Time          `json:"updated_at"`
+	ParentID   *int64             `json:"parent_id"`
+	IsTemplate bool               `json:"is_template"`
+	Category   string             `json:"category"`
+	OwnerID    *int64             `json:"owner_id"`
+	ReviewAt   pgtype.Timestamptz `json:"review_at"`
 }
 
 type Project struct {

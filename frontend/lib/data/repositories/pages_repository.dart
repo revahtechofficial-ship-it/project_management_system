@@ -10,11 +10,18 @@ class PagesRepository {
 
   final Dio _dio;
 
-  /// Lists pages of a given [type], most-recently-updated first (no bodies).
-  Future<List<WorkspacePage>> list(PageType type) async {
+  /// Lists pages of a given [type] (no bodies). Set [templates] true to list the
+  /// reusable templates of that type instead of real pages.
+  Future<List<WorkspacePage>> list(
+    PageType type, {
+    bool templates = false,
+  }) async {
     final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
       '/api/v1/pages',
-      queryParameters: <String, dynamic>{'type': type.toJson()},
+      queryParameters: <String, dynamic>{
+        'type': type.toJson(),
+        if (templates) 'template': 'true',
+      },
     );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
@@ -30,13 +37,17 @@ class PagesRepository {
   }
 
   /// Creates a page of [type], optionally nested under [parentId]; returns the
-  /// stored record.
+  /// stored record. Set [isTemplate] to save it as a reusable template.
   Future<WorkspacePage> create({
     required PageType type,
     String title = '',
     String body = '',
     String icon = '',
     int? parentId,
+    bool isTemplate = false,
+    String category = '',
+    int? ownerId,
+    String? reviewAt,
   }) async {
     final Response<Map<String, dynamic>> res = await _dio
         .post<Map<String, dynamic>>(
@@ -47,6 +58,10 @@ class PagesRepository {
             'body': body,
             'icon': icon,
             'parent_id': parentId,
+            'is_template': isTemplate,
+            'category': category,
+            'owner_id': ownerId,
+            'review_at': reviewAt,
           },
         );
     return WorkspacePage.fromJson(res.data ?? const <String, dynamic>{});
@@ -58,17 +73,28 @@ class PagesRepository {
     data: <String, dynamic>{'parent_id': parentId},
   );
 
-  /// Saves a page's title, body and icon; returns the updated record.
+  /// Saves a page's title, body, icon and SOP metadata; returns the updated
+  /// record.
   Future<WorkspacePage> update(
     int id, {
     required String title,
     required String body,
     String icon = '',
+    String category = '',
+    int? ownerId,
+    String? reviewAt,
   }) async {
     final Response<Map<String, dynamic>> res = await _dio
         .put<Map<String, dynamic>>(
           '/api/v1/pages/$id',
-          data: <String, dynamic>{'title': title, 'body': body, 'icon': icon},
+          data: <String, dynamic>{
+            'title': title,
+            'body': body,
+            'icon': icon,
+            'category': category,
+            'owner_id': ownerId,
+            'review_at': reviewAt,
+          },
         );
     return WorkspacePage.fromJson(res.data ?? const <String, dynamic>{});
   }

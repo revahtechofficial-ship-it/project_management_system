@@ -4,28 +4,33 @@ import 'package:flutter/material.dart';
 /// `toJson`/`fromJson` with `snake_case`-free API string values (AGENTS.md §9).
 enum PageType {
   doc,
+  sop,
   whiteboard,
   form;
 
   String get label => switch (this) {
     PageType.doc => 'Docs',
+    PageType.sop => 'SOPs',
     PageType.whiteboard => 'Whiteboard',
     PageType.form => 'Form',
   };
 
   IconData get icon => switch (this) {
     PageType.doc => Icons.description_outlined,
+    PageType.sop => Icons.fact_check_outlined,
     PageType.whiteboard => Icons.gesture_outlined,
     PageType.form => Icons.dynamic_form_outlined,
   };
 
   String toJson() => switch (this) {
     PageType.doc => 'doc',
+    PageType.sop => 'sop',
     PageType.whiteboard => 'whiteboard',
     PageType.form => 'form',
   };
 
   factory PageType.fromJson(String value) => switch (value) {
+    'sop' => PageType.sop,
     'whiteboard' => PageType.whiteboard,
     'form' => PageType.form,
     _ => PageType.doc,

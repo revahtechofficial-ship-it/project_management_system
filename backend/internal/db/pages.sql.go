@@ -8,23 +8,32 @@ package db
 import (
 	"context"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createPage = `-- name: CreatePage :one
-INSERT INTO pages (type, title, icon, body, parent_id, created_by, updated_by)
+INSERT INTO pages (type, title, icon, body, parent_id, is_template, category,
+                   owner_id, review_at, created_by, updated_by)
 VALUES ($1, $2, $3, $4,
-        $5, $6, $7)
-RETURNING id, type, title, icon, body, created_by, updated_by, created_at, updated_at, parent_id
+        $5, $6, $7,
+        $8, $9,
+        $10, $11)
+RETURNING id, type, title, icon, body, created_by, updated_by, created_at, updated_at, parent_id, is_template, category, owner_id, review_at
 `
 
 type CreatePageParams struct {
-	Type      string `json:"type"`
-	Title     string `json:"title"`
-	Icon      string `json:"icon"`
-	Body      string `json:"body"`
-	ParentID  *int64 `json:"parent_id"`
-	CreatedBy *int64 `json:"created_by"`
-	UpdatedBy *int64 `json:"updated_by"`
+	Type       string             `json:"type"`
+	Title      string             `json:"title"`
+	Icon       string             `json:"icon"`
+	Body       string             `json:"body"`
+	ParentID   *int64             `json:"parent_id"`
+	IsTemplate bool               `json:"is_template"`
+	Category   string             `json:"category"`
+	OwnerID    *int64             `json:"owner_id"`
+	ReviewAt   pgtype.Timestamptz `json:"review_at"`
+	CreatedBy  *int64             `json:"created_by"`
+	UpdatedBy  *int64             `json:"updated_by"`
 }
 
 func (q *Queries) CreatePage(ctx context.Context, arg CreatePageParams) (Page, error) {
@@ -34,6 +43,10 @@ func (q *Queries) CreatePage(ctx context.Context, arg CreatePageParams) (Page, e
 		arg.Icon,
 		arg.Body,
 		arg.ParentID,
+		arg.IsTemplate,
+		arg.Category,
+		arg.OwnerID,
+		arg.ReviewAt,
 		arg.CreatedBy,
 		arg.UpdatedBy,
 	)
@@ -49,6 +62,10 @@ func (q *Queries) CreatePage(ctx context.Context, arg CreatePageParams) (Page, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ParentID,
+		&i.IsTemplate,
+		&i.Category,
+		&i.OwnerID,
+		&i.ReviewAt,
 	)
 	return i, err
 }
@@ -63,29 +80,37 @@ func (q *Queries) DeletePage(ctx context.Context, id int64) error {
 }
 
 const getPage = `-- name: GetPage :one
-SELECT p.id, p.type, p.title, p.icon, p.body, p.parent_id,
-       p.created_by, p.updated_by, p.created_at, p.updated_at,
+SELECT p.id, p.type, p.title, p.icon, p.body, p.parent_id, p.is_template,
+       p.category, p.owner_id, p.review_at, p.created_by, p.updated_by,
+       p.created_at, p.updated_at,
        COALESCE(cu.full_name, '')::text AS created_by_name,
-       COALESCE(uu.full_name, '')::text AS updated_by_name
+       COALESCE(uu.full_name, '')::text AS updated_by_name,
+       COALESCE(ow.full_name, '')::text AS owner_name
 FROM pages p
 LEFT JOIN users cu ON cu.id = p.created_by
 LEFT JOIN users uu ON uu.id = p.updated_by
+LEFT JOIN users ow ON ow.id = p.owner_id
 WHERE p.id = $1
 `
 
 type GetPageRow struct {
-	ID            int64     `json:"id"`
-	Type          string    `json:"type"`
-	Title         string    `json:"title"`
-	Icon          string    `json:"icon"`
-	Body          string    `json:"body"`
-	ParentID      *int64    `json:"parent_id"`
-	CreatedBy     *int64    `json:"created_by"`
-	UpdatedBy     *int64    `json:"updated_by"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
-	CreatedByName string    `json:"created_by_name"`
-	UpdatedByName string    `json:"updated_by_name"`
+	ID            int64              `json:"id"`
+	Type          string             `json:"type"`
+	Title         string             `json:"title"`
+	Icon          string             `json:"icon"`
+	Body          string             `json:"body"`
+	ParentID      *int64             `json:"parent_id"`
+	IsTemplate    bool               `json:"is_template"`
+	Category      string             `json:"category"`
+	OwnerID       *int64             `json:"owner_id"`
+	ReviewAt      pgtype.Timestamptz `json:"review_at"`
+	CreatedBy     *int64             `json:"created_by"`
+	UpdatedBy     *int64             `json:"updated_by"`
+	CreatedAt     time.Time          `json:"created_at"`
+	UpdatedAt     time.Time          `json:"updated_at"`
+	CreatedByName string             `json:"created_by_name"`
+	UpdatedByName string             `json:"updated_by_name"`
+	OwnerName     string             `json:"owner_name"`
 }
 
 func (q *Queries) GetPage(ctx context.Context, id int64) (GetPageRow, error) {
@@ -98,41 +123,59 @@ func (q *Queries) GetPage(ctx context.Context, id int64) (GetPageRow, error) {
 		&i.Icon,
 		&i.Body,
 		&i.ParentID,
+		&i.IsTemplate,
+		&i.Category,
+		&i.OwnerID,
+		&i.ReviewAt,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CreatedByName,
 		&i.UpdatedByName,
+		&i.OwnerName,
 	)
 	return i, err
 }
 
 const listPages = `-- name: ListPages :many
-SELECT p.id, p.type, p.title, p.icon, p.parent_id, p.created_at, p.updated_at,
+SELECT p.id, p.type, p.title, p.icon, p.parent_id, p.is_template, p.category,
+       p.owner_id, p.review_at, p.created_at, p.updated_at,
        COALESCE(cu.full_name, '')::text AS created_by_name,
-       COALESCE(uu.full_name, '')::text AS updated_by_name
+       COALESCE(uu.full_name, '')::text AS updated_by_name,
+       COALESCE(ow.full_name, '')::text AS owner_name
 FROM pages p
 LEFT JOIN users cu ON cu.id = p.created_by
 LEFT JOIN users uu ON uu.id = p.updated_by
-WHERE p.type = $1
+LEFT JOIN users ow ON ow.id = p.owner_id
+WHERE p.type = $1 AND p.is_template = $2
 ORDER BY p.title ASC
 `
 
-type ListPagesRow struct {
-	ID            int64     `json:"id"`
-	Type          string    `json:"type"`
-	Title         string    `json:"title"`
-	Icon          string    `json:"icon"`
-	ParentID      *int64    `json:"parent_id"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
-	CreatedByName string    `json:"created_by_name"`
-	UpdatedByName string    `json:"updated_by_name"`
+type ListPagesParams struct {
+	Type       string `json:"type"`
+	IsTemplate bool   `json:"is_template"`
 }
 
-func (q *Queries) ListPages(ctx context.Context, type_ string) ([]ListPagesRow, error) {
-	rows, err := q.db.Query(ctx, listPages, type_)
+type ListPagesRow struct {
+	ID            int64              `json:"id"`
+	Type          string             `json:"type"`
+	Title         string             `json:"title"`
+	Icon          string             `json:"icon"`
+	ParentID      *int64             `json:"parent_id"`
+	IsTemplate    bool               `json:"is_template"`
+	Category      string             `json:"category"`
+	OwnerID       *int64             `json:"owner_id"`
+	ReviewAt      pgtype.Timestamptz `json:"review_at"`
+	CreatedAt     time.Time          `json:"created_at"`
+	UpdatedAt     time.Time          `json:"updated_at"`
+	CreatedByName string             `json:"created_by_name"`
+	UpdatedByName string             `json:"updated_by_name"`
+	OwnerName     string             `json:"owner_name"`
+}
+
+func (q *Queries) ListPages(ctx context.Context, arg ListPagesParams) ([]ListPagesRow, error) {
+	rows, err := q.db.Query(ctx, listPages, arg.Type, arg.IsTemplate)
 	if err != nil {
 		return nil, err
 	}
@@ -146,10 +189,15 @@ func (q *Queries) ListPages(ctx context.Context, type_ string) ([]ListPagesRow, 
 			&i.Title,
 			&i.Icon,
 			&i.ParentID,
+			&i.IsTemplate,
+			&i.Category,
+			&i.OwnerID,
+			&i.ReviewAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CreatedByName,
 			&i.UpdatedByName,
+			&i.OwnerName,
 		); err != nil {
 			return nil, err
 		}
@@ -179,16 +227,21 @@ func (q *Queries) SetPageParent(ctx context.Context, arg SetPageParentParams) er
 const updatePage = `-- name: UpdatePage :exec
 UPDATE pages
 SET title = $1, icon = $2, body = $3,
-    updated_by = $4, updated_at = now()
-WHERE id = $5
+    category = $4, owner_id = $5,
+    review_at = $6,
+    updated_by = $7, updated_at = now()
+WHERE id = $8
 `
 
 type UpdatePageParams struct {
-	Title     string `json:"title"`
-	Icon      string `json:"icon"`
-	Body      string `json:"body"`
-	UpdatedBy *int64 `json:"updated_by"`
-	ID        int64  `json:"id"`
+	Title     string             `json:"title"`
+	Icon      string             `json:"icon"`
+	Body      string             `json:"body"`
+	Category  string             `json:"category"`
+	OwnerID   *int64             `json:"owner_id"`
+	ReviewAt  pgtype.Timestamptz `json:"review_at"`
+	UpdatedBy *int64             `json:"updated_by"`
+	ID        int64              `json:"id"`
 }
 
 func (q *Queries) UpdatePage(ctx context.Context, arg UpdatePageParams) error {
@@ -196,6 +249,9 @@ func (q *Queries) UpdatePage(ctx context.Context, arg UpdatePageParams) error {
 		arg.Title,
 		arg.Icon,
 		arg.Body,
+		arg.Category,
+		arg.OwnerID,
+		arg.ReviewAt,
 		arg.UpdatedBy,
 		arg.ID,
 	)
