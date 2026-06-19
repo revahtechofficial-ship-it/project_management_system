@@ -14,7 +14,9 @@ import '../tasks/providers/tasks_providers.dart';
 import '../tasks/widgets/task_board_view.dart';
 import '../tasks/widgets/task_form_dialog.dart';
 import 'providers/sprints_providers.dart';
+import 'widgets/sprint_burndown.dart';
 import 'widgets/sprint_form_dialog.dart';
+import 'widgets/sprint_velocity.dart';
 
 /// Sprint planning + execution: manage sprints, run the active one as a board,
 /// and pull tasks from the backlog (AGENTS.md §1 feature page).
@@ -215,6 +217,18 @@ class _SprintsPageState extends ConsumerState<SprintsPage> {
                   .toList(growable: false),
               onTapTask: _editTask,
             ),
+          ),
+          const SizedBox(height: 24),
+          DashboardCard(
+            title: 'Burndown · ${selected.name}',
+            child: SprintBurndown(sprint: selected, tasks: tasks),
+          ),
+        ],
+        if (sprints.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 24),
+          DashboardCard(
+            title: 'Velocity',
+            child: SprintVelocity(sprints: sprints),
           ),
         ],
         const SizedBox(height: 24),
