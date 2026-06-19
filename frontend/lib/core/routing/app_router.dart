@@ -7,6 +7,7 @@ import '../../features/auth/login_page.dart';
 import '../../features/auth/reset_password_page.dart';
 import '../../features/auth/signup_page.dart';
 import '../../features/auth/verify_otp_page.dart';
+import '../../features/automation/automation_page.dart';
 import '../../features/chat/chat_page.dart';
 import '../../features/dashboard/dashboard_page.dart';
 import '../../features/dashboard/dashboards_page.dart';
@@ -76,6 +77,10 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/goals', builder: (c, s) => const GoalsPage()),
           GoRoute(path: '/team', builder: (c, s) => const TeamPage()),
           GoRoute(path: '/reports', builder: (c, s) => const ReportsPage()),
+          GoRoute(
+            path: '/automation',
+            builder: (c, s) => const AutomationPage(),
+          ),
           GoRoute(path: '/settings', builder: (c, s) => const SettingsPage()),
           GoRoute(
             path: '/notifications',

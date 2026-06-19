@@ -28,6 +28,21 @@ func (q *Queries) AddTaskAssignee(ctx context.Context, arg AddTaskAssigneeParams
 	return err
 }
 
+const addTaskTag = `-- name: AddTaskTag :exec
+UPDATE tasks SET tags = array_append(tags, $1), updated_at = now()
+WHERE id = $2 AND NOT ($1 = ANY(tags))
+`
+
+type AddTaskTagParams struct {
+	Tag interface{} `json:"tag"`
+	ID  int64       `json:"id"`
+}
+
+func (q *Queries) AddTaskTag(ctx context.Context, arg AddTaskTagParams) error {
+	_, err := q.db.Exec(ctx, addTaskTag, arg.Tag, arg.ID)
+	return err
+}
+
 const bulkDeleteTasks = `-- name: BulkDeleteTasks :exec
 DELETE FROM tasks
 WHERE id = ANY($1::bigint[])
@@ -589,6 +604,36 @@ func (q *Queries) SetTaskDone(ctx context.Context, arg SetTaskDoneParams) (Task,
 		&i.Points,
 	)
 	return i, err
+}
+
+const setTaskDueAt = `-- name: SetTaskDueAt :exec
+UPDATE tasks SET due_date = $1, updated_at = now()
+WHERE id = $2
+`
+
+type SetTaskDueAtParams struct {
+	DueDate pgtype.Timestamptz `json:"due_date"`
+	ID      int64              `json:"id"`
+}
+
+func (q *Queries) SetTaskDueAt(ctx context.Context, arg SetTaskDueAtParams) error {
+	_, err := q.db.Exec(ctx, setTaskDueAt, arg.DueDate, arg.ID)
+	return err
+}
+
+const setTaskPriority = `-- name: SetTaskPriority :exec
+UPDATE tasks SET priority = $1, updated_at = now()
+WHERE id = $2
+`
+
+type SetTaskPriorityParams struct {
+	Priority string `json:"priority"`
+	ID       int64  `json:"id"`
+}
+
+func (q *Queries) SetTaskPriority(ctx context.Context, arg SetTaskPriorityParams) error {
+	_, err := q.db.Exec(ctx, setTaskPriority, arg.Priority, arg.ID)
+	return err
 }
 
 const setTaskSprint = `-- name: SetTaskSprint :exec

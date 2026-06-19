@@ -30,6 +30,18 @@ type Attachment struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type AutomationRule struct {
+	ID         int64     `json:"id"`
+	Name       string    `json:"name"`
+	Enabled    bool      `json:"enabled"`
+	Trigger    string    `json:"trigger"`
+	Conditions string    `json:"conditions"`
+	Actions    string    `json:"actions"`
+	CreatedBy  *int64    `json:"created_by"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
 type ChecklistItem struct {
 	ID        int64     `json:"id"`
 	TaskID    int64     `json:"task_id"`

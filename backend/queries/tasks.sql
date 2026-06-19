@@ -119,6 +119,18 @@ SET status = $2,
 WHERE id = $1
 RETURNING *;
 
+-- name: SetTaskPriority :exec
+UPDATE tasks SET priority = sqlc.arg(priority), updated_at = now()
+WHERE id = sqlc.arg(id);
+
+-- name: SetTaskDueAt :exec
+UPDATE tasks SET due_date = sqlc.arg(due_date), updated_at = now()
+WHERE id = sqlc.arg(id);
+
+-- name: AddTaskTag :exec
+UPDATE tasks SET tags = array_append(tags, sqlc.arg(tag)), updated_at = now()
+WHERE id = sqlc.arg(id) AND NOT (sqlc.arg(tag) = ANY(tags));
+
 -- name: SetTaskDone :one
 UPDATE tasks
 SET done = $2,
