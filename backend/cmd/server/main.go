@@ -131,6 +131,7 @@ func main() {
 		api.Mount("/api/v1/project-templates", handler.NewProjectTemplateHandler(queries).Routes())
 		api.Mount("/api/v1/sprints", handler.NewSprintHandler(queries).Routes())
 		api.Mount("/api/v1/spaces", handler.NewSpaceHandler(queries).Routes())
+		api.Mount("/api/v1/pages", handler.NewPageHandler(queries).Routes())
 		teamHandler := handler.NewTeamHandler(queries)
 		api.Get("/api/v1/team", teamHandler.List)
 		api.Patch("/api/v1/team/{id}/role", teamHandler.SetRole)

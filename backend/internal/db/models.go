@@ -134,6 +134,18 @@ type OtpCode struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Page struct {
+	ID        int64     `json:"id"`
+	Type      string    `json:"type"`
+	Title     string    `json:"title"`
+	Icon      string    `json:"icon"`
+	Body      string    `json:"body"`
+	CreatedBy *int64    `json:"created_by"`
+	UpdatedBy *int64    `json:"updated_by"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type Project struct {
 	ID          int64              `json:"id"`
 	Name        string             `json:"name"`

@@ -30,6 +30,7 @@ const List<_NavItem> _navItems = <_NavItem>[
   _NavItem(Icons.directions_run, 'Sprints', '/sprints'),
   _NavItem(Icons.chat_bubble_outline, 'Chat', '/chat'),
   _NavItem(Icons.folder_outlined, 'Projects', '/projects'),
+  _NavItem(Icons.description_outlined, 'Pages', '/pages'),
   _NavItem(Icons.insights_outlined, 'Planning', '/planning'),
   _NavItem(Icons.groups_outlined, 'Team', '/team'),
   _NavItem(Icons.bar_chart_outlined, 'Reports', '/reports'),
