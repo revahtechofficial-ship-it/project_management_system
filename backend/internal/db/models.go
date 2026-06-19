@@ -99,6 +99,18 @@ type FormResponse struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type KeyResult struct {
+	ID           int64     `json:"id"`
+	ObjectiveID  int64     `json:"objective_id"`
+	Title        string    `json:"title"`
+	StartValue   float64   `json:"start_value"`
+	CurrentValue float64   `json:"current_value"`
+	TargetValue  float64   `json:"target_value"`
+	Unit         string    `json:"unit"`
+	Position     int32     `json:"position"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
 type Message struct {
 	ID               int64     `json:"id"`
 	ConversationID   int64     `json:"conversation_id"`
@@ -141,6 +153,19 @@ type Notification struct {
 	CreatedAt time.Time `json:"created_at"`
 	UserID    *int64    `json:"user_id"`
 	Link      string    `json:"link"`
+}
+
+type Objective struct {
+	ID          int64     `json:"id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	OwnerID     *int64    `json:"owner_id"`
+	ParentID    *int64    `json:"parent_id"`
+	Period      string    `json:"period"`
+	Status      string    `json:"status"`
+	CreatedBy   *int64    `json:"created_by"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type OtpCode struct {
