@@ -148,6 +148,71 @@ func (q *Queries) GetTimeEntry(ctx context.Context, id int64) (GetTimeEntryRow, 
 	return i, err
 }
 
+const listAllTimeEntries = `-- name: ListAllTimeEntries :many
+SELECT te.id, te.user_id, te.task_id, te.minutes, te.started_at, te.ended_at,
+       te.description, te.billable, te.created_at,
+       COALESCE(t.title, '')::text AS task_title,
+       COALESCE(u.full_name, '')::text AS user_name
+FROM time_entries te
+LEFT JOIN tasks t ON t.id = te.task_id
+LEFT JOIN users u ON u.id = te.user_id
+WHERE te.started_at >= $1
+  AND te.started_at < $2
+  AND te.ended_at IS NOT NULL
+ORDER BY te.started_at DESC
+`
+
+type ListAllTimeEntriesParams struct {
+	FromTs time.Time `json:"from_ts"`
+	ToTs   time.Time `json:"to_ts"`
+}
+
+type ListAllTimeEntriesRow struct {
+	ID          int64              `json:"id"`
+	UserID      int64              `json:"user_id"`
+	TaskID      *int64             `json:"task_id"`
+	Minutes     int32              `json:"minutes"`
+	StartedAt   time.Time          `json:"started_at"`
+	EndedAt     pgtype.Timestamptz `json:"ended_at"`
+	Description string             `json:"description"`
+	Billable    bool               `json:"billable"`
+	CreatedAt   time.Time          `json:"created_at"`
+	TaskTitle   string             `json:"task_title"`
+	UserName    string             `json:"user_name"`
+}
+
+func (q *Queries) ListAllTimeEntries(ctx context.Context, arg ListAllTimeEntriesParams) ([]ListAllTimeEntriesRow, error) {
+	rows, err := q.db.Query(ctx, listAllTimeEntries, arg.FromTs, arg.ToTs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAllTimeEntriesRow{}
+	for rows.Next() {
+		var i ListAllTimeEntriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.TaskID,
+			&i.Minutes,
+			&i.StartedAt,
+			&i.EndedAt,
+			&i.Description,
+			&i.Billable,
+			&i.CreatedAt,
+			&i.TaskTitle,
+			&i.UserName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTimeEntries = `-- name: ListTimeEntries :many
 SELECT te.id, te.user_id, te.task_id, te.minutes, te.started_at, te.ended_at,
        te.description, te.billable, te.created_at,

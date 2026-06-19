@@ -11,6 +11,19 @@ WHERE te.user_id = sqlc.arg(user_id)
   AND te.started_at < sqlc.arg(to_ts)
 ORDER BY te.started_at DESC;
 
+-- name: ListAllTimeEntries :many
+SELECT te.id, te.user_id, te.task_id, te.minutes, te.started_at, te.ended_at,
+       te.description, te.billable, te.created_at,
+       COALESCE(t.title, '')::text AS task_title,
+       COALESCE(u.full_name, '')::text AS user_name
+FROM time_entries te
+LEFT JOIN tasks t ON t.id = te.task_id
+LEFT JOIN users u ON u.id = te.user_id
+WHERE te.started_at >= sqlc.arg(from_ts)
+  AND te.started_at < sqlc.arg(to_ts)
+  AND te.ended_at IS NOT NULL
+ORDER BY te.started_at DESC;
+
 -- name: GetTimeEntry :one
 SELECT te.id, te.user_id, te.task_id, te.minutes, te.started_at, te.ended_at,
        te.description, te.billable, te.created_at,

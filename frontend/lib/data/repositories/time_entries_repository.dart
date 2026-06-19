@@ -20,6 +20,19 @@ class TimeEntriesRepository {
         .toList(growable: false);
   }
 
+  /// Entries for reporting within a date range: every member's for an admin,
+  /// or just the caller's own otherwise.
+  Future<List<TimeEntry>> teamList({String? from, String? to}) async {
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/time-entries/team',
+      queryParameters: <String, dynamic>{'from': ?from, 'to': ?to},
+    );
+    final List<dynamic> data = res.data ?? <dynamic>[];
+    return data
+        .map((dynamic e) => TimeEntry.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
   /// The currently running timer, or null when nothing is running.
   Future<TimeEntry?> active() async {
     final Response<dynamic> res = await _dio.get<dynamic>(

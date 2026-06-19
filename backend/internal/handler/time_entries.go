@@ -29,6 +29,7 @@ func NewTimeHandler(q *db.Queries) *TimeHandler {
 func (h *TimeHandler) Routes() http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", h.list)
+	r.Get("/team", h.team)
 	r.Get("/active", h.active)
 	r.Post("/start", h.start)
 	r.Post("/{id}/stop", h.stop)
@@ -122,6 +123,46 @@ func (h *TimeHandler) list(w http.ResponseWriter, r *http.Request) {
 	out := make([]timeEntryResponse, 0, len(rows))
 	for _, e := range rows {
 		out = append(out, teFromList(e))
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// team returns time entries for reporting: all members' entries for an admin,
+// or just the caller's own for everyone else.
+func (h *TimeHandler) team(w http.ResponseWriter, r *http.Request) {
+	uid, ok := h.actor(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, errors.New("unauthenticated"))
+		return
+	}
+	now := time.Now()
+	from := dayOr(r.URL.Query().Get("from"), now.AddDate(0, 0, -30))
+	to := dayOr(r.URL.Query().Get("to"), now.AddDate(0, 0, 1))
+	out := make([]timeEntryResponse, 0)
+	if isAdmin(r.Context()) {
+		rows, err := h.q.ListAllTimeEntries(r.Context(), db.ListAllTimeEntriesParams{
+			FromTs: from, ToTs: to,
+		})
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		for _, e := range rows {
+			out = append(out, teFromList(db.ListTimeEntriesRow(e)))
+		}
+	} else {
+		rows, err := h.q.ListTimeEntries(r.Context(), db.ListTimeEntriesParams{
+			UserID: uid, FromTs: from, ToTs: to,
+		})
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		for _, e := range rows {
+			if e.EndedAt.Valid {
+				out = append(out, teFromList(e))
+			}
+		}
 	}
 	writeJSON(w, http.StatusOK, out)
 }

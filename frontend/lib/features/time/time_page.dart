@@ -13,18 +13,28 @@ import '../../data/models/time_entry.dart';
 import '../tasks/providers/tasks_providers.dart';
 import 'providers/time_providers.dart';
 import 'widgets/time_entry_dialog.dart';
+import 'widgets/time_reports_view.dart';
 
 String ymd(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-'
     '${d.month.toString().padLeft(2, '0')}-'
     '${d.day.toString().padLeft(2, '0')}';
 
-/// The time tracker: a built-in timer, a manual time log and the timesheet of
-/// the current user's entries grouped by day (AGENTS.md §1 feature page).
-class TimePage extends ConsumerWidget {
+enum _TimeView { timesheet, reports }
+
+/// The time tracker: a built-in timer, a manual time log, the timesheet, and a
+/// reporting view with team/billable analytics (AGENTS.md §1 feature page).
+class TimePage extends ConsumerStatefulWidget {
   const TimePage({super.key});
 
-  Future<void> _logTime(BuildContext context, WidgetRef ref) async {
+  @override
+  ConsumerState<TimePage> createState() => _TimePageState();
+}
+
+class _TimePageState extends ConsumerState<TimePage> {
+  _TimeView _view = _TimeView.timesheet;
+
+  Future<void> _logTime() async {
     final bool? saved = await showTimeEntryDialog(context);
     if ((saved ?? false)) {
       ref.invalidate(myTimeEntriesProvider);
@@ -32,12 +42,7 @@ class TimePage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<TimeEntry?> active = ref.watch(activeTimerProvider);
-    final AsyncValue<List<TimeEntry>> entries = ref.watch(
-      myTimeEntriesProvider,
-    );
-
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -47,42 +52,84 @@ class TimePage extends ConsumerWidget {
             title: 'Time',
             subtitle: 'Track time with the timer or log it manually',
             actions: <Widget>[
-              FilledButton.icon(
-                onPressed: () => _logTime(context, ref),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Log time'),
+              SegmentedButton<_TimeView>(
+                segments: const <ButtonSegment<_TimeView>>[
+                  ButtonSegment<_TimeView>(
+                    value: _TimeView.timesheet,
+                    icon: Icon(Icons.list_alt_outlined, size: 18),
+                    label: Text('Timesheet'),
+                  ),
+                  ButtonSegment<_TimeView>(
+                    value: _TimeView.reports,
+                    icon: Icon(Icons.bar_chart_outlined, size: 18),
+                    label: Text('Reports'),
+                  ),
+                ],
+                selected: <_TimeView>{_view},
+                showSelectedIcon: false,
+                onSelectionChanged: (Set<_TimeView> s) =>
+                    setState(() => _view = s.first),
               ),
+              if (_view == _TimeView.timesheet)
+                FilledButton.icon(
+                  onPressed: _logTime,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Log time'),
+                ),
             ],
           ),
           const SizedBox(height: 16),
-          active.when(
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const _StartBar(),
-            data: (TimeEntry? t) =>
-                t == null ? const _StartBar() : _RunningBar(entry: t),
-          ),
-          const SizedBox(height: 16),
           Expanded(
-            child: entries.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (Object e, _) =>
-                  Center(child: Text('Failed to load entries:\n$e')),
-              data: (List<TimeEntry> items) {
-                final List<TimeEntry> done = items
-                    .where((TimeEntry e) => !e.running)
-                    .toList(growable: false);
-                if (done.isEmpty) {
-                  return const EmptyState(
-                    icon: Icons.timer_outlined,
-                    message: 'No time logged yet. Start the timer or log time.',
-                  );
-                }
-                return _Timesheet(entries: done);
-              },
-            ),
+            child: _view == _TimeView.timesheet
+                ? const _TimesheetBody()
+                : const TimeReportsView(),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The timer + timesheet (the default Time view).
+class _TimesheetBody extends ConsumerWidget {
+  const _TimesheetBody();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<TimeEntry?> active = ref.watch(activeTimerProvider);
+    final AsyncValue<List<TimeEntry>> entries = ref.watch(
+      myTimeEntriesProvider,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        active.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, _) => const _StartBar(),
+          data: (TimeEntry? t) =>
+              t == null ? const _StartBar() : _RunningBar(entry: t),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: entries.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (Object e, _) =>
+                Center(child: Text('Failed to load entries:\n$e')),
+            data: (List<TimeEntry> items) {
+              final List<TimeEntry> done = items
+                  .where((TimeEntry e) => !e.running)
+                  .toList(growable: false);
+              if (done.isEmpty) {
+                return const EmptyState(
+                  icon: Icons.timer_outlined,
+                  message: 'No time logged yet. Start the timer or log time.',
+                );
+              }
+              return _Timesheet(entries: done);
+            },
+          ),
+        ),
+      ],
     );
   }
 }
