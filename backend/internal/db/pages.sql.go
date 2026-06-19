@@ -11,10 +11,10 @@ import (
 )
 
 const createPage = `-- name: CreatePage :one
-INSERT INTO pages (type, title, icon, body, created_by, updated_by)
+INSERT INTO pages (type, title, icon, body, parent_id, created_by, updated_by)
 VALUES ($1, $2, $3, $4,
-        $5, $6)
-RETURNING id, type, title, icon, body, created_by, updated_by, created_at, updated_at
+        $5, $6, $7)
+RETURNING id, type, title, icon, body, created_by, updated_by, created_at, updated_at, parent_id
 `
 
 type CreatePageParams struct {
@@ -22,6 +22,7 @@ type CreatePageParams struct {
 	Title     string `json:"title"`
 	Icon      string `json:"icon"`
 	Body      string `json:"body"`
+	ParentID  *int64 `json:"parent_id"`
 	CreatedBy *int64 `json:"created_by"`
 	UpdatedBy *int64 `json:"updated_by"`
 }
@@ -32,6 +33,7 @@ func (q *Queries) CreatePage(ctx context.Context, arg CreatePageParams) (Page, e
 		arg.Title,
 		arg.Icon,
 		arg.Body,
+		arg.ParentID,
 		arg.CreatedBy,
 		arg.UpdatedBy,
 	)
@@ -46,6 +48,7 @@ func (q *Queries) CreatePage(ctx context.Context, arg CreatePageParams) (Page, e
 		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ParentID,
 	)
 	return i, err
 }
@@ -60,8 +63,8 @@ func (q *Queries) DeletePage(ctx context.Context, id int64) error {
 }
 
 const getPage = `-- name: GetPage :one
-SELECT p.id, p.type, p.title, p.icon, p.body, p.created_by, p.updated_by,
-       p.created_at, p.updated_at,
+SELECT p.id, p.type, p.title, p.icon, p.body, p.parent_id,
+       p.created_by, p.updated_by, p.created_at, p.updated_at,
        COALESCE(cu.full_name, '')::text AS created_by_name,
        COALESCE(uu.full_name, '')::text AS updated_by_name
 FROM pages p
@@ -76,6 +79,7 @@ type GetPageRow struct {
 	Title         string    `json:"title"`
 	Icon          string    `json:"icon"`
 	Body          string    `json:"body"`
+	ParentID      *int64    `json:"parent_id"`
 	CreatedBy     *int64    `json:"created_by"`
 	UpdatedBy     *int64    `json:"updated_by"`
 	CreatedAt     time.Time `json:"created_at"`
@@ -93,6 +97,7 @@ func (q *Queries) GetPage(ctx context.Context, id int64) (GetPageRow, error) {
 		&i.Title,
 		&i.Icon,
 		&i.Body,
+		&i.ParentID,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
@@ -104,14 +109,14 @@ func (q *Queries) GetPage(ctx context.Context, id int64) (GetPageRow, error) {
 }
 
 const listPages = `-- name: ListPages :many
-SELECT p.id, p.type, p.title, p.icon, p.created_at, p.updated_at,
+SELECT p.id, p.type, p.title, p.icon, p.parent_id, p.created_at, p.updated_at,
        COALESCE(cu.full_name, '')::text AS created_by_name,
        COALESCE(uu.full_name, '')::text AS updated_by_name
 FROM pages p
 LEFT JOIN users cu ON cu.id = p.created_by
 LEFT JOIN users uu ON uu.id = p.updated_by
 WHERE p.type = $1
-ORDER BY p.updated_at DESC
+ORDER BY p.title ASC
 `
 
 type ListPagesRow struct {
@@ -119,6 +124,7 @@ type ListPagesRow struct {
 	Type          string    `json:"type"`
 	Title         string    `json:"title"`
 	Icon          string    `json:"icon"`
+	ParentID      *int64    `json:"parent_id"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 	CreatedByName string    `json:"created_by_name"`
@@ -139,6 +145,7 @@ func (q *Queries) ListPages(ctx context.Context, type_ string) ([]ListPagesRow, 
 			&i.Type,
 			&i.Title,
 			&i.Icon,
+			&i.ParentID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CreatedByName,
@@ -152,6 +159,21 @@ func (q *Queries) ListPages(ctx context.Context, type_ string) ([]ListPagesRow, 
 		return nil, err
 	}
 	return items, nil
+}
+
+const setPageParent = `-- name: SetPageParent :exec
+UPDATE pages SET parent_id = $1, updated_at = now()
+WHERE id = $2
+`
+
+type SetPageParentParams struct {
+	ParentID *int64 `json:"parent_id"`
+	ID       int64  `json:"id"`
+}
+
+func (q *Queries) SetPageParent(ctx context.Context, arg SetPageParentParams) error {
+	_, err := q.db.Exec(ctx, setPageParent, arg.ParentID, arg.ID)
+	return err
 }
 
 const updatePage = `-- name: UpdatePage :exec

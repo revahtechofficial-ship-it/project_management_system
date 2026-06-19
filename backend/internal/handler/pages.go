@@ -31,6 +31,7 @@ func (h *PageHandler) Routes() http.Handler {
 	r.Post("/", h.create)
 	r.Get("/{id}", h.get)
 	r.Put("/{id}", h.update)
+	r.Patch("/{id}/parent", h.setParent)
 	r.Delete("/{id}", h.delete)
 	return r
 }
@@ -41,6 +42,7 @@ type pageResponse struct {
 	Title         string    `json:"title"`
 	Icon          string    `json:"icon"`
 	Body          string    `json:"body"`
+	ParentID      *int64    `json:"parent_id"`
 	CreatedByName string    `json:"created_by_name"`
 	UpdatedByName string    `json:"updated_by_name"`
 	CreatedAt     time.Time `json:"created_at"`
@@ -53,6 +55,7 @@ func pageFromList(p db.ListPagesRow) pageResponse {
 		Type:          p.Type,
 		Title:         p.Title,
 		Icon:          p.Icon,
+		ParentID:      p.ParentID,
 		CreatedByName: p.CreatedByName,
 		UpdatedByName: p.UpdatedByName,
 		CreatedAt:     p.CreatedAt,
@@ -67,6 +70,7 @@ func pageFromGet(p db.GetPageRow) pageResponse {
 		Title:         p.Title,
 		Icon:          p.Icon,
 		Body:          p.Body,
+		ParentID:      p.ParentID,
 		CreatedByName: p.CreatedByName,
 		UpdatedByName: p.UpdatedByName,
 		CreatedAt:     p.CreatedAt,
@@ -117,10 +121,11 @@ func (h *PageHandler) get(w http.ResponseWriter, r *http.Request) {
 }
 
 type pageBody struct {
-	Type  string `json:"type"`
-	Title string `json:"title"`
-	Icon  string `json:"icon"`
-	Body  string `json:"body"`
+	Type     string `json:"type"`
+	Title    string `json:"title"`
+	Icon     string `json:"icon"`
+	Body     string `json:"body"`
+	ParentID *int64 `json:"parent_id"`
 }
 
 func (h *PageHandler) create(w http.ResponseWriter, r *http.Request) {
@@ -135,6 +140,7 @@ func (h *PageHandler) create(w http.ResponseWriter, r *http.Request) {
 		Title:     strings.TrimSpace(b.Title),
 		Icon:      strings.TrimSpace(b.Icon),
 		Body:      b.Body,
+		ParentID:  b.ParentID,
 		CreatedBy: actor,
 		UpdatedBy: actor,
 	})
@@ -178,6 +184,50 @@ func (h *PageHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, pageFromGet(row))
+}
+
+type setParentBody struct {
+	ParentID *int64 `json:"parent_id"`
+}
+
+func (h *PageHandler) setParent(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	var b setParentBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	// Guard against cycles: a page can't be its own parent, nor be moved under
+	// one of its own descendants. Walk up the proposed parent's ancestor chain.
+	if b.ParentID != nil {
+		if *b.ParentID == id {
+			writeError(w, http.StatusBadRequest, errors.New("a page cannot be its own parent"))
+			return
+		}
+		cur := b.ParentID
+		for hops := 0; cur != nil && hops < 100; hops++ {
+			if *cur == id {
+				writeError(w, http.StatusBadRequest, errors.New("cannot move a page under its own descendant"))
+				return
+			}
+			row, err := h.q.GetPage(r.Context(), *cur)
+			if err != nil {
+				break
+			}
+			cur = row.ParentID
+		}
+	}
+	if err := h.q.SetPageParent(r.Context(), db.SetPageParentParams{
+		ID: id, ParentID: b.ParentID,
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *PageHandler) delete(w http.ResponseWriter, r *http.Request) {

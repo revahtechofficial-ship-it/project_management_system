@@ -29,12 +29,14 @@ class PagesRepository {
     return WorkspacePage.fromJson(res.data ?? const <String, dynamic>{});
   }
 
-  /// Creates a page of [type]; returns the stored record.
+  /// Creates a page of [type], optionally nested under [parentId]; returns the
+  /// stored record.
   Future<WorkspacePage> create({
     required PageType type,
     String title = '',
     String body = '',
     String icon = '',
+    int? parentId,
   }) async {
     final Response<Map<String, dynamic>> res = await _dio
         .post<Map<String, dynamic>>(
@@ -44,10 +46,17 @@ class PagesRepository {
             'title': title,
             'body': body,
             'icon': icon,
+            'parent_id': parentId,
           },
         );
     return WorkspacePage.fromJson(res.data ?? const <String, dynamic>{});
   }
+
+  /// Re-parents a page (pass `null` to move it to the top level).
+  Future<void> setParent(int id, int? parentId) => _dio.patch<void>(
+    '/api/v1/pages/$id/parent',
+    data: <String, dynamic>{'parent_id': parentId},
+  );
 
   /// Saves a page's title, body and icon; returns the updated record.
   Future<WorkspacePage> update(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../data/enums/page_type.dart';
 import '../../../data/models/workspace_page.dart';
 import '../providers/pages_providers.dart';
 
@@ -102,6 +103,60 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
     }
   }
 
+  Future<void> _addSubpage() async {
+    try {
+      final WorkspacePage child = await ref
+          .read(pagesRepositoryProvider)
+          .create(type: PageType.doc, parentId: widget.pageId);
+      ref.invalidate(pagesByTypeProvider(PageType.doc));
+      if (mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (BuildContext context) =>
+                DocEditorScreen(pageId: child.id),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not add subpage: $e')));
+      }
+    }
+  }
+
+  /// The ancestor chain (root-first) of the current page, resolved from the
+  /// cached docs list. Empty when the page is top-level or the list isn't ready.
+  List<WorkspacePage> _ancestors() {
+    final List<WorkspacePage> all =
+        ref.read(pagesByTypeProvider(PageType.doc)).asData?.value ??
+        const <WorkspacePage>[];
+    final Map<int, WorkspacePage> byId = <int, WorkspacePage>{
+      for (final WorkspacePage p in all) p.id: p,
+    };
+    final List<WorkspacePage> chain = <WorkspacePage>[];
+    int? pid = _page?.parentId;
+    int hops = 0;
+    while (pid != null && byId.containsKey(pid) && hops < 50) {
+      final WorkspacePage a = byId[pid]!;
+      chain.insert(0, a);
+      pid = a.parentId;
+      hops++;
+    }
+    return chain;
+  }
+
+  void _openPage(int id) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => DocEditorScreen(pageId: id),
+      ),
+    );
+  }
+
+  // _Breadcrumb is defined at the bottom of this library.
+
   Future<void> _delete() async {
     final bool ok =
         await showDialog<bool>(
@@ -179,6 +234,11 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
                 label: const Text('Save'),
               ),
             IconButton(
+              tooltip: 'Add subpage',
+              icon: const Icon(Icons.add),
+              onPressed: _page == null ? null : _addSubpage,
+            ),
+            IconButton(
               tooltip: 'Delete',
               icon: const Icon(Icons.delete_outline),
               onPressed: _page == null ? null : _delete,
@@ -197,6 +257,7 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
+                        _Breadcrumb(ancestors: _ancestors(), onTap: _openPage),
                         TextField(
                           controller: _title,
                           onChanged: (_) => setState(() => _dirty = true),
@@ -241,6 +302,46 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
                   ),
                 ),
               ),
+      ),
+    );
+  }
+}
+
+/// A clickable ancestor trail shown above a nested doc's title.
+class _Breadcrumb extends StatelessWidget {
+  const _Breadcrumb({required this.ancestors, required this.onTap});
+
+  final List<WorkspacePage> ancestors;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (ancestors.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final TextStyle style = TextStyle(
+      fontSize: 12,
+      color: scheme.onSurfaceVariant,
+    );
+    final List<Widget> parts = <Widget>[];
+    for (int i = 0; i < ancestors.length; i++) {
+      final WorkspacePage a = ancestors[i];
+      parts.add(
+        InkWell(
+          onTap: () => onTap(a.id),
+          child: Text(a.displayTitle, style: style),
+        ),
+      );
+      if (i < ancestors.length - 1) {
+        parts.add(Text('  /  ', style: style));
+      }
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: parts,
       ),
     );
   }

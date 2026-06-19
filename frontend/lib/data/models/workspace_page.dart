@@ -8,6 +8,7 @@ class WorkspacePage {
   final String title;
   final String icon;
   final String body;
+  final int? parentId;
   final String createdByName;
   final String updatedByName;
   final DateTime createdAt;
@@ -21,6 +22,7 @@ class WorkspacePage {
     this.title = '',
     this.icon = '',
     this.body = '',
+    this.parentId,
     this.createdByName = '',
     this.updatedByName = '',
   });
@@ -34,6 +36,7 @@ class WorkspacePage {
     title: json['title'] as String? ?? '',
     icon: json['icon'] as String? ?? '',
     body: json['body'] as String? ?? '',
+    parentId: json['parent_id'] as int?,
     createdByName: json['created_by_name'] as String? ?? '',
     updatedByName: json['updated_by_name'] as String? ?? '',
     createdAt: DateTime.parse(json['created_at'] as String),
@@ -46,6 +49,7 @@ class WorkspacePage {
     'title': title,
     'icon': icon,
     'body': body,
+    'parent_id': parentId,
     'created_by_name': createdByName,
     'updated_by_name': updatedByName,
     'created_at': createdAt.toIso8601String(),
@@ -64,6 +68,7 @@ class WorkspacePage {
           other.title == title &&
           other.icon == icon &&
           other.body == body &&
+          other.parentId == parentId &&
           other.createdByName == createdByName &&
           other.updatedByName == updatedByName &&
           other.createdAt == createdAt &&
@@ -76,6 +81,7 @@ class WorkspacePage {
     title,
     icon,
     body,
+    parentId,
     createdByName,
     updatedByName,
     createdAt,
