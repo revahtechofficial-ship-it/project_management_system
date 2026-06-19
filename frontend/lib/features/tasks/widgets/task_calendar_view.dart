@@ -43,67 +43,80 @@ class _TaskCalendarViewState extends State<TaskCalendarView> {
 
     return SingleChildScrollView(
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            IconButton(
-              icon: const Icon(Icons.chevron_left),
-              onPressed: () => _shift(-1),
-            ),
-            Text(monthYear(_month),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () => _shift(-1),
+              ),
+              Text(
+                monthYear(_month),
                 style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w700)),
-            IconButton(
-              icon: const Icon(Icons.chevron_right),
-              onPressed: () => _shift(1),
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed: () {
-                final DateTime now = DateTime.now();
-                setState(() => _month = DateTime(now.year, now.month));
-              },
-              child: const Text('Today'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: <Widget>[
-            for (final String d in const <String>[
-              'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
-            ])
-              Expanded(
-                child: Center(
-                  child: Text(d,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurfaceVariant)),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        for (int week = 0; week < 6; week++)
-          SizedBox(
-            height: 104,
-            child: Row(
-              children: <Widget>[
-                for (int day = 0; day < 7; day++)
-                  Expanded(
-                    child: _DayCell(
-                      date: gridStart.add(Duration(days: week * 7 + day)),
-                      month: _month.month,
-                      tasks: widget.tasks,
-                      onTapTask: widget.onTapTask,
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () => _shift(1),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () {
+                  final DateTime now = DateTime.now();
+                  setState(() => _month = DateTime(now.year, now.month));
+                },
+                child: const Text('Today'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: <Widget>[
+              for (final String d in const <String>[
+                'Mon',
+                'Tue',
+                'Wed',
+                'Thu',
+                'Fri',
+                'Sat',
+                'Sun',
+              ])
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      d,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
-      ],
+          const SizedBox(height: 4),
+          for (int week = 0; week < 6; week++)
+            SizedBox(
+              height: 104,
+              child: Row(
+                children: <Widget>[
+                  for (int day = 0; day < 7; day++)
+                    Expanded(
+                      child: _DayCell(
+                        date: gridStart.add(Duration(days: week * 7 + day)),
+                        month: _month.month,
+                        tasks: widget.tasks,
+                        onTapTask: widget.onTapTask,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -128,8 +141,9 @@ class _DayCell extends StatelessWidget {
     final bool inMonth = date.month == month;
     final bool isToday = sameDay(date, DateTime.now());
     final List<Task> dayTasks = tasks
-        .where((Task t) =>
-            t.dueDate != null && sameDay(t.dueDate!.toLocal(), date))
+        .where(
+          (Task t) => t.dueDate != null && sameDay(t.dueDate!.toLocal(), date),
+        )
         .toList();
     final List<Task> shown = dayTasks.take(3).toList();
     final int extra = dayTasks.length - shown.length;
@@ -153,7 +167,9 @@ class _DayCell extends StatelessWidget {
               alignment: Alignment.center,
               decoration: isToday
                   ? const BoxDecoration(
-                      color: AppColors.brand, shape: BoxShape.circle)
+                      color: AppColors.brand,
+                      shape: BoxShape.circle,
+                    )
                   : null,
               child: Text(
                 '${date.day}',
@@ -163,8 +179,8 @@ class _DayCell extends StatelessWidget {
                   color: isToday
                       ? Colors.white
                       : inMonth
-                          ? scheme.onSurface
-                          : scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      ? scheme.onSurface
+                      : scheme.onSurfaceVariant.withValues(alpha: 0.5),
                 ),
               ),
             ),
@@ -172,9 +188,10 @@ class _DayCell extends StatelessWidget {
           const SizedBox(height: 2),
           for (final Task t in shown) _MiniTask(task: t, onTap: onTapTask),
           if (extra > 0)
-            Text('+$extra more',
-                style: TextStyle(
-                    fontSize: 10, color: scheme.onSurfaceVariant)),
+            Text(
+              '+$extra more',
+              style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant),
+            ),
         ],
       ),
     );

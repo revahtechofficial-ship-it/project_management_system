@@ -8,11 +8,12 @@ import '../../../providers/dio_provider.dart';
 /// (AGENTS.md §1 `features/[feature]/providers`).
 final Provider<TasksRepository> tasksRepositoryProvider =
     Provider<TasksRepository>((ref) {
-  return TasksRepository(ref.watch(dioProvider));
-});
+      return TasksRepository(ref.watch(dioProvider));
+    });
 
 /// The list of tasks from the backend. Invalidate to refresh.
-final FutureProvider<List<Task>> tasksProvider =
-    FutureProvider<List<Task>>((ref) {
+final FutureProvider<List<Task>> tasksProvider = FutureProvider<List<Task>>((
+  ref,
+) {
   return ref.watch(tasksRepositoryProvider).list();
 });

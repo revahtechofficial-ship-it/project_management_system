@@ -19,8 +19,11 @@ final RegExp _mentionRe = RegExp(r'@([A-Za-z0-9._-]+)');
 Map<String, int> _tokenMap(List<TeamMember> members) {
   final Map<String, int> map = <String, int>{};
   for (final TeamMember m in members) {
-    final List<String> parts =
-        m.name.trim().split(RegExp(r'\s+')).where((String s) => s.isNotEmpty).toList();
+    final List<String> parts = m.name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((String s) => s.isNotEmpty)
+        .toList();
     if (parts.isNotEmpty) {
       map.putIfAbsent(parts.first.toLowerCase(), () => m.id);
     }
@@ -52,9 +55,12 @@ List<InlineSpan> _bodySpans(String body, Set<String> valid, Color color) {
     }
     final String text = body.substring(m.start, m.end);
     if (valid.contains(m.group(1)!.toLowerCase())) {
-      spans.add(TextSpan(
+      spans.add(
+        TextSpan(
           text: text,
-          style: TextStyle(color: color, fontWeight: FontWeight.w700)));
+          style: TextStyle(color: color, fontWeight: FontWeight.w700),
+        ),
+      );
     } else {
       spans.add(TextSpan(text: text));
     }
@@ -117,7 +123,7 @@ class _TaskCommentsSectionState extends ConsumerState<TaskCommentsSection> {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final List<Comment> comments =
         ref.watch(commentsProvider(widget.taskId)).asData?.value ??
-            const <Comment>[];
+        const <Comment>[];
     final List<TeamMember> members =
         ref.watch(teamMembersProvider).asData?.value ?? const <TeamMember>[];
     final Map<String, int> tokens = _tokenMap(members);
@@ -130,9 +136,10 @@ class _TaskCommentsSectionState extends ConsumerState<TaskCommentsSection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         if (comments.isEmpty)
-          Text('No comments yet — start the conversation.',
-              style: TextStyle(
-                  fontSize: 13, color: scheme.onSurfaceVariant)),
+          Text(
+            'No comments yet — start the conversation.',
+            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+          ),
         for (final Comment c in comments)
           _CommentTile(
             comment: c,
@@ -162,7 +169,8 @@ class _TaskCommentsSectionState extends ConsumerState<TaskCommentsSection> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.send_rounded, size: 18),
               onPressed: _busy ? null : () => _send(tokens),
             ),
@@ -202,19 +210,30 @@ class _CommentTile extends StatelessWidget {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    Text(comment.authorName ?? 'Unknown',
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w700)),
+                    Text(
+                      comment.authorName ?? 'Unknown',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Text(relativeTime(comment.createdAt),
-                        style: TextStyle(
-                            fontSize: 11, color: scheme.onSurfaceVariant)),
+                    Text(
+                      relativeTime(comment.createdAt),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                     const Spacer(),
                     if (canDelete)
                       InkWell(
                         onTap: onDelete,
-                        child: Icon(Icons.close,
-                            size: 14, color: scheme.onSurfaceVariant),
+                        child: Icon(
+                          Icons.close,
+                          size: 14,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                   ],
                 ),
@@ -222,11 +241,11 @@ class _CommentTile extends StatelessWidget {
                 RichText(
                   text: TextSpan(
                     style: TextStyle(
-                        fontSize: 13.5,
-                        height: 1.4,
-                        color: scheme.onSurface),
-                    children:
-                        _bodySpans(comment.body, valid, AppColors.brand),
+                      fontSize: 13.5,
+                      height: 1.4,
+                      color: scheme.onSurface,
+                    ),
+                    children: _bodySpans(comment.body, valid, AppColors.brand),
                   ),
                 ),
               ],
@@ -247,11 +266,12 @@ class TaskActivitySection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final List<Activity> items =
-        ref.watch(activityProvider(taskId)).asData?.value ??
-            const <Activity>[];
+        ref.watch(activityProvider(taskId)).asData?.value ?? const <Activity>[];
     if (items.isEmpty) {
-      return Text('No activity yet.',
-          style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant));
+      return Text(
+        'No activity yet.',
+        style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+      );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,25 +287,24 @@ class _ActivityRow extends StatelessWidget {
   final Activity activity;
 
   (IconData, Color) get _visual => switch (activity.action) {
-        'created' => (Icons.add_circle_rounded, AppColors.brand),
-        'completed' => (Icons.check_circle_rounded, AppColors.green),
-        'reopened' => (Icons.replay_rounded, AppColors.orange),
-        'status' => (Icons.swap_horiz_rounded, AppColors.sky),
-        'comment' => (Icons.chat_bubble_rounded, AppColors.brand),
-        'updated' => (Icons.edit_rounded, AppColors.slate),
-        _ => (Icons.circle, AppColors.slate),
-      };
+    'created' => (Icons.add_circle_rounded, AppColors.brand),
+    'completed' => (Icons.check_circle_rounded, AppColors.green),
+    'reopened' => (Icons.replay_rounded, AppColors.orange),
+    'status' => (Icons.swap_horiz_rounded, AppColors.sky),
+    'comment' => (Icons.chat_bubble_rounded, AppColors.brand),
+    'updated' => (Icons.edit_rounded, AppColors.slate),
+    _ => (Icons.circle, AppColors.slate),
+  };
 
   String get _verb => switch (activity.action) {
-        'created' => 'created this task',
-        'completed' => 'completed this task',
-        'reopened' => 'reopened this task',
-        'status' =>
-          'moved to ${TaskStatus.fromJson(activity.detail).label}',
-        'comment' => 'commented',
-        'updated' => 'edited this task',
-        _ => activity.action,
-      };
+    'created' => 'created this task',
+    'completed' => 'completed this task',
+    'reopened' => 'reopened this task',
+    'status' => 'moved to ${TaskStatus.fromJson(activity.detail).label}',
+    'comment' => 'commented',
+    'updated' => 'edited this task',
+    _ => activity.action,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -304,17 +323,19 @@ class _ActivityRow extends StatelessWidget {
                 style: TextStyle(fontSize: 13, color: scheme.onSurface),
                 children: <InlineSpan>[
                   TextSpan(
-                      text: activity.actorName ?? 'Someone',
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                    text: activity.actorName ?? 'Someone',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
                   TextSpan(text: ' $_verb'),
                 ],
               ),
             ),
           ),
           const SizedBox(width: 8),
-          Text(relativeTime(activity.createdAt),
-              style: TextStyle(
-                  fontSize: 11, color: scheme.onSurfaceVariant)),
+          Text(
+            relativeTime(activity.createdAt),
+            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+          ),
         ],
       ),
     );

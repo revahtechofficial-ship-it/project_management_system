@@ -14,10 +14,15 @@ import '../../data/models/workflow_status.dart';
 import 'providers/statuses_providers.dart';
 import 'providers/task_templates_providers.dart';
 import 'providers/tasks_providers.dart';
+import 'widgets/task_activity_view.dart';
 import 'widgets/task_board_view.dart';
 import 'widgets/task_calendar_view.dart';
 import 'widgets/task_form_dialog.dart';
 import 'widgets/task_gantt_view.dart';
+import 'widgets/task_mindmap_view.dart';
+import 'widgets/task_table_view.dart';
+import 'widgets/task_timeline_view.dart';
+import 'widgets/task_workload_view.dart';
 
 /// Lists and manages tasks with switchable List / Calendar / Timeline views
 /// (AGENTS.md §1 feature page). The selected view is ephemeral UI state.
@@ -161,20 +166,20 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                           ButtonSegment<TaskView>(
                             value: v,
                             icon: Icon(v.icon, size: 18),
-                            label: Text(v.label),
+                            tooltip: v.label,
                           ),
                       ],
                       selected: <TaskView>{_view},
                       showSelectedIcon: false,
                       onSelectionChanged: (Set<TaskView> s) => setState(() {
                         _view = s.first;
-                        if (_view != TaskView.list) {
+                        if (!_view.supportsSelection) {
                           _selecting = false;
                           _selected.clear();
                         }
                       }),
                     ),
-                    if (_view == TaskView.list)
+                    if (_view.supportsSelection)
                       IconButton(
                         tooltip: _selecting ? 'Cancel selection' : 'Select',
                         isSelected: _selecting,
@@ -249,8 +254,13 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             : _TaskTile(task: items[i], onEdit: () => _editTask(items[i])),
       ),
       TaskView.board => TaskBoardView(tasks: items, onTapTask: _editTask),
+      TaskView.table => TaskTableView(tasks: items, onTapTask: _editTask),
       TaskView.calendar => TaskCalendarView(tasks: items, onTapTask: _editTask),
+      TaskView.timeline => TaskTimelineView(tasks: items, onTapTask: _editTask),
       TaskView.gantt => TaskGanttView(tasks: items, onTapTask: _editTask),
+      TaskView.workload => TaskWorkloadView(tasks: items, onTapTask: _editTask),
+      TaskView.activity => TaskActivityView(tasks: items, onTapTask: _editTask),
+      TaskView.mindMap => TaskMindMapView(tasks: items, onTapTask: _editTask),
     };
   }
 }

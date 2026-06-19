@@ -72,12 +72,9 @@ class _MilestonesDialogState extends ConsumerState<MilestonesDialog> {
   }
 
   Future<void> _toggle(Milestone m) async {
-    await ref.read(milestonesRepositoryProvider).update(
-          m.id,
-          name: m.name,
-          dueDate: m.dueDate,
-          done: !m.done,
-        );
+    await ref
+        .read(milestonesRepositoryProvider)
+        .update(m.id, name: m.name, dueDate: m.dueDate, done: !m.done);
     _refresh();
   }
 
@@ -103,8 +100,10 @@ class _MilestonesDialogState extends ConsumerState<MilestonesDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             if (items.isEmpty)
-              Text('No milestones yet.',
-                  style: TextStyle(color: scheme.onSurfaceVariant))
+              Text(
+                'No milestones yet.',
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              )
             else
               ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 280),
@@ -114,15 +113,18 @@ class _MilestonesDialogState extends ConsumerState<MilestonesDialog> {
                     for (final Milestone m in items)
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.flag,
-                            color: m.done
-                                ? AppColors.green
-                                : AppColors.rose),
-                        title: Text(m.name,
-                            style: TextStyle(
-                                decoration: m.done
-                                    ? TextDecoration.lineThrough
-                                    : null)),
+                        leading: Icon(
+                          Icons.flag,
+                          color: m.done ? AppColors.green : AppColors.rose,
+                        ),
+                        title: Text(
+                          m.name,
+                          style: TextStyle(
+                            decoration: m.done
+                                ? TextDecoration.lineThrough
+                                : null,
+                          ),
+                        ),
                         subtitle: Text(shortDate(m.dueDate)),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -166,7 +168,8 @@ class _MilestonesDialogState extends ConsumerState<MilestonesDialog> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.add),
                   onPressed: _busy ? null : _add,
                 ),
@@ -175,8 +178,10 @@ class _MilestonesDialogState extends ConsumerState<MilestonesDialog> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Text(_error!,
-                    style: TextStyle(color: scheme.error, fontSize: 12)),
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: scheme.error, fontSize: 12),
+                ),
               ),
           ],
         ),

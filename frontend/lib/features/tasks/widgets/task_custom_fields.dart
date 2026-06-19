@@ -56,7 +56,9 @@ class _TaskCustomFieldsSectionState
   }
 
   TextEditingController _ctrl(int id) => _controllers.putIfAbsent(
-      id, () => TextEditingController(text: _values[id] ?? ''));
+    id,
+    () => TextEditingController(text: _values[id] ?? ''),
+  );
 
   Future<void> _save(int id, String value) async {
     _values[id] = value;
@@ -66,9 +68,9 @@ class _TaskCustomFieldsSectionState
           .setTaskValue(widget.taskId, id, value);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save field: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not save field: $e')));
       }
     }
   }
@@ -194,9 +196,11 @@ class _DateField extends StatelessWidget {
             lastDate: DateTime(now.year + 5),
           );
           if (picked != null) {
-            onChanged('${picked.year}-'
-                '${picked.month.toString().padLeft(2, '0')}-'
-                '${picked.day.toString().padLeft(2, '0')}');
+            onChanged(
+              '${picked.year}-'
+              '${picked.month.toString().padLeft(2, '0')}-'
+              '${picked.day.toString().padLeft(2, '0')}',
+            );
           }
         },
         child: Padding(

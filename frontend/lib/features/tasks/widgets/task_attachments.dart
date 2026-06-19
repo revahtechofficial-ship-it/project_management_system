@@ -25,8 +25,7 @@ class _TaskAttachmentsSectionState
   bool _busy = false;
 
   Future<void> _pickAndUpload() async {
-    final FilePickerResult? result =
-        await FilePicker.pickFiles(withData: true);
+    final FilePickerResult? result = await FilePicker.pickFiles(withData: true);
     if (result == null || result.files.isEmpty) {
       return;
     }
@@ -44,9 +43,9 @@ class _TaskAttachmentsSectionState
       ref.invalidate(activityProvider(widget.taskId));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
       }
     } finally {
       if (mounted) {
@@ -56,14 +55,14 @@ class _TaskAttachmentsSectionState
   }
 
   Future<void> _download(Attachment a) async {
-    final String? token =
-        ref.read(authControllerProvider).asData?.value.token;
+    final String? token = ref.read(authControllerProvider).asData?.value.token;
     if (token == null) {
       return;
     }
     final Uri uri = Uri.parse(
-        '${AppConfig.apiBaseUrl}/api/v1/attachments/${a.id}/download'
-        '?token=$token');
+      '${AppConfig.apiBaseUrl}/api/v1/attachments/${a.id}/download'
+      '?token=$token',
+    );
     await launchUrl(uri, webOnlyWindowName: '_blank');
   }
 
@@ -78,7 +77,7 @@ class _TaskAttachmentsSectionState
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final List<Attachment> items =
         ref.watch(attachmentsProvider(widget.taskId)).asData?.value ??
-            const <Attachment>[];
+        const <Attachment>[];
     final int? me = ref.watch(authControllerProvider).asData?.value.user?.id;
     final bool admin =
         ref.watch(authControllerProvider).asData?.value.isAdmin ?? false;
@@ -87,8 +86,10 @@ class _TaskAttachmentsSectionState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         if (items.isEmpty)
-          Text('No files attached.',
-              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
+          Text(
+            'No files attached.',
+            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+          ),
         for (final Attachment a in items)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
@@ -100,16 +101,22 @@ class _TaskAttachmentsSectionState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(a.filename,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text(
+                        a.filename,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       Text(
                         '${a.sizeLabel} · ${a.uploaderName ?? 'Someone'} · '
                         '${relativeTime(a.createdAt)}',
                         style: TextStyle(
-                            fontSize: 11, color: scheme.onSurfaceVariant),
+                          fontSize: 11,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -139,7 +146,8 @@ class _TaskAttachmentsSectionState
                 ? const SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2))
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Icon(Icons.attach_file, size: 18),
             label: Text(_busy ? 'Uploading…' : 'Attach file'),
           ),
