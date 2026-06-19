@@ -1,12 +1,14 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/workspace_page.dart';
+import '../../tasks/providers/tasks_providers.dart';
 import '../providers/pages_providers.dart';
 
-enum _Tool { select, pen }
+enum _Tool { move, pen, connect }
 
 const List<int> _palette = <int>[
   0xFFFDE68A, // amber
@@ -17,8 +19,9 @@ const List<int> _palette = <int>[
   0xFF111827, // ink
 ];
 
-/// A freeform whiteboard: draggable sticky notes plus freehand pen strokes,
-/// persisted as JSON in the page body. Pushed via [Navigator] (AGENTS.md §9).
+/// A freeform whiteboard for brainstorming: sticky notes, flowchart shapes
+/// (rectangle / decision / terminator), connectors and freehand pen — plus
+/// turning any element into a task. Persisted as JSON in the page body.
 class WhiteboardEditorScreen extends ConsumerStatefulWidget {
   const WhiteboardEditorScreen({super.key, required this.pageId});
 
@@ -32,17 +35,19 @@ class WhiteboardEditorScreen extends ConsumerStatefulWidget {
 class _WhiteboardEditorScreenState
     extends ConsumerState<WhiteboardEditorScreen> {
   final TextEditingController _title = TextEditingController();
-  final List<_Note> _notes = <_Note>[];
+  final List<_Element> _elements = <_Element>[];
   final List<_Stroke> _strokes = <_Stroke>[];
+  final List<_Connector> _connectors = <_Connector>[];
   _Stroke? _current;
-  _Tool _tool = _Tool.select;
+  _Tool _tool = _Tool.move;
   int _color = _palette.first;
   int _penColor = 0xFF111827;
+  String? _connectFrom;
   WorkspacePage? _page;
   bool _loading = true;
   bool _saving = false;
   bool _dirty = false;
-  int _noteSeq = 0;
+  int _seq = 0;
 
   bool get _canEdit => _page?.canEdit ?? true;
 
@@ -85,33 +90,42 @@ class _WhiteboardEditorScreenState
     try {
       final Map<String, dynamic> data =
           jsonDecode(body) as Map<String, dynamic>;
+      // Back-compat: an older board stored sticky notes under "notes".
       for (final dynamic n in data['notes'] as List<dynamic>? ?? <dynamic>[]) {
-        final Map<String, dynamic> m = n as Map<String, dynamic>;
-        _notes.add(
-          _Note(
-            id: m['id'] as String? ?? 'n${_noteSeq++}',
-            x: (m['x'] as num?)?.toDouble() ?? 40,
-            y: (m['y'] as num?)?.toDouble() ?? 40,
-            text: m['text'] as String? ?? '',
-            color: m['color'] as int? ?? _palette.first,
-          ),
+        _elements.add(_Element.fromJson(n as Map<String, dynamic>, 'note'));
+      }
+      for (final dynamic e
+          in data['elements'] as List<dynamic>? ?? <dynamic>[]) {
+        _elements.add(_Element.fromJson(e as Map<String, dynamic>, 'note'));
+      }
+      for (final _Element e in _elements) {
+        final int n = int.tryParse(e.id.replaceAll(RegExp(r'\D'), '')) ?? 0;
+        if (n >= _seq) {
+          _seq = n + 1;
+        }
+      }
+      for (final dynamic c
+          in data['connectors'] as List<dynamic>? ?? <dynamic>[]) {
+        final Map<String, dynamic> m = c as Map<String, dynamic>;
+        _connectors.add(
+          _Connector(from: m['from'] as String, to: m['to'] as String),
         );
       }
       for (final dynamic s
           in data['strokes'] as List<dynamic>? ?? <dynamic>[]) {
         final Map<String, dynamic> m = s as Map<String, dynamic>;
-        final List<Offset> pts = <Offset>[
-          for (final dynamic p in m['points'] as List<dynamic>? ?? <dynamic>[])
-            Offset(
-              ((p as List<dynamic>)[0] as num).toDouble(),
-              (p[1] as num).toDouble(),
-            ),
-        ];
         _strokes.add(
           _Stroke(
             color: m['color'] as int? ?? 0xFF111827,
             width: (m['width'] as num?)?.toDouble() ?? 3,
-            points: pts,
+            points: <Offset>[
+              for (final dynamic p
+                  in m['points'] as List<dynamic>? ?? <dynamic>[])
+                Offset(
+                  ((p as List<dynamic>)[0] as num).toDouble(),
+                  (p[1] as num).toDouble(),
+                ),
+            ],
           ),
         );
       }
@@ -121,15 +135,12 @@ class _WhiteboardEditorScreenState
   }
 
   String _serialize() => jsonEncode(<String, dynamic>{
-    'notes': <Map<String, dynamic>>[
-      for (final _Note n in _notes)
-        <String, dynamic>{
-          'id': n.id,
-          'x': n.x,
-          'y': n.y,
-          'text': n.text,
-          'color': n.color,
-        },
+    'elements': <Map<String, dynamic>>[
+      for (final _Element e in _elements) e.toJson(),
+    ],
+    'connectors': <Map<String, dynamic>>[
+      for (final _Connector c in _connectors)
+        <String, dynamic>{'from': c.from, 'to': c.to},
     ],
     'strokes': <Map<String, dynamic>>[
       for (final _Stroke s in _strokes)
@@ -175,13 +186,14 @@ class _WhiteboardEditorScreenState
     }
   }
 
-  void _addNote() {
+  void _add(String type) {
     setState(() {
-      _notes.add(
-        _Note(
-          id: 'n${_noteSeq++}',
-          x: 60 + (_notes.length % 5) * 24,
-          y: 60 + (_notes.length % 5) * 24,
+      _elements.add(
+        _Element(
+          id: 'n${_seq++}',
+          type: type,
+          x: 80 + (_elements.length % 6) * 26,
+          y: 80 + (_elements.length % 6) * 26,
           text: '',
           color: _color,
         ),
@@ -190,17 +202,17 @@ class _WhiteboardEditorScreenState
     });
   }
 
-  Future<void> _editNote(_Note note) async {
-    final TextEditingController c = TextEditingController(text: note.text);
+  Future<void> _editText(_Element e) async {
+    final TextEditingController c = TextEditingController(text: e.text);
     final String? text = await showDialog<String>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: const Text('Note'),
+        title: const Text('Text'),
         content: TextField(
           controller: c,
           autofocus: true,
-          minLines: 3,
-          maxLines: 6,
+          minLines: 2,
+          maxLines: 5,
           decoration: const InputDecoration(hintText: 'Write something…'),
         ),
         actions: <Widget>[
@@ -218,9 +230,125 @@ class _WhiteboardEditorScreenState
     c.dispose();
     if (text != null) {
       setState(() {
-        note.text = text;
+        e.text = text;
         _dirty = true;
       });
+    }
+  }
+
+  Future<void> _createTask(_Element e) async {
+    final String title = e.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add text first to make a task.')),
+      );
+      return;
+    }
+    try {
+      await ref.read(tasksRepositoryProvider).create(title: title);
+      ref.invalidate(tasksProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Task created: $title')));
+      }
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not create task: $err')));
+      }
+    }
+  }
+
+  void _elementActions(_Element e) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (BuildContext context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit text'),
+              onTap: () {
+                Navigator.pop(context);
+                _editText(e);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_task),
+              title: const Text('Create task'),
+              onTap: () {
+                Navigator.pop(context);
+                _createTask(e);
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: <Widget>[
+                  for (final int c in _palette)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        setState(() {
+                          e.color = c;
+                          _dirty = true;
+                        });
+                      },
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: Color(c),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.black26),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.delete_outline,
+                color: Colors.redAccent,
+              ),
+              title: const Text('Delete'),
+              onTap: () {
+                Navigator.pop(context);
+                setState(() {
+                  _elements.remove(e);
+                  _connectors.removeWhere(
+                    (_Connector c) => c.from == e.id || c.to == e.id,
+                  );
+                  _dirty = true;
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _tapElement(_Element e) {
+    if (_tool == _Tool.connect) {
+      setState(() {
+        if (_connectFrom == null) {
+          _connectFrom = e.id;
+        } else if (_connectFrom != e.id) {
+          _connectors.add(_Connector(from: _connectFrom!, to: e.id));
+          _connectFrom = null;
+          _dirty = true;
+        } else {
+          _connectFrom = null;
+        }
+      });
+    } else {
+      _elementActions(e);
     }
   }
 
@@ -293,106 +421,175 @@ class _WhiteboardEditorScreenState
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Row(
-          children: <Widget>[
-            SegmentedButton<_Tool>(
-              segments: const <ButtonSegment<_Tool>>[
-                ButtonSegment<_Tool>(
-                  value: _Tool.select,
-                  icon: Icon(Icons.back_hand_outlined, size: 18),
-                  label: Text('Move'),
-                ),
-                ButtonSegment<_Tool>(
-                  value: _Tool.pen,
-                  icon: Icon(Icons.edit_outlined, size: 18),
-                  label: Text('Pen'),
-                ),
-              ],
-              selected: <_Tool>{_tool},
-              showSelectedIcon: false,
-              onSelectionChanged: (Set<_Tool> s) =>
-                  setState(() => _tool = s.first),
-            ),
-            const SizedBox(width: 16),
-            for (final int c in _palette)
-              GestureDetector(
-                onTap: () => setState(() {
-                  if (_tool == _Tool.pen) {
-                    _penColor = c;
-                  } else {
-                    _color = c;
-                  }
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            children: <Widget>[
+              SegmentedButton<_Tool>(
+                segments: const <ButtonSegment<_Tool>>[
+                  ButtonSegment<_Tool>(
+                    value: _Tool.move,
+                    icon: Icon(Icons.back_hand_outlined, size: 18),
+                    label: Text('Move'),
+                  ),
+                  ButtonSegment<_Tool>(
+                    value: _Tool.pen,
+                    icon: Icon(Icons.edit_outlined, size: 18),
+                    label: Text('Pen'),
+                  ),
+                  ButtonSegment<_Tool>(
+                    value: _Tool.connect,
+                    icon: Icon(Icons.timeline, size: 18),
+                    label: Text('Connect'),
+                  ),
+                ],
+                selected: <_Tool>{_tool},
+                showSelectedIcon: false,
+                onSelectionChanged: (Set<_Tool> s) => setState(() {
+                  _tool = s.first;
+                  _connectFrom = null;
                 }),
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  decoration: BoxDecoration(
-                    color: Color(c),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: (_tool == _Tool.pen ? _penColor : _color) == c
-                          ? scheme.primary
-                          : scheme.outlineVariant,
-                      width: (_tool == _Tool.pen ? _penColor : _color) == c
-                          ? 3
-                          : 1,
+              ),
+              const SizedBox(width: 16),
+              for (final int c in _palette)
+                GestureDetector(
+                  onTap: () => setState(() {
+                    if (_tool == _Tool.pen) {
+                      _penColor = c;
+                    } else {
+                      _color = c;
+                    }
+                  }),
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      color: Color(c),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: (_tool == _Tool.pen ? _penColor : _color) == c
+                            ? scheme.primary
+                            : scheme.outlineVariant,
+                        width: (_tool == _Tool.pen ? _penColor : _color) == c
+                            ? 3
+                            : 1,
+                      ),
                     ),
                   ),
                 ),
+              const SizedBox(width: 16),
+              _addButton(),
+              IconButton(
+                tooltip: 'Clear drawing',
+                icon: const Icon(Icons.cleaning_services_outlined),
+                onPressed: _strokes.isEmpty
+                    ? null
+                    : () => setState(() {
+                        _strokes.clear();
+                        _dirty = true;
+                      }),
               ),
-            const Spacer(),
-            TextButton.icon(
-              onPressed: _addNote,
-              icon: const Icon(Icons.sticky_note_2_outlined, size: 18),
-              label: const Text('Note'),
-            ),
-            IconButton(
-              tooltip: 'Clear drawing',
-              icon: const Icon(Icons.cleaning_services_outlined),
-              onPressed: _strokes.isEmpty
-                  ? null
-                  : () => setState(() {
-                      _strokes.clear();
-                      _dirty = true;
-                    }),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
+  Widget _addButton() => PopupMenuButton<String>(
+    tooltip: 'Add element',
+    onSelected: _add,
+    itemBuilder: (BuildContext context) => const <PopupMenuEntry<String>>[
+      PopupMenuItem<String>(
+        value: 'note',
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.sticky_note_2_outlined),
+          title: Text('Sticky note'),
+        ),
+      ),
+      PopupMenuItem<String>(
+        value: 'rect',
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.crop_square),
+          title: Text('Process (box)'),
+        ),
+      ),
+      PopupMenuItem<String>(
+        value: 'diamond',
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.change_history),
+          title: Text('Decision'),
+        ),
+      ),
+      PopupMenuItem<String>(
+        value: 'ellipse',
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.circle_outlined),
+          title: Text('Start / end'),
+        ),
+      ),
+    ],
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.add, size: 18),
+          SizedBox(width: 6),
+          Text('Add'),
+          Icon(Icons.arrow_drop_down, size: 18),
+        ],
+      ),
+    ),
+  );
+
   Widget _canvas() {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final Map<String, Offset> centers = <String, Offset>{
+      for (final _Element e in _elements) e.id: e.center,
+    };
     return Container(
       color: scheme.surface,
       child: Stack(
         children: <Widget>[
           Positioned.fill(
             child: CustomPaint(
-              painter: _StrokePainter(strokes: _strokes, current: _current),
+              painter: _CanvasPainter(
+                strokes: _strokes,
+                current: _current,
+                connectors: _connectors,
+                centers: centers,
+                connectorColor: scheme.onSurfaceVariant,
+              ),
             ),
           ),
-          for (final _Note n in _notes)
+          for (final _Element e in _elements)
             Positioned(
-              left: n.x,
-              top: n.y,
-              child: _NoteCard(
-                note: n,
-                editable: _canEdit && _tool == _Tool.select,
-                onMove: (Offset d) => setState(() {
-                  n.x += d.dx;
-                  n.y += d.dy;
-                  _dirty = true;
-                }),
-                onTap: () => _editNote(n),
-                onDelete: () => setState(() {
-                  _notes.remove(n);
-                  _dirty = true;
-                }),
+              left: e.x,
+              top: e.y,
+              child: _ElementWidget(
+                element: e,
+                interactive: _canEdit,
+                highlighted: _connectFrom == e.id,
+                onMove: _tool == _Tool.move
+                    ? (Offset d) => setState(() {
+                        e.x += d.dx;
+                        e.y += d.dy;
+                        _dirty = true;
+                      })
+                    : null,
+                onTap: _canEdit ? () => _tapElement(e) : null,
               ),
             ),
           if (_canEdit && _tool == _Tool.pen)
@@ -423,9 +620,10 @@ class _WhiteboardEditorScreenState
   }
 }
 
-class _Note {
-  _Note({
+class _Element {
+  _Element({
     required this.id,
+    required this.type,
     required this.x,
     required this.y,
     required this.text,
@@ -433,108 +631,228 @@ class _Note {
   });
 
   final String id;
+  final String type;
   double x;
   double y;
   String text;
   int color;
+
+  Size get size => switch (type) {
+    'note' => const Size(168, 100),
+    'diamond' => const Size(120, 120),
+    _ => const Size(150, 86),
+  };
+
+  Offset get center => Offset(x + size.width / 2, y + size.height / 2);
+
+  factory _Element.fromJson(Map<String, dynamic> m, String fallbackType) =>
+      _Element(
+        id: m['id'] as String? ?? 'n0',
+        type: m['type'] as String? ?? fallbackType,
+        x: (m['x'] as num?)?.toDouble() ?? 40,
+        y: (m['y'] as num?)?.toDouble() ?? 40,
+        text: m['text'] as String? ?? '',
+        color: m['color'] as int? ?? _palette.first,
+      );
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'type': type,
+    'x': x,
+    'y': y,
+    'text': text,
+    'color': color,
+  };
+}
+
+class _Connector {
+  const _Connector({required this.from, required this.to});
+  final String from;
+  final String to;
 }
 
 class _Stroke {
   _Stroke({required this.color, required this.width, required this.points});
-
   final int color;
   final double width;
   final List<Offset> points;
 }
 
-class _NoteCard extends StatelessWidget {
-  const _NoteCard({
-    required this.note,
-    required this.editable,
+class _ElementWidget extends StatelessWidget {
+  const _ElementWidget({
+    required this.element,
+    required this.interactive,
+    required this.highlighted,
     required this.onMove,
     required this.onTap,
-    required this.onDelete,
   });
 
-  final _Note note;
-  final bool editable;
-  final ValueChanged<Offset> onMove;
-  final VoidCallback onTap;
-  final VoidCallback onDelete;
+  final _Element element;
+  final bool interactive;
+  final bool highlighted;
+  final ValueChanged<Offset>? onMove;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final Size s = element.size;
     return GestureDetector(
-      onTap: editable ? onTap : null,
-      onPanUpdate: editable ? (DragUpdateDetails d) => onMove(d.delta) : null,
+      onTap: interactive ? onTap : null,
+      onPanUpdate: onMove == null
+          ? null
+          : (DragUpdateDetails d) => onMove!(d.delta),
       child: Container(
-        width: 168,
-        constraints: const BoxConstraints(minHeight: 110),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Color(note.color),
-          borderRadius: BorderRadius.circular(6),
-          boxShadow: const <BoxShadow>[
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 6,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (editable)
-              Align(
-                alignment: Alignment.topRight,
-                child: GestureDetector(
-                  onTap: onDelete,
-                  child: const Icon(
-                    Icons.close,
-                    size: 16,
-                    color: Colors.black54,
-                  ),
+        decoration: highlighted
+            ? BoxDecoration(
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
                 ),
-              ),
-            Text(
-              note.text.isEmpty ? 'Tap to edit' : note.text,
-              style: TextStyle(
-                color: note.text.isEmpty ? Colors.black45 : Colors.black87,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+                borderRadius: BorderRadius.circular(8),
+              )
+            : null,
+        child: SizedBox(
+          width: s.width,
+          height: s.height,
+          child: _shape(context),
         ),
       ),
     );
   }
+
+  Widget _shape(BuildContext context) {
+    final Color c = Color(element.color);
+    final Widget label = Center(
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Text(
+          element.text.isEmpty ? 'Tap to edit' : element.text,
+          textAlign: TextAlign.center,
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: element.text.isEmpty ? Colors.black45 : Colors.black87,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+    switch (element.type) {
+      case 'note':
+        return Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: c,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          alignment: Alignment.topLeft,
+          child: Text(
+            element.text.isEmpty ? 'Tap to edit' : element.text,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: element.text.isEmpty ? Colors.black45 : Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        );
+      case 'ellipse':
+        return Container(
+          decoration: BoxDecoration(
+            color: c.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(60),
+            border: Border.all(color: c, width: 2),
+          ),
+          child: label,
+        );
+      case 'diamond':
+        return Stack(
+          alignment: Alignment.center,
+          children: <Widget>[
+            Transform.rotate(
+              angle: math.pi / 4,
+              child: Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  color: c.withValues(alpha: 0.18),
+                  border: Border.all(color: c, width: 2),
+                ),
+              ),
+            ),
+            label,
+          ],
+        );
+      case 'rect':
+      default:
+        return Container(
+          decoration: BoxDecoration(
+            color: c.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: c, width: 2),
+          ),
+          child: label,
+        );
+    }
+  }
 }
 
-class _StrokePainter extends CustomPainter {
-  _StrokePainter({required this.strokes, required this.current});
+class _CanvasPainter extends CustomPainter {
+  _CanvasPainter({
+    required this.strokes,
+    required this.current,
+    required this.connectors,
+    required this.centers,
+    required this.connectorColor,
+  });
 
   final List<_Stroke> strokes;
   final _Stroke? current;
+  final List<_Connector> connectors;
+  final Map<String, Offset> centers;
+  final Color connectorColor;
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Connectors (behind strokes/elements).
+    final Paint cp = Paint()
+      ..color = connectorColor
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke;
+    for (final _Connector c in connectors) {
+      final Offset? a = centers[c.from];
+      final Offset? b = centers[c.to];
+      if (a == null || b == null) {
+        continue;
+      }
+      canvas.drawLine(a, b, cp);
+      _arrowHead(canvas, a, b, connectorColor);
+    }
+    // Strokes.
     for (final _Stroke s in <_Stroke>[...strokes, ?current]) {
-      if (s.points.length < 2) {
-        if (s.points.length == 1) {
-          canvas.drawCircle(
-            s.points.first,
-            s.width / 2,
-            Paint()..color = Color(s.color),
-          );
-        }
+      if (s.points.isEmpty) {
+        continue;
+      }
+      if (s.points.length == 1) {
+        canvas.drawCircle(
+          s.points.first,
+          s.width / 2,
+          Paint()..color = Color(s.color),
+        );
         continue;
       }
       final Paint paint = Paint()
         ..color = Color(s.color)
         ..strokeWidth = s.width
         ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
         ..style = PaintingStyle.stroke;
       final Path path = Path()..moveTo(s.points.first.dx, s.points.first.dy);
       for (final Offset p in s.points.skip(1)) {
@@ -544,6 +862,26 @@ class _StrokePainter extends CustomPainter {
     }
   }
 
+  void _arrowHead(Canvas canvas, Offset a, Offset b, Color color) {
+    final double angle = math.atan2(b.dy - a.dy, b.dx - a.dx);
+    // Pull the tip back so it sits near the target element's edge.
+    final Offset tip = b - Offset(math.cos(angle) * 40, math.sin(angle) * 40);
+    const double len = 12;
+    final Paint p = Paint()..color = color;
+    final Path path = Path()
+      ..moveTo(tip.dx, tip.dy)
+      ..lineTo(
+        tip.dx - len * math.cos(angle - 0.5),
+        tip.dy - len * math.sin(angle - 0.5),
+      )
+      ..lineTo(
+        tip.dx - len * math.cos(angle + 0.5),
+        tip.dy - len * math.sin(angle + 0.5),
+      )
+      ..close();
+    canvas.drawPath(path, p);
+  }
+
   @override
-  bool shouldRepaint(_StrokePainter oldDelegate) => true;
+  bool shouldRepaint(_CanvasPainter old) => true;
 }
