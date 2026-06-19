@@ -91,6 +91,14 @@ type Folder struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type FormResponse struct {
+	ID          int64     `json:"id"`
+	PageID      int64     `json:"page_id"`
+	SubmittedBy *int64    `json:"submitted_by"`
+	Answers     string    `json:"answers"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type Message struct {
 	ID               int64     `json:"id"`
 	ConversationID   int64     `json:"conversation_id"`

@@ -9,6 +9,7 @@ import '../../data/enums/page_type.dart';
 import '../../data/models/workspace_page.dart';
 import 'providers/pages_providers.dart';
 import 'widgets/doc_editor_screen.dart';
+import 'widgets/form_editor_screen.dart';
 import 'widgets/whiteboard_editor_screen.dart';
 
 /// The Pages workspace: collaborative Docs (live), plus Whiteboard and Form
@@ -28,6 +29,7 @@ class _PagesPageState extends ConsumerState<PagesPage> {
       MaterialPageRoute<void>(
         builder: (BuildContext context) => switch (type) {
           PageType.whiteboard => WhiteboardEditorScreen(pageId: id),
+          PageType.form => FormEditorScreen(pageId: id),
           _ => DocEditorScreen(pageId: id),
         },
       ),
@@ -111,6 +113,12 @@ class _PagesPageState extends ConsumerState<PagesPage> {
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('New whiteboard'),
                 ),
+              if (_tab == PageType.form)
+                FilledButton.icon(
+                  onPressed: () => _create(PageType.form),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('New form'),
+                ),
             ],
           ),
           const SizedBox(height: 20),
@@ -135,7 +143,13 @@ class _PagesPageState extends ConsumerState<PagesPage> {
           onOpen: (int id) => _openPage(id, PageType.whiteboard),
         );
       case PageType.form:
-        return _ComingSoon(type: _tab);
+        return _FlatPageList(
+          type: PageType.form,
+          icon: Icons.dynamic_form_outlined,
+          color: AppColors.sky,
+          emptyMessage: 'No forms yet. Create one to collect responses.',
+          onOpen: (int id) => _openPage(id, PageType.form),
+        );
     }
   }
 }
@@ -589,37 +603,6 @@ class _FlatPageList extends ConsumerWidget {
           },
         );
       },
-    );
-  }
-}
-
-class _ComingSoon extends StatelessWidget {
-  const _ComingSoon({required this.type});
-
-  final PageType type;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(type.icon, size: 56, color: scheme.onSurfaceVariant),
-          const SizedBox(height: 16),
-          Text(
-            '${type.label} is coming soon',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            type == PageType.whiteboard
-                ? 'A freeform canvas for sketches and sticky notes.'
-                : 'Build intake forms and collect responses.',
-            style: TextStyle(color: scheme.onSurfaceVariant),
-          ),
-        ],
-      ),
     );
   }
 }

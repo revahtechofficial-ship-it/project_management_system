@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../enums/page_type.dart';
+import '../models/form_response_entry.dart';
 import '../models/page_share.dart';
 import '../models/workspace_page.dart';
 
@@ -130,4 +131,24 @@ class PagesRepository {
   /// Revokes a user's access to a shared page.
   Future<void> removeShare(int id, int userId) =>
       _dio.delete<void>('/api/v1/pages/$id/shares/$userId');
+
+  /// Submits a response to a form page (any user with access).
+  Future<void> submitForm(int id, Map<String, dynamic> answers) =>
+      _dio.post<void>(
+        '/api/v1/pages/$id/responses',
+        data: <String, dynamic>{'answers': answers},
+      );
+
+  /// Lists a form's responses (owner/admin only).
+  Future<List<FormResponseEntry>> formResponses(int id) async {
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/pages/$id/responses',
+    );
+    final List<dynamic> data = res.data ?? <dynamic>[];
+    return data
+        .map(
+          (dynamic e) => FormResponseEntry.fromJson(e as Map<String, dynamic>),
+        )
+        .toList(growable: false);
+  }
 }

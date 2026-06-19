@@ -59,6 +59,8 @@ func (h *PageHandler) Routes() http.Handler {
 	r.Get("/{id}/shares", h.listShares)
 	r.Post("/{id}/shares", h.addShare)
 	r.Delete("/{id}/shares/{userId}", h.removeShare)
+	r.Post("/{id}/responses", h.submitResponse)
+	r.Get("/{id}/responses", h.listResponses)
 	r.Delete("/{id}", h.delete)
 	return r
 }
@@ -513,6 +515,82 @@ func (h *PageHandler) removeShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type formResponseResponse struct {
+	ID              int64          `json:"id"`
+	Answers         map[string]any `json:"answers"`
+	SubmittedByName string         `json:"submitted_by_name"`
+	CreatedAt       time.Time      `json:"created_at"`
+}
+
+// submitResponse records a form submission. Anyone with access to the form may
+// submit.
+func (h *PageHandler) submitResponse(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	row, err := h.q.GetPage(r.Context(), id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, errors.New("form not found"))
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if h.access(r.Context(), row) == "" {
+		writeError(w, http.StatusForbidden, errors.New("you don't have access to this form"))
+		return
+	}
+	var b struct {
+		Answers map[string]any `json:"answers"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	answers, err := json.Marshal(b.Answers)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid answers"))
+		return
+	}
+	if _, err := h.q.CreateFormResponse(r.Context(), db.CreateFormResponseParams{
+		PageID:      id,
+		SubmittedBy: actorOf(r.Context()),
+		Answers:     string(answers),
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+}
+
+// listResponses returns a form's submissions; restricted to its owner/admin.
+func (h *PageHandler) listResponses(w http.ResponseWriter, r *http.Request) {
+	row, ok := h.loadManageable(w, r)
+	if !ok {
+		return
+	}
+	rows, err := h.q.ListFormResponses(r.Context(), row.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	out := make([]formResponseResponse, 0, len(rows))
+	for _, fr := range rows {
+		answers := map[string]any{}
+		_ = json.Unmarshal([]byte(fr.Answers), &answers)
+		out = append(out, formResponseResponse{
+			ID:              fr.ID,
+			Answers:         answers,
+			SubmittedByName: fr.SubmittedByName,
+			CreatedAt:       fr.CreatedAt,
+		})
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (h *PageHandler) delete(w http.ResponseWriter, r *http.Request) {
