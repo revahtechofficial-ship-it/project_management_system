@@ -29,11 +29,19 @@ import 'call/call_actions.dart';
 import 'providers/chat_providers.dart';
 import 'screen_capture/screen_capture.dart';
 import 'widgets/giphy_picker.dart';
+import 'widgets/group_members_dialog.dart';
 import 'widgets/new_conversation_dialog.dart';
 
 /// Emojis offered in the quick-reaction row of the message action sheet.
 const List<String> _quickReactions = <String>[
-  '👍', '❤️', '😂', '😮', '😢', '🙏', '🎉', '🔥'
+  '👍',
+  '❤️',
+  '😂',
+  '😮',
+  '😢',
+  '🙏',
+  '🎉',
+  '🔥',
 ];
 
 final RegExp _urlRe = RegExp(r'https?://[^\s]+');
@@ -102,8 +110,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   ChatRepository get _repo => ref.read(chatRepositoryProvider);
   int? get _myId => ref.read(authControllerProvider).asData?.value.user?.id;
-  String? get _token =>
-      ref.read(authControllerProvider).asData?.value.token;
+  String? get _token => ref.read(authControllerProvider).asData?.value.token;
 
   @override
   void initState() {
@@ -139,7 +146,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
     try {
       await _recorder.start(
-          const RecordConfig(encoder: AudioEncoder.opus), path: '');
+        const RecordConfig(encoder: AudioEncoder.opus),
+        path: '',
+      );
       setState(() {
         _recording = true;
         _recSeconds = 0;
@@ -169,9 +178,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     try {
       final Uint8List? bytes = await _fetchBytes(path);
       if (bytes != null && bytes.isNotEmpty) {
-        _appendMine(await _repo.uploadFile(
-            _selectedId!, bytes, 'voice-message.webm',
-            contentType: 'audio/webm'));
+        _appendMine(
+          await _repo.uploadFile(
+            _selectedId!,
+            bytes,
+            'voice-message.webm',
+            contentType: 'audio/webm',
+          ),
+        );
       }
     } catch (e) {
       _err('Could not send voice message: $e');
@@ -230,8 +244,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
     setState(() => _sending = true);
     try {
-      _appendMine(await _repo.uploadFile(_selectedId!, bytes, 'screenshot.png',
-          contentType: 'image/png'));
+      _appendMine(
+        await _repo.uploadFile(
+          _selectedId!,
+          bytes,
+          'screenshot.png',
+          contentType: 'image/png',
+        ),
+      );
     } catch (e) {
       _err('Could not send screenshot: $e');
     } finally {
@@ -242,8 +262,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _uploadGroupAvatar(int conversationId) async {
-    final FilePickerResult? result =
-        await FilePicker.pickFiles(type: FileType.image, withData: true);
+    final FilePickerResult? result = await FilePicker.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
     final bytes = result?.files.first.bytes;
     if (result == null || bytes == null || !mounted) {
       return;
@@ -259,6 +281,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       ref.invalidate(conversationsProvider);
     } catch (e) {
       _err('Could not update group photo: $e');
+    }
+  }
+
+  /// Opens the group info sheet (member list + admin add/remove + leave). If the
+  /// current user leaves, the open thread is closed.
+  Future<void> _openGroupInfo(Conversation conv) async {
+    final bool left = await showGroupMembers(context, conv);
+    if (left && mounted) {
+      _back();
+      ref.invalidate(conversationsProvider);
     }
   }
 
@@ -294,14 +326,20 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
     _loadingOlder = true;
     try {
-      final List<ChatMessage> older = await _repo.messages(_selectedId!,
-          limit: _pageSize, offset: _messages.length);
+      final List<ChatMessage> older = await _repo.messages(
+        _selectedId!,
+        limit: _pageSize,
+        offset: _messages.length,
+      );
       if (!mounted) {
         return;
       }
-      final double prevExtent =
-          _scroll.hasClients ? _scroll.position.maxScrollExtent : 0;
-      final double prevPixels = _scroll.hasClients ? _scroll.position.pixels : 0;
+      final double prevExtent = _scroll.hasClients
+          ? _scroll.position.maxScrollExtent
+          : 0;
+      final double prevPixels = _scroll.hasClients
+          ? _scroll.position.pixels
+          : 0;
       setState(() {
         _messages = <ChatMessage>[...older.reversed, ..._messages];
         _hasMoreOlder = older.length == _pageSize;
@@ -309,7 +347,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scroll.hasClients) {
           _scroll.jumpTo(
-              prevPixels + (_scroll.position.maxScrollExtent - prevExtent));
+            prevPixels + (_scroll.position.maxScrollExtent - prevExtent),
+          );
         }
       });
     } finally {
@@ -332,8 +371,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final int? me = _myId;
     if (me != null) {
       setState(() {
-        final Map<String, Set<int>> forMsg =
-            _reactions.putIfAbsent(messageId, () => <String, Set<int>>{});
+        final Map<String, Set<int>> forMsg = _reactions.putIfAbsent(
+          messageId,
+          () => <String, Set<int>>{},
+        );
         final Set<int> users = forMsg.putIfAbsent(emoji, () => <int>{});
         if (!users.remove(me)) {
           users.add(me);
@@ -356,8 +397,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final int userId = e['user_id'] as int;
     final bool added = e['added'] as bool? ?? false;
     setState(() {
-      final Map<String, Set<int>> forMsg =
-          _reactions.putIfAbsent(messageId, () => <String, Set<int>>{});
+      final Map<String, Set<int>> forMsg = _reactions.putIfAbsent(
+        messageId,
+        () => <String, Set<int>>{},
+      );
       final Set<int> users = forMsg.putIfAbsent(emoji, () => <int>{});
       if (added) {
         users.add(userId);
@@ -373,8 +416,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   void _onEvent(Map<String, dynamic> e) {
     switch (e['type']) {
       case 'message':
-        final ChatMessage msg =
-            ChatMessage.fromJson(e['message'] as Map<String, dynamic>);
+        final ChatMessage msg = ChatMessage.fromJson(
+          e['message'] as Map<String, dynamic>,
+        );
         ref.invalidate(conversationsProvider);
         if (msg.conversationId == _selectedId) {
           if (!_messages.any((ChatMessage m) => m.id == msg.id)) {
@@ -399,17 +443,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       case 'message_deleted':
         if (e['conversation_id'] == _selectedId) {
           final int id = e['id'] as int;
-          setState(() =>
-              _messages = _messages.where((ChatMessage m) => m.id != id).toList());
+          setState(
+            () => _messages = _messages
+                .where((ChatMessage m) => m.id != id)
+                .toList(),
+          );
         }
         ref.invalidate(conversationsProvider);
       case 'message_edited':
         if (e['conversation_id'] == _selectedId) {
-          final ChatMessage edited =
-              ChatMessage.fromJson(e['message'] as Map<String, dynamic>);
-          setState(() => _messages = _messages
-              .map((ChatMessage m) => m.id == edited.id ? edited : m)
-              .toList());
+          final ChatMessage edited = ChatMessage.fromJson(
+            e['message'] as Map<String, dynamic>,
+          );
+          setState(
+            () => _messages = _messages
+                .map((ChatMessage m) => m.id == edited.id ? edited : m)
+                .toList(),
+          );
         }
       case 'reaction':
         if (e['conversation_id'] == _selectedId) {
@@ -419,16 +469,26 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         if (e['conversation_id'] == _selectedId) {
           final int id = e['message_id'] as int;
           final bool pinned = e['pinned'] as bool? ?? false;
-          setState(() => _messages = _messages
-              .map((ChatMessage m) =>
-                  m.id == id ? m.copyWith(pinned: pinned) : m)
-              .toList());
+          setState(
+            () => _messages = _messages
+                .map(
+                  (ChatMessage m) =>
+                      m.id == id ? m.copyWith(pinned: pinned) : m,
+                )
+                .toList(),
+          );
           _refreshPinned();
         }
       case 'read':
         if (e['conversation_id'] == _selectedId && e['user_id'] != _myId) {
           final DateTime at = DateTime.parse(e['read_at'] as String);
           setState(() => _otherReadAt = at);
+        }
+      case 'members':
+        ref.invalidate(conversationsProvider);
+        final int? cid = e['conversation_id'] as int?;
+        if (cid != null) {
+          ref.invalidate(conversationMembersProvider(cid));
         }
     }
   }
@@ -471,18 +531,21 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   void _toggleEmoji() => setState(() => _emojiOpen = !_emojiOpen);
 
   Future<void> _deleteMessage(int id) async {
-    final bool ok = await showDialog<bool>(
+    final bool ok =
+        await showDialog<bool>(
           context: context,
           builder: (BuildContext context) => AlertDialog(
             title: const Text('Delete message'),
             content: const Text('Delete this message for everyone?'),
             actions: <Widget>[
               TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel')),
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
               FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Delete')),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Delete'),
+              ),
             ],
           ),
         ) ??
@@ -492,8 +555,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
     try {
       await _repo.deleteMessage(id);
-      setState(() =>
-          _messages = _messages.where((ChatMessage m) => m.id != id).toList());
+      setState(
+        () =>
+            _messages = _messages.where((ChatMessage m) => m.id != id).toList(),
+      );
       ref.invalidate(conversationsProvider);
     } catch (e) {
       _err('Could not delete: $e');
@@ -502,8 +567,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   Future<void> _open(int id) async {
     final Conversation? conv = _selectedFrom(
-        ref.read(conversationsProvider).asData?.value ??
-            const <Conversation>[]);
+      ref.read(conversationsProvider).asData?.value ?? const <Conversation>[],
+    );
     setState(() {
       _selectedId = id;
       _messages = <ChatMessage>[];
@@ -604,8 +669,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   Future<void> _forward(ChatMessage m) async {
     final List<Conversation> convos =
-        ref.read(conversationsProvider).asData?.value ??
-            const <Conversation>[];
+        ref.read(conversationsProvider).asData?.value ?? const <Conversation>[];
     final int? targetId = await showDialog<int>(
       context: context,
       builder: (BuildContext dialog) => SimpleDialog(
@@ -619,7 +683,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 leading: c.isGroup
                     ? const CircleAvatar(child: Icon(Icons.groups))
                     : UserAvatar(
-                        name: c.name, imageUrl: c.otherAvatarUrl, radius: 18),
+                        name: c.name,
+                        imageUrl: c.otherAvatarUrl,
+                        radius: 18,
+                      ),
                 title: Text(c.name.isEmpty ? 'Conversation' : c.name),
               ),
             ),
@@ -635,9 +702,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (targetId == _selectedId) {
         // The forwarded copy arrives over the socket for the open chat.
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Message forwarded')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Message forwarded')));
       }
     } catch (e) {
       _err('Forward failed: $e');
@@ -650,8 +717,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _emojiOpen = false;
     });
     _composer.text = m.body;
-    _composer.selection =
-        TextSelection.collapsed(offset: _composer.text.length);
+    _composer.selection = TextSelection.collapsed(
+      offset: _composer.text.length,
+    );
   }
 
   void _cancelEdit() {
@@ -665,9 +733,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     setState(() => _editingId = null);
     try {
       final ChatMessage updated = await _repo.editMessage(id, body);
-      setState(() => _messages = _messages
-          .map((ChatMessage m) => m.id == id ? updated : m)
-          .toList());
+      setState(
+        () => _messages = _messages
+            .map((ChatMessage m) => m.id == id ? updated : m)
+            .toList(),
+      );
     } catch (e) {
       _err('Edit failed: $e');
     }
@@ -716,7 +786,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             ),
             ListTile(
               leading: Icon(
-                  m.pinned ? Icons.push_pin : Icons.push_pin_outlined),
+                m.pinned ? Icons.push_pin : Icons.push_pin_outlined,
+              ),
               title: Text(m.pinned ? 'Unpin' : 'Pin'),
               onTap: () {
                 Navigator.pop(sheet);
@@ -744,8 +815,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             if (isMine)
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text('Delete',
-                    style: TextStyle(color: Colors.red)),
+                title: const Text(
+                  'Delete',
+                  style: TextStyle(color: Colors.red),
+                ),
                 onTap: () {
                   Navigator.pop(sheet);
                   _deleteMessage(m.id);
@@ -832,8 +905,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (_selectedId == null) {
       return;
     }
-    final FilePickerResult? result =
-        await FilePicker.pickFiles(type: type, withData: true);
+    final FilePickerResult? result = await FilePicker.pickFiles(
+      type: type,
+      withData: true,
+    );
     final bytes = result?.files.first.bytes;
     if (result == null || bytes == null) {
       return;
@@ -844,8 +919,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
     setState(() => _sending = true);
     try {
-      _appendMine(await _repo.uploadFile(
-          _selectedId!, bytes, result.files.first.name));
+      _appendMine(
+        await _repo.uploadFile(_selectedId!, bytes, result.files.first.name),
+      );
     } catch (e) {
       _err('Upload failed: $e');
     } finally {
@@ -865,8 +941,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   void _err(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -885,10 +962,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       return;
     }
     final Conversation? conv = _selectedFrom(
-        ref.read(conversationsProvider).asData?.value ??
-            const <Conversation>[]);
-    await startCall(context, ref, _selectedId!, mode,
-        title: conv?.name ?? '');
+      ref.read(conversationsProvider).asData?.value ?? const <Conversation>[],
+    );
+    await startCall(context, ref, _selectedId!, mode, title: conv?.name ?? '');
   }
 
   Future<void> _newDm() async {
@@ -918,18 +994,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<Map<String, dynamic>>>(chatEventsProvider,
-        (AsyncValue<Map<String, dynamic>>? prev,
-            AsyncValue<Map<String, dynamic>> next) {
+    ref.listen<AsyncValue<Map<String, dynamic>>>(chatEventsProvider, (
+      AsyncValue<Map<String, dynamic>>? prev,
+      AsyncValue<Map<String, dynamic>> next,
+    ) {
       next.whenData(_onEvent);
     });
 
     final List<Conversation> convos =
         ref.watch(conversationsProvider).asData?.value ??
-            const <Conversation>[];
+        const <Conversation>[];
     final Map<int, UserPresence> presence =
         ref.watch(presenceProvider).asData?.value ??
-            const <int, UserPresence>{};
+        const <int, UserPresence>{};
     final Conversation? selected = _selectedFrom(convos);
     final bool wide = MediaQuery.sizeOf(context).width >= 820;
 
@@ -940,15 +1017,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             SizedBox(
-                width: 320,
-                child:
-                    _ListPane(state: this, convos: convos, presence: presence)),
+              width: 320,
+              child: _ListPane(state: this, convos: convos, presence: presence),
+            ),
             const SizedBox(width: 12),
             Expanded(
-                child: _ThreadPane(
-                    state: this,
-                    conversation: selected,
-                    presence: presence)),
+              child: _ThreadPane(
+                state: this,
+                conversation: selected,
+                presence: presence,
+              ),
+            ),
           ],
         ),
       );
@@ -961,15 +1040,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               state: this,
               conversation: selected,
               presence: presence,
-              showBack: true),
+              showBack: true,
+            ),
     );
   }
 }
 
 /// The left pane: conversation list with a "new chat" menu.
 class _ListPane extends StatelessWidget {
-  const _ListPane(
-      {required this.state, required this.convos, required this.presence});
+  const _ListPane({
+    required this.state,
+    required this.convos,
+    required this.presence,
+  });
   final _ChatPageState state;
   final List<Conversation> convos;
   final Map<int, UserPresence> presence;
@@ -994,9 +1077,10 @@ class _ListPane extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
             child: Row(
               children: <Widget>[
-                const Text('Chat',
-                    style: TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w800)),
+                const Text(
+                  'Chat',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                ),
                 const Spacer(),
                 PopupMenuButton<String>(
                   tooltip: 'New conversation',
@@ -1005,17 +1089,21 @@ class _ListPane extends StatelessWidget {
                       v == 'dm' ? state._newDm() : state._newGroup(),
                   itemBuilder: (BuildContext context) =>
                       const <PopupMenuEntry<String>>[
-                    PopupMenuItem<String>(
-                        value: 'dm',
-                        child: ListTile(
+                        PopupMenuItem<String>(
+                          value: 'dm',
+                          child: ListTile(
                             leading: Icon(Icons.person_add_alt_1),
-                            title: Text('New message'))),
-                    PopupMenuItem<String>(
-                        value: 'group',
-                        child: ListTile(
+                            title: Text('New message'),
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'group',
+                          child: ListTile(
                             leading: Icon(Icons.group_add),
-                            title: Text('New group'))),
-                  ],
+                            title: Text('New group'),
+                          ),
+                        ),
+                      ],
                 ),
               ],
             ),
@@ -1026,20 +1114,22 @@ class _ListPane extends StatelessWidget {
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
-                      child: Text('No conversations yet.\nStart a new chat.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: scheme.onSurfaceVariant)),
+                      child: Text(
+                        'No conversations yet.\nStart a new chat.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
                     ),
                   )
                 : ListView.builder(
                     itemCount: convos.length,
                     itemBuilder: (BuildContext context, int i) =>
                         _ConversationTile(
-                      conversation: convos[i],
-                      selected: convos[i].id == state._selectedId,
-                      status: _statusFor(convos[i]),
-                      onTap: () => state._open(convos[i].id),
-                    ),
+                          conversation: convos[i],
+                          selected: convos[i].id == state._selectedId,
+                          status: _statusFor(convos[i]),
+                          onTap: () => state._open(convos[i].id),
+                        ),
                   ),
           ),
         ],
@@ -1076,7 +1166,8 @@ class _ConversationTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-            fontWeight: unread > 0 ? FontWeight.w800 : FontWeight.w600),
+          fontWeight: unread > 0 ? FontWeight.w800 : FontWeight.w600,
+        ),
       ),
       subtitle: Text(
         conversation.preview,
@@ -1090,21 +1181,26 @@ class _ConversationTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: <Widget>[
-          Text(relativeTime(conversation.lastAt),
-              style:
-                  TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+          Text(
+            relativeTime(conversation.lastAt),
+            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+          ),
           const SizedBox(height: 4),
           if (unread > 0)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
               decoration: const BoxDecoration(
-                  color: AppColors.brand,
-                  borderRadius: BorderRadius.all(Radius.circular(10))),
-              child: Text('$unread',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700)),
+                color: AppColors.brand,
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
+              child: Text(
+                '$unread',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
         ],
       ),
@@ -1134,28 +1230,33 @@ class _ThreadPane extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(Icons.forum_outlined,
-                  size: 48, color: scheme.onSurfaceVariant),
+              Icon(
+                Icons.forum_outlined,
+                size: 48,
+                color: scheme.onSurfaceVariant,
+              ),
               const SizedBox(height: 12),
-              Text('Select a conversation',
-                  style: TextStyle(color: scheme.onSurfaceVariant)),
+              Text(
+                'Select a conversation',
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
             ],
           ),
         ),
       );
     }
     final Conversation c = conversation!;
-    final UserPresence? otherPres =
-        c.isGroup ? null : presence[c.otherUserId];
+    final UserPresence? otherPres = c.isGroup ? null : presence[c.otherUserId];
     final bool otherOnline = otherPres?.online ?? false;
     return _Panel(
       child: Column(
         children: <Widget>[
           _ThreadHeader(
-              state: state,
-              conversation: c,
-              other: otherPres,
-              showBack: showBack),
+            state: state,
+            conversation: c,
+            other: otherPres,
+            showBack: showBack,
+          ),
           const Divider(height: 1),
           if (state._pinned.isNotEmpty)
             _PinnedBanner(
@@ -1167,44 +1268,50 @@ class _ThreadPane extends StatelessWidget {
             child: state._loadingMessages
                 ? const Center(child: CircularProgressIndicator())
                 : state._messages.isEmpty
-                    ? Center(
-                        child: Text('No messages yet. Say hello!',
-                            style:
-                                TextStyle(color: scheme.onSurfaceVariant)))
-                    : ListView.builder(
-                        controller: state._scroll,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
-                        itemCount: state._messages.length,
-                        itemBuilder: (BuildContext context, int i) {
-                          final ChatMessage m = state._messages[i];
-                          final bool isMine = m.senderId == state._myId;
-                          final bool seen = isMine &&
-                              !c.isGroup &&
-                              state._otherReadAt != null &&
-                              !m.createdAt.isAfter(state._otherReadAt!);
-                          return _MessageBubble(
-                            message: m,
-                            isMine: isMine,
-                            isGroup: c.isGroup,
-                            token: state._token,
-                            repo: state._repo,
-                            myId: state._myId,
-                            seen: seen,
-                            otherOnline: otherOnline,
-                            reactions: state._reactions[m.id],
-                            onReact: (String emoji) =>
-                                state._toggleReaction(m.id, emoji),
-                            onLongPress: () =>
-                                state._showMessageActions(m, isMine),
-                          );
-                        },
-                      ),
+                ? Center(
+                    child: Text(
+                      'No messages yet. Say hello!',
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: state._scroll,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    itemCount: state._messages.length,
+                    itemBuilder: (BuildContext context, int i) {
+                      final ChatMessage m = state._messages[i];
+                      final bool isMine = m.senderId == state._myId;
+                      final bool seen =
+                          isMine &&
+                          !c.isGroup &&
+                          state._otherReadAt != null &&
+                          !m.createdAt.isAfter(state._otherReadAt!);
+                      return _MessageBubble(
+                        message: m,
+                        isMine: isMine,
+                        isGroup: c.isGroup,
+                        token: state._token,
+                        repo: state._repo,
+                        myId: state._myId,
+                        seen: seen,
+                        otherOnline: otherOnline,
+                        reactions: state._reactions[m.id],
+                        onReact: (String emoji) =>
+                            state._toggleReaction(m.id, emoji),
+                        onLongPress: () => state._showMessageActions(m, isMine),
+                      );
+                    },
+                  ),
           ),
           if (state._typingName != null) _TypingRow(name: state._typingName!),
           if (state._replyTarget != null)
             _ReplyBanner(
-                message: state._replyTarget!, onCancel: state._cancelReply),
+              message: state._replyTarget!,
+              onCancel: state._cancelReply,
+            ),
           if (state._editingId != null)
             _EditBanner(onCancel: state._cancelEdit),
           _Composer(state: state),
@@ -1271,8 +1378,11 @@ class _ThreadHeader extends StatelessWidget {
                     child: CircleAvatar(
                       radius: 8,
                       backgroundColor: AppColors.brand,
-                      child: Icon(Icons.camera_alt,
-                          size: 9, color: Colors.white),
+                      child: Icon(
+                        Icons.camera_alt,
+                        size: 9,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -1296,18 +1406,29 @@ class _ThreadHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w700),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 if (!conversation.isGroup)
-                  Text(_subtitle(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: (status ?? UserStatus.offline).color)),
+                  Text(
+                    _subtitle(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: (status ?? UserStatus.offline).color,
+                    ),
+                  ),
               ],
             ),
           ),
+          if (conversation.isGroup)
+            IconButton(
+              tooltip: 'Group info & members',
+              icon: const Icon(Icons.group_outlined),
+              onPressed: () => state._openGroupInfo(conversation),
+            ),
           IconButton(
             tooltip: 'Voice call',
             icon: const Icon(Icons.call),
@@ -1369,7 +1490,9 @@ class _Composer extends StatelessWidget {
                   borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
+                  horizontal: 16,
+                  vertical: 10,
+                ),
               ),
             ),
           ),
@@ -1399,8 +1522,10 @@ class _Composer extends StatelessWidget {
         children: <Widget>[
           const _PulsingDot(),
           const SizedBox(width: 10),
-          Text('Recording  ${state._recLabel}',
-              style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(
+            'Recording  ${state._recLabel}',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
           const Spacer(),
           TextButton(
             onPressed: () => state._stopRecording(send: false),
@@ -1427,8 +1552,9 @@ class _PulsingDot extends StatefulWidget {
 class _PulsingDotState extends State<_PulsingDot>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 700))
-    ..repeat(reverse: true);
+    vsync: this,
+    duration: const Duration(milliseconds: 700),
+  )..repeat(reverse: true);
 
   @override
   void dispose() {
@@ -1443,8 +1569,10 @@ class _PulsingDotState extends State<_PulsingDot>
       child: Container(
         width: 12,
         height: 12,
-        decoration:
-            const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+        decoration: const BoxDecoration(
+          color: Colors.red,
+          shape: BoxShape.circle,
+        ),
       ),
     );
   }
@@ -1515,9 +1643,11 @@ class _MessageBubble extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 220, maxHeight: 220),
-            child: Image.network(url,
-                errorBuilder: (_, _, _) =>
-                    const Icon(Icons.broken_image_outlined)),
+            child: Image.network(
+              url,
+              errorBuilder: (_, _, _) =>
+                  const Icon(Icons.broken_image_outlined),
+            ),
           ),
         ),
       );
@@ -1532,176 +1662,204 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final Color bubble =
-        isMine ? AppColors.brand : scheme.surfaceContainerHighest;
+    final Color bubble = isMine
+        ? AppColors.brand
+        : scheme.surfaceContainerHighest;
     final Color fg = isMine ? Colors.white : scheme.onSurface;
-    final List<MapEntry<String, Set<int>>> chips = (reactions ??
-            const <String, Set<int>>{})
-        .entries
-        .where((MapEntry<String, Set<int>> e) => e.value.isNotEmpty)
-        .toList();
+    final List<MapEntry<String, Set<int>>> chips =
+        (reactions ?? const <String, Set<int>>{}).entries
+            .where((MapEntry<String, Set<int>> e) => e.value.isNotEmpty)
+            .toList();
     final bool showAvatar = isGroup && !isMine;
     final Widget content = Column(
-        crossAxisAlignment:
-            isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: <Widget>[
-          GestureDetector(
-            onLongPress: onLongPress,
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 360),
-              margin: const EdgeInsets.only(top: 4),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: bubble,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                crossAxisAlignment: isMine
-                    ? CrossAxisAlignment.end
-                    : CrossAxisAlignment.start,
-                children: <Widget>[
-                  if (isGroup && !isMine && message.senderName != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      child: Text(message.senderName!,
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: fg.withValues(alpha: 0.85))),
-                    ),
-                  if (message.forwarded)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 3),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Icon(Icons.forward,
-                              size: 12, color: fg.withValues(alpha: 0.7)),
-                          const SizedBox(width: 4),
-                          Text('Forwarded',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  fontStyle: FontStyle.italic,
-                                  color: fg.withValues(alpha: 0.7))),
-                        ],
+      crossAxisAlignment: isMine
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: <Widget>[
+        GestureDetector(
+          onLongPress: onLongPress,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 360),
+            margin: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: bubble,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: isMine
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: <Widget>[
+                if (isGroup && !isMine && message.senderName != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      message.senderName!,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: fg.withValues(alpha: 0.85),
                       ),
                     ),
-                  if (message.isReply)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 4),
-                      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-                      decoration: BoxDecoration(
-                        color: fg.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border(
-                            left: BorderSide(
-                                color: fg.withValues(alpha: 0.5), width: 3)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Text(message.replySenderName ?? 'Reply',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: fg.withValues(alpha: 0.9))),
-                          Text(
-                            ChatMessage.previewFor(
-                                message.replyKind, message.replyBody),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: fg.withValues(alpha: 0.8)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (message.isImage && token != null)
-                    _ImageContent(
-                        url: _url, onTap: () => _showImageLightbox(context, _url))
-                  else if (message.isAudio && token != null)
-                    _AudioContent(url: _url, fg: fg)
-                  else if (message.isVideo && token != null)
-                    _VideoContent(
-                        message: message,
-                        fg: fg,
-                        onTap: () => _showVideoLightbox(context, _url))
-                  else if (message.hasAttachment)
-                    _FileContent(
-                        message: message, fg: fg, onTap: _download),
-                  if (message.body.isNotEmpty && !_pureMediaUrl)
-                    Padding(
-                      padding:
-                          EdgeInsets.only(top: message.hasAttachment ? 6 : 0),
-                      child: Text(message.body, style: TextStyle(color: fg)),
-                    ),
-                  if (!message.hasAttachment) _linkOrLocation(context, fg),
-                  const SizedBox(height: 2),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      if (message.edited)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: Text('edited',
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  fontStyle: FontStyle.italic,
-                                  color: fg.withValues(alpha: 0.6))),
-                        ),
-                      if (message.pinned)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: Icon(Icons.push_pin,
-                              size: 11, color: fg.withValues(alpha: 0.7)),
-                        ),
-                      Text(
-                        TimeOfDay.fromDateTime(message.createdAt.toLocal())
-                            .format(context),
-                        style: TextStyle(
-                            fontSize: 10, color: fg.withValues(alpha: 0.7)),
-                      ),
-                      if (isMine && !isGroup)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4),
-                          child: Icon(
-                            // sent (single) / delivered (double) / read (blue).
-                            (seen || otherOnline)
-                                ? Icons.done_all
-                                : Icons.done,
-                            size: 14,
-                            color: seen
-                                ? const Color(0xFF7DD3FC)
-                                : fg.withValues(alpha: 0.7),
-                          ),
-                        ),
-                    ],
                   ),
-                ],
-              ),
+                if (message.forwarded)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 3),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Icon(
+                          Icons.forward,
+                          size: 12,
+                          color: fg.withValues(alpha: 0.7),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Forwarded',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic,
+                            color: fg.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (message.isReply)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 4),
+                    padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                    decoration: BoxDecoration(
+                      color: fg.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border(
+                        left: BorderSide(
+                          color: fg.withValues(alpha: 0.5),
+                          width: 3,
+                        ),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          message.replySenderName ?? 'Reply',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: fg.withValues(alpha: 0.9),
+                          ),
+                        ),
+                        Text(
+                          ChatMessage.previewFor(
+                            message.replyKind,
+                            message.replyBody,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: fg.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (message.isImage && token != null)
+                  _ImageContent(
+                    url: _url,
+                    onTap: () => _showImageLightbox(context, _url),
+                  )
+                else if (message.isAudio && token != null)
+                  _AudioContent(url: _url, fg: fg)
+                else if (message.isVideo && token != null)
+                  _VideoContent(
+                    message: message,
+                    fg: fg,
+                    onTap: () => _showVideoLightbox(context, _url),
+                  )
+                else if (message.hasAttachment)
+                  _FileContent(message: message, fg: fg, onTap: _download),
+                if (message.body.isNotEmpty && !_pureMediaUrl)
+                  Padding(
+                    padding: EdgeInsets.only(
+                      top: message.hasAttachment ? 6 : 0,
+                    ),
+                    child: Text(message.body, style: TextStyle(color: fg)),
+                  ),
+                if (!message.hasAttachment) _linkOrLocation(context, fg),
+                const SizedBox(height: 2),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    if (message.edited)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Text(
+                          'edited',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontStyle: FontStyle.italic,
+                            color: fg.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ),
+                    if (message.pinned)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Icon(
+                          Icons.push_pin,
+                          size: 11,
+                          color: fg.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    Text(
+                      TimeOfDay.fromDateTime(
+                        message.createdAt.toLocal(),
+                      ).format(context),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: fg.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    if (isMine && !isGroup)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Icon(
+                          // sent (single) / delivered (double) / read (blue).
+                          (seen || otherOnline) ? Icons.done_all : Icons.done,
+                          size: 14,
+                          color: seen
+                              ? const Color(0xFF7DD3FC)
+                              : fg.withValues(alpha: 0.7),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
-          if (chips.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Wrap(
-                spacing: 4,
-                children: <Widget>[
-                  for (final MapEntry<String, Set<int>> e in chips)
-                    _ReactionChip(
-                      emoji: e.key,
-                      count: e.value.length,
-                      mine: myId != null && e.value.contains(myId),
-                      onTap: () => onReact(e.key),
-                    ),
-                ],
-              ),
+        ),
+        if (chips.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Wrap(
+              spacing: 4,
+              children: <Widget>[
+                for (final MapEntry<String, Set<int>> e in chips)
+                  _ReactionChip(
+                    emoji: e.key,
+                    count: e.value.length,
+                    mine: myId != null && e.value.contains(myId),
+                    onTap: () => onReact(e.key),
+                  ),
+              ],
             ),
-        ],
-      );
+          ),
+      ],
+    );
 
     if (!showAvatar) {
       return Align(
@@ -1718,9 +1876,10 @@ class _MessageBubble extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 6, bottom: 4),
             child: UserAvatar(
-                name: message.senderName ?? '',
-                radius: 13,
-                imageUrl: message.senderAvatarUrl),
+              name: message.senderName ?? '',
+              radius: 13,
+              imageUrl: message.senderAvatarUrl,
+            ),
           ),
           Flexible(child: content),
         ],
@@ -1774,10 +1933,15 @@ void _showImageLightbox(BuildContext context, String url) {
           InteractiveViewer(
             maxScale: 5,
             child: Center(
-              child: Image.network(url,
-                  errorBuilder: (BuildContext c, Object e, StackTrace? s) =>
-                      const Icon(Icons.broken_image_outlined,
-                          color: Colors.white, size: 48)),
+              child: Image.network(
+                url,
+                errorBuilder: (BuildContext c, Object e, StackTrace? s) =>
+                    const Icon(
+                      Icons.broken_image_outlined,
+                      color: Colors.white,
+                      size: 48,
+                    ),
+              ),
             ),
           ),
           Positioned(
@@ -1797,8 +1961,11 @@ void _showImageLightbox(BuildContext context, String url) {
 /// A video attachment shown as a tappable card with a play button; tapping
 /// opens a full-screen player.
 class _VideoContent extends StatelessWidget {
-  const _VideoContent(
-      {required this.message, required this.fg, required this.onTap});
+  const _VideoContent({
+    required this.message,
+    required this.fg,
+    required this.onTap,
+  });
   final ChatMessage message;
   final Color fg;
   final VoidCallback onTap;
@@ -1831,14 +1998,19 @@ class _VideoContent extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text(message.attachmentName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style:
-                          TextStyle(color: fg, fontWeight: FontWeight.w600)),
-                  Text('Video · ${message.sizeLabel}',
-                      style: TextStyle(
-                          color: fg.withValues(alpha: 0.75), fontSize: 11)),
+                  Text(
+                    message.attachmentName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: fg, fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    'Video · ${message.sizeLabel}',
+                    style: TextStyle(
+                      color: fg.withValues(alpha: 0.75),
+                      fontSize: 11,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1889,16 +2061,18 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> {
   void initState() {
     super.initState();
     _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url))
-      ..initialize().then((_) {
-        if (mounted) {
-          setState(() => _ready = true);
-          _controller.play();
-        }
-      }).catchError((Object e) {
-        if (mounted) {
-          setState(() => _error = '$e');
-        }
-      });
+      ..initialize()
+          .then((_) {
+            if (mounted) {
+              setState(() => _ready = true);
+              _controller.play();
+            }
+          })
+          .catchError((Object e) {
+            if (mounted) {
+              setState(() => _error = '$e');
+            }
+          });
   }
 
   @override
@@ -1908,8 +2082,11 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> {
   }
 
   void _toggle() {
-    setState(() =>
-        _controller.value.isPlaying ? _controller.pause() : _controller.play());
+    setState(
+      () => _controller.value.isPlaying
+          ? _controller.pause()
+          : _controller.play(),
+    );
   }
 
   @override
@@ -1918,8 +2095,10 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> {
       return const SizedBox(
         height: 200,
         child: Center(
-          child: Text('Could not play this video.',
-              style: TextStyle(color: Colors.white70)),
+          child: Text(
+            'Could not play this video.',
+            style: TextStyle(color: Colors.white70),
+          ),
         ),
       );
     }
@@ -1943,8 +2122,11 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> {
               children: <Widget>[
                 VideoPlayer(_controller),
                 if (!_controller.value.isPlaying)
-                  const Icon(Icons.play_circle_fill,
-                      color: Colors.white70, size: 64),
+                  const Icon(
+                    Icons.play_circle_fill,
+                    color: Colors.white70,
+                    size: 64,
+                  ),
               ],
             ),
           ),
@@ -1967,7 +2149,8 @@ class _AudioContent extends StatefulWidget {
 
 class _AudioContentState extends State<_AudioContent> {
   final AudioPlayer _player = AudioPlayer();
-  final List<StreamSubscription<dynamic>> _subs = <StreamSubscription<dynamic>>[];
+  final List<StreamSubscription<dynamic>> _subs =
+      <StreamSubscription<dynamic>>[];
   bool _playing = false;
   Duration _pos = Duration.zero;
   Duration _dur = Duration.zero;
@@ -1975,29 +2158,37 @@ class _AudioContentState extends State<_AudioContent> {
   @override
   void initState() {
     super.initState();
-    _subs.add(_player.onPlayerStateChanged.listen((PlayerState s) {
-      if (mounted) {
-        setState(() => _playing = s == PlayerState.playing);
-      }
-    }));
-    _subs.add(_player.onPositionChanged.listen((Duration p) {
-      if (mounted) {
-        setState(() => _pos = p);
-      }
-    }));
-    _subs.add(_player.onDurationChanged.listen((Duration d) {
-      if (mounted) {
-        setState(() => _dur = d);
-      }
-    }));
-    _subs.add(_player.onPlayerComplete.listen((_) {
-      if (mounted) {
-        setState(() {
-          _playing = false;
-          _pos = Duration.zero;
-        });
-      }
-    }));
+    _subs.add(
+      _player.onPlayerStateChanged.listen((PlayerState s) {
+        if (mounted) {
+          setState(() => _playing = s == PlayerState.playing);
+        }
+      }),
+    );
+    _subs.add(
+      _player.onPositionChanged.listen((Duration p) {
+        if (mounted) {
+          setState(() => _pos = p);
+        }
+      }),
+    );
+    _subs.add(
+      _player.onDurationChanged.listen((Duration d) {
+        if (mounted) {
+          setState(() => _dur = d);
+        }
+      }),
+    );
+    _subs.add(
+      _player.onPlayerComplete.listen((_) {
+        if (mounted) {
+          setState(() {
+            _playing = false;
+            _pos = Duration.zero;
+          });
+        }
+      }),
+    );
   }
 
   @override
@@ -2031,8 +2222,11 @@ class _AudioContentState extends State<_AudioContent> {
         children: <Widget>[
           GestureDetector(
             onTap: _toggle,
-            child: Icon(_playing ? Icons.pause_circle : Icons.play_circle,
-                color: widget.fg, size: 34),
+            child: Icon(
+              _playing ? Icons.pause_circle : Icons.play_circle,
+              color: widget.fg,
+              size: 34,
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -2054,8 +2248,9 @@ class _AudioContentState extends State<_AudioContent> {
                     Text(
                       _dur == Duration.zero ? 'Voice message' : _fmt(_dur),
                       style: TextStyle(
-                          fontSize: 11,
-                          color: widget.fg.withValues(alpha: 0.8)),
+                        fontSize: 11,
+                        color: widget.fg.withValues(alpha: 0.8),
+                      ),
                     ),
                   ],
                 ),
@@ -2110,26 +2305,33 @@ class _LinkPreviewCard extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   if (pv.site.isNotEmpty)
-                    Text(pv.site.toUpperCase(),
-                        style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurfaceVariant)),
+                    Text(
+                      pv.site.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                   if (pv.title.isNotEmpty)
-                    Text(pv.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            const TextStyle(fontWeight: FontWeight.w700)),
+                    Text(
+                      pv.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
                   if (pv.description.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
-                      child: Text(pv.description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: scheme.onSurfaceVariant)),
+                      child: Text(
+                        pv.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -2153,8 +2355,8 @@ class _LocationCard extends StatelessWidget {
     final String? map = coords == null
         ? null
         : 'https://staticmap.openstreetmap.de/staticmap.php'
-            '?center=${coords.$1},${coords.$2}&zoom=15&size=280x130'
-            '&markers=${coords.$1},${coords.$2},red-pushpin';
+              '?center=${coords.$1},${coords.$2}&zoom=15&size=280x130'
+              '&markers=${coords.$1},${coords.$2},red-pushpin';
     return InkWell(
       onTap: () => launchUrl(Uri.parse(url), webOnlyWindowName: '_blank'),
       child: Container(
@@ -2169,16 +2371,21 @@ class _LocationCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             if (map != null)
-              Image.network(map,
-                  height: 130,
-                  width: 280,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                        height: 90,
-                        color: scheme.surfaceContainerHighest,
-                        child: Icon(Icons.map_outlined,
-                            color: scheme.onSurfaceVariant, size: 36),
-                      )),
+              Image.network(
+                map,
+                height: 130,
+                width: 280,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  height: 90,
+                  color: scheme.surfaceContainerHighest,
+                  child: Icon(
+                    Icons.map_outlined,
+                    color: scheme.onSurfaceVariant,
+                    size: 36,
+                  ),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.all(8),
               child: Row(
@@ -2186,11 +2393,15 @@ class _LocationCard extends StatelessWidget {
                   Icon(Icons.location_on, color: scheme.primary, size: 18),
                   const SizedBox(width: 6),
                   const Expanded(
-                      child: Text('Shared location',
-                          style: TextStyle(fontWeight: FontWeight.w600))),
-                  Text('Open in Maps',
-                      style: TextStyle(
-                          fontSize: 11, color: scheme.primary)),
+                    child: Text(
+                      'Shared location',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Text(
+                    'Open in Maps',
+                    style: TextStyle(fontSize: 11, color: scheme.primary),
+                  ),
                 ],
               ),
             ),
@@ -2219,9 +2430,9 @@ class _ImageContent extends StatelessWidget {
             fit: BoxFit.cover,
             errorBuilder: (BuildContext c, Object e, StackTrace? s) =>
                 const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.broken_image_outlined),
-            ),
+                  padding: EdgeInsets.all(8),
+                  child: Icon(Icons.broken_image_outlined),
+                ),
           ),
         ),
       ),
@@ -2230,8 +2441,11 @@ class _ImageContent extends StatelessWidget {
 }
 
 class _FileContent extends StatelessWidget {
-  const _FileContent(
-      {required this.message, required this.fg, required this.onTap});
+  const _FileContent({
+    required this.message,
+    required this.fg,
+    required this.onTap,
+  });
   final ChatMessage message;
   final Color fg;
   final VoidCallback onTap;
@@ -2250,14 +2464,19 @@ class _FileContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text(message.attachmentName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: fg, fontWeight: FontWeight.w600)),
-                Text(message.sizeLabel,
-                    style: TextStyle(
-                        color: fg.withValues(alpha: 0.75), fontSize: 11)),
+                Text(
+                  message.attachmentName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: fg, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  message.sizeLabel,
+                  style: TextStyle(
+                    color: fg.withValues(alpha: 0.75),
+                    fontSize: 11,
+                  ),
+                ),
               ],
             ),
           ),
@@ -2278,15 +2497,17 @@ class _ConvAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!conversation.isGroup) {
       return UserAvatar(
-          name: conversation.name,
-          radius: radius,
-          imageUrl: conversation.otherAvatarUrl);
+        name: conversation.name,
+        radius: radius,
+        imageUrl: conversation.otherAvatarUrl,
+      );
     }
     if (conversation.groupAvatarUrl != null) {
       return UserAvatar(
-          name: conversation.name,
-          radius: radius,
-          imageUrl: conversation.groupAvatarUrl);
+        name: conversation.name,
+        radius: radius,
+        imageUrl: conversation.groupAvatarUrl,
+      );
     }
     return CircleAvatar(
       radius: radius,
@@ -2319,7 +2540,9 @@ class _PresenceAvatar extends StatelessWidget {
                 color: status!.color,
                 shape: BoxShape.circle,
                 border: Border.all(
-                    color: Theme.of(context).colorScheme.surface, width: 2),
+                  color: Theme.of(context).colorScheme.surface,
+                  width: 2,
+                ),
               ),
             ),
           ),
@@ -2346,8 +2569,7 @@ class _PinnedBanner extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
-        border: Border(
-            bottom: BorderSide(color: scheme.outlineVariant)),
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
       ),
       child: Row(
         children: <Widget>[
@@ -2358,11 +2580,14 @@ class _PinnedBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text(count > 1 ? '$count pinned messages' : 'Pinned message',
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.primary)),
+                Text(
+                  count > 1 ? '$count pinned messages' : 'Pinned message',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.primary,
+                  ),
+                ),
                 Text(
                   ChatMessage.previewFor(message.kind, message.body),
                   maxLines: 1,
@@ -2405,11 +2630,14 @@ class _ReplyBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text('Replying to ${message.senderName ?? 'message'}',
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.primary)),
+                Text(
+                  'Replying to ${message.senderName ?? 'message'}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.primary,
+                  ),
+                ),
                 Text(
                   ChatMessage.previewFor(message.kind, message.body),
                   maxLines: 1,
@@ -2468,11 +2696,14 @@ class _TypingRow extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Text('$name is typing…',
-            style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        child: Text(
+          '$name is typing…',
+          style: TextStyle(
+            fontSize: 12,
+            fontStyle: FontStyle.italic,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
       ),
     );
   }
@@ -2501,8 +2732,7 @@ class _AttachOption extends StatelessWidget {
         backgroundColor: color.withValues(alpha: 0.15),
         child: Icon(icon, color: color),
       ),
-      title: Text(label,
-          style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(subtitle),
     );
   }
@@ -2539,9 +2769,7 @@ class _EmojiPanel extends StatelessWidget {
             buttonColor: scheme.surfaceContainerHighest,
             buttonIconColor: scheme.onSurface,
           ),
-          searchViewConfig: SearchViewConfig(
-            backgroundColor: scheme.surface,
-          ),
+          searchViewConfig: SearchViewConfig(backgroundColor: scheme.surface),
         ),
       ),
     );

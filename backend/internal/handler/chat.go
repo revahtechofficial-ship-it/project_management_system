@@ -277,6 +277,25 @@ func (h *ChatHandler) broadcastMessage(ctx context.Context, convID int64, msg me
 	h.hub.SendToUsers(ids, payload)
 }
 
+// broadcastMembers tells the conversation's current members — plus any users in
+// extra (e.g. someone just removed) — that the membership changed, so their
+// clients can refresh the member list and conversation index.
+func (h *ChatHandler) broadcastMembers(ctx context.Context, convID int64, extra ...int64) {
+	ids, err := h.q.ConversationMemberIDs(ctx, convID)
+	if err != nil {
+		ids = nil
+	}
+	ids = append(ids, extra...)
+	payload, err := json.Marshal(map[string]any{
+		"type":            "members",
+		"conversation_id": convID,
+	})
+	if err != nil {
+		return
+	}
+	h.hub.SendToUsers(ids, payload)
+}
+
 // --- conversations ---------------------------------------------------------
 
 func (h *ChatHandler) listConversations(w http.ResponseWriter, r *http.Request) {
@@ -575,8 +594,13 @@ func (h *ChatHandler) listMembers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ChatHandler) addMembers(w http.ResponseWriter, r *http.Request) {
-	convID, _, ok := h.authConv(w, r)
+	convID, actor, ok := h.authConv(w, r)
 	if !ok {
+		return
+	}
+	// Only a group's admin (its creator) may add members.
+	if role, _ := h.memberRole(r.Context(), convID, actor); role != "admin" {
+		writeError(w, http.StatusForbidden, errors.New("only an admin can add members"))
 		return
 	}
 	var b struct {
@@ -587,8 +611,11 @@ func (h *ChatHandler) addMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, uid := range b.UserIDs {
-		h.addMember(r.Context(), convID, uid, "member")
+		if uid != actor {
+			h.addMember(r.Context(), convID, uid, "member")
+		}
 	}
+	h.broadcastMembers(r.Context(), convID)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -615,6 +642,7 @@ func (h *ChatHandler) removeMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	h.broadcastMembers(r.Context(), convID, target)
 	w.WriteHeader(http.StatusNoContent)
 }
 
