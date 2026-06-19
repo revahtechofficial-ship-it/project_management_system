@@ -149,6 +149,14 @@ type Page struct {
 	Category   string             `json:"category"`
 	OwnerID    *int64             `json:"owner_id"`
 	ReviewAt   pgtype.Timestamptz `json:"review_at"`
+	Visibility string             `json:"visibility"`
+}
+
+type PageShare struct {
+	PageID     int64     `json:"page_id"`
+	UserID     int64     `json:"user_id"`
+	Permission string    `json:"permission"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type Project struct {

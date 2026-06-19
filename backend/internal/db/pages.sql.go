@@ -19,7 +19,7 @@ VALUES ($1, $2, $3, $4,
         $5, $6, $7,
         $8, $9,
         $10, $11)
-RETURNING id, type, title, icon, body, created_by, updated_by, created_at, updated_at, parent_id, is_template, category, owner_id, review_at
+RETURNING id, type, title, icon, body, created_by, updated_by, created_at, updated_at, parent_id, is_template, category, owner_id, review_at, visibility
 `
 
 type CreatePageParams struct {
@@ -66,6 +66,7 @@ func (q *Queries) CreatePage(ctx context.Context, arg CreatePageParams) (Page, e
 		&i.Category,
 		&i.OwnerID,
 		&i.ReviewAt,
+		&i.Visibility,
 	)
 	return i, err
 }
@@ -81,8 +82,8 @@ func (q *Queries) DeletePage(ctx context.Context, id int64) error {
 
 const getPage = `-- name: GetPage :one
 SELECT p.id, p.type, p.title, p.icon, p.body, p.parent_id, p.is_template,
-       p.category, p.owner_id, p.review_at, p.created_by, p.updated_by,
-       p.created_at, p.updated_at,
+       p.category, p.owner_id, p.review_at, p.visibility,
+       p.created_by, p.updated_by, p.created_at, p.updated_at,
        COALESCE(cu.full_name, '')::text AS created_by_name,
        COALESCE(uu.full_name, '')::text AS updated_by_name,
        COALESCE(ow.full_name, '')::text AS owner_name
@@ -104,6 +105,7 @@ type GetPageRow struct {
 	Category      string             `json:"category"`
 	OwnerID       *int64             `json:"owner_id"`
 	ReviewAt      pgtype.Timestamptz `json:"review_at"`
+	Visibility    string             `json:"visibility"`
 	CreatedBy     *int64             `json:"created_by"`
 	UpdatedBy     *int64             `json:"updated_by"`
 	CreatedAt     time.Time          `json:"created_at"`
@@ -127,6 +129,7 @@ func (q *Queries) GetPage(ctx context.Context, id int64) (GetPageRow, error) {
 		&i.Category,
 		&i.OwnerID,
 		&i.ReviewAt,
+		&i.Visibility,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,
@@ -138,23 +141,92 @@ func (q *Queries) GetPage(ctx context.Context, id int64) (GetPageRow, error) {
 	return i, err
 }
 
+const getPageShare = `-- name: GetPageShare :one
+SELECT permission FROM page_shares WHERE page_id = $1 AND user_id = $2
+`
+
+type GetPageShareParams struct {
+	PageID int64 `json:"page_id"`
+	UserID int64 `json:"user_id"`
+}
+
+func (q *Queries) GetPageShare(ctx context.Context, arg GetPageShareParams) (string, error) {
+	row := q.db.QueryRow(ctx, getPageShare, arg.PageID, arg.UserID)
+	var permission string
+	err := row.Scan(&permission)
+	return permission, err
+}
+
+const listPageShares = `-- name: ListPageShares :many
+SELECT s.user_id, s.permission, u.full_name, u.email, u.avatar
+FROM page_shares s
+JOIN users u ON u.id = s.user_id
+WHERE s.page_id = $1
+ORDER BY u.full_name
+`
+
+type ListPageSharesRow struct {
+	UserID     int64  `json:"user_id"`
+	Permission string `json:"permission"`
+	FullName   string `json:"full_name"`
+	Email      string `json:"email"`
+	Avatar     string `json:"avatar"`
+}
+
+func (q *Queries) ListPageShares(ctx context.Context, pageID int64) ([]ListPageSharesRow, error) {
+	rows, err := q.db.Query(ctx, listPageShares, pageID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPageSharesRow{}
+	for rows.Next() {
+		var i ListPageSharesRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Permission,
+			&i.FullName,
+			&i.Email,
+			&i.Avatar,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPages = `-- name: ListPages :many
 SELECT p.id, p.type, p.title, p.icon, p.parent_id, p.is_template, p.category,
-       p.owner_id, p.review_at, p.created_at, p.updated_at,
+       p.owner_id, p.review_at, p.visibility, p.created_by,
+       p.created_at, p.updated_at,
        COALESCE(cu.full_name, '')::text AS created_by_name,
        COALESCE(uu.full_name, '')::text AS updated_by_name,
-       COALESCE(ow.full_name, '')::text AS owner_name
+       COALESCE(ow.full_name, '')::text AS owner_name,
+       COALESCE(ps.permission, '')::text AS my_permission
 FROM pages p
 LEFT JOIN users cu ON cu.id = p.created_by
 LEFT JOIN users uu ON uu.id = p.updated_by
 LEFT JOIN users ow ON ow.id = p.owner_id
-WHERE p.type = $1 AND p.is_template = $2
+LEFT JOIN page_shares ps ON ps.page_id = p.id AND ps.user_id = $1
+WHERE p.type = $2 AND p.is_template = $3
+  AND (
+    $4::boolean
+    OR p.visibility = 'workspace'
+    OR p.created_by = $1
+    OR ps.user_id IS NOT NULL
+  )
 ORDER BY p.title ASC
 `
 
 type ListPagesParams struct {
+	Actor      *int64 `json:"actor"`
 	Type       string `json:"type"`
 	IsTemplate bool   `json:"is_template"`
+	IsAdmin    bool   `json:"is_admin"`
 }
 
 type ListPagesRow struct {
@@ -167,15 +239,23 @@ type ListPagesRow struct {
 	Category      string             `json:"category"`
 	OwnerID       *int64             `json:"owner_id"`
 	ReviewAt      pgtype.Timestamptz `json:"review_at"`
+	Visibility    string             `json:"visibility"`
+	CreatedBy     *int64             `json:"created_by"`
 	CreatedAt     time.Time          `json:"created_at"`
 	UpdatedAt     time.Time          `json:"updated_at"`
 	CreatedByName string             `json:"created_by_name"`
 	UpdatedByName string             `json:"updated_by_name"`
 	OwnerName     string             `json:"owner_name"`
+	MyPermission  string             `json:"my_permission"`
 }
 
 func (q *Queries) ListPages(ctx context.Context, arg ListPagesParams) ([]ListPagesRow, error) {
-	rows, err := q.db.Query(ctx, listPages, arg.Type, arg.IsTemplate)
+	rows, err := q.db.Query(ctx, listPages,
+		arg.Actor,
+		arg.Type,
+		arg.IsTemplate,
+		arg.IsAdmin,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -193,11 +273,14 @@ func (q *Queries) ListPages(ctx context.Context, arg ListPagesParams) ([]ListPag
 			&i.Category,
 			&i.OwnerID,
 			&i.ReviewAt,
+			&i.Visibility,
+			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CreatedByName,
 			&i.UpdatedByName,
 			&i.OwnerName,
+			&i.MyPermission,
 		); err != nil {
 			return nil, err
 		}
@@ -207,6 +290,20 @@ func (q *Queries) ListPages(ctx context.Context, arg ListPagesParams) ([]ListPag
 		return nil, err
 	}
 	return items, nil
+}
+
+const removePageShare = `-- name: RemovePageShare :exec
+DELETE FROM page_shares WHERE page_id = $1 AND user_id = $2
+`
+
+type RemovePageShareParams struct {
+	PageID int64 `json:"page_id"`
+	UserID int64 `json:"user_id"`
+}
+
+func (q *Queries) RemovePageShare(ctx context.Context, arg RemovePageShareParams) error {
+	_, err := q.db.Exec(ctx, removePageShare, arg.PageID, arg.UserID)
+	return err
 }
 
 const setPageParent = `-- name: SetPageParent :exec
@@ -221,6 +318,21 @@ type SetPageParentParams struct {
 
 func (q *Queries) SetPageParent(ctx context.Context, arg SetPageParentParams) error {
 	_, err := q.db.Exec(ctx, setPageParent, arg.ParentID, arg.ID)
+	return err
+}
+
+const setPageVisibility = `-- name: SetPageVisibility :exec
+UPDATE pages SET visibility = $1, updated_at = now()
+WHERE id = $2
+`
+
+type SetPageVisibilityParams struct {
+	Visibility string `json:"visibility"`
+	ID         int64  `json:"id"`
+}
+
+func (q *Queries) SetPageVisibility(ctx context.Context, arg SetPageVisibilityParams) error {
+	_, err := q.db.Exec(ctx, setPageVisibility, arg.Visibility, arg.ID)
 	return err
 }
 
@@ -255,5 +367,22 @@ func (q *Queries) UpdatePage(ctx context.Context, arg UpdatePageParams) error {
 		arg.UpdatedBy,
 		arg.ID,
 	)
+	return err
+}
+
+const upsertPageShare = `-- name: UpsertPageShare :exec
+INSERT INTO page_shares (page_id, user_id, permission)
+VALUES ($1, $2, $3)
+ON CONFLICT (page_id, user_id) DO UPDATE SET permission = EXCLUDED.permission
+`
+
+type UpsertPageShareParams struct {
+	PageID     int64  `json:"page_id"`
+	UserID     int64  `json:"user_id"`
+	Permission string `json:"permission"`
+}
+
+func (q *Queries) UpsertPageShare(ctx context.Context, arg UpsertPageShareParams) error {
+	_, err := q.db.Exec(ctx, upsertPageShare, arg.PageID, arg.UserID, arg.Permission)
 	return err
 }

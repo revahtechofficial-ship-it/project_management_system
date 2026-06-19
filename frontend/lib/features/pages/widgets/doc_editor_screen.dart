@@ -8,6 +8,7 @@ import '../../../data/models/team_member.dart';
 import '../../../data/models/workspace_page.dart';
 import '../../team/providers/team_providers.dart';
 import '../providers/pages_providers.dart';
+import 'share_dialog.dart';
 
 /// A focused, full-screen editor for a single Doc. Loads the page body, lets
 /// the user edit the title and Markdown/plain-text body, and saves on demand
@@ -34,6 +35,8 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
   String? _error;
 
   bool get _isSop => _page?.type == PageType.sop;
+  bool get _canEdit => _page?.canEdit ?? true;
+  bool get _canManage => _page?.canManage ?? false;
 
   @override
   void initState() {
@@ -77,7 +80,7 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
   }
 
   Future<bool> _save({bool silent = false}) async {
-    if (_page == null) {
+    if (_page == null || !_canEdit) {
       return true;
     }
     setState(() => _saving = true);
@@ -164,6 +167,22 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
     }
   }
 
+  Future<void> _openShare() async {
+    if (_page == null) {
+      return;
+    }
+    await showShareDialog(context, _page!);
+    // Visibility may have changed; refresh the page meta (not the editor text).
+    try {
+      final WorkspacePage fresh = await ref
+          .read(pagesRepositoryProvider)
+          .get(widget.pageId);
+      if (mounted) {
+        setState(() => _page = fresh);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _addSubpage() async {
     try {
       final WorkspacePage child = await ref
@@ -217,6 +236,50 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
   }
 
   // _Breadcrumb is defined at the bottom of this library.
+
+  /// Small chips reflecting the page's sharing state and the viewer's access.
+  Widget _statusChips(ColorScheme scheme) {
+    final List<Widget> chips = <Widget>[
+      if (_page!.isPrivate)
+        _chip(Icons.lock_outline, 'Private', AppColors.amber),
+      if (!_canEdit) _chip(Icons.visibility_outlined, 'View only', scheme),
+    ];
+    if (chips.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Wrap(spacing: 8, children: chips),
+    );
+  }
+
+  Widget _chip(IconData icon, String label, Object color) {
+    final Color c = color is Color
+        ? color
+        : (color as ColorScheme).onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 14, color: c),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: c,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// The SOP governance bar: owner, category and a review-by date.
   Widget _sopBar() {
@@ -372,29 +435,36 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
                   ),
                 ),
               )
-            else
+            else if (_canEdit)
               TextButton.icon(
                 onPressed: _dirty ? () => _save() : null,
                 icon: const Icon(Icons.save_outlined, size: 18),
                 label: const Text('Save'),
               ),
-            if (!_isSop)
+            if (_canManage)
+              IconButton(
+                tooltip: 'Share',
+                icon: const Icon(Icons.share_outlined),
+                onPressed: _page == null ? null : _openShare,
+              ),
+            if (_canEdit && !_isSop)
               IconButton(
                 tooltip: 'Add subpage',
                 icon: const Icon(Icons.add),
                 onPressed: _page == null ? null : _addSubpage,
               ),
-            if (!_isSop)
+            if (_canEdit && !_isSop)
               IconButton(
                 tooltip: 'Save as template',
                 icon: const Icon(Icons.bookmark_add_outlined),
                 onPressed: _page == null ? null : _saveAsTemplate,
               ),
-            IconButton(
-              tooltip: 'Delete',
-              icon: const Icon(Icons.delete_outline),
-              onPressed: _page == null ? null : _delete,
-            ),
+            if (_canManage)
+              IconButton(
+                tooltip: 'Delete',
+                icon: const Icon(Icons.delete_outline),
+                onPressed: _page == null ? null : _delete,
+              ),
           ],
         ),
         body: _loading
@@ -410,8 +480,10 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         _Breadcrumb(ancestors: _ancestors(), onTap: _openPage),
+                        if (_page != null) _statusChips(scheme),
                         TextField(
                           controller: _title,
+                          readOnly: !_canEdit,
                           onChanged: (_) => setState(() => _dirty = true),
                           style: const TextStyle(
                             fontSize: 26,
@@ -434,19 +506,22 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
                               ),
                             ),
                           ),
-                        if (_isSop) _sopBar(),
+                        if (_isSop && _canEdit) _sopBar(),
                         const Divider(),
                         Expanded(
                           child: TextField(
                             controller: _body,
+                            readOnly: !_canEdit,
                             onChanged: (_) => setState(() => _dirty = true),
                             maxLines: null,
                             expands: true,
                             textAlignVertical: TextAlignVertical.top,
                             keyboardType: TextInputType.multiline,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Write in plain text or Markdown…',
+                              hintText: _canEdit
+                                  ? 'Write in plain text or Markdown…'
+                                  : null,
                             ),
                           ),
                         ),

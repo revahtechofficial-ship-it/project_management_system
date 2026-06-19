@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/enums/page_type.dart';
+import '../../../data/models/page_share.dart';
 import '../../../data/models/workspace_page.dart';
 import '../../../data/repositories/pages_repository.dart';
 import '../../../providers/dio_provider.dart';
@@ -21,4 +22,12 @@ final pagesByTypeProvider =
 /// The reusable Doc templates. Invalidate after saving a new template.
 final docTemplatesProvider = FutureProvider<List<WorkspacePage>>((ref) {
   return ref.watch(pagesRepositoryProvider).list(PageType.doc, templates: true);
+});
+
+/// The users a (private) page is shared with. Invalidate after changing shares.
+final pageSharesProvider = FutureProvider.family<List<PageShare>, int>((
+  ref,
+  int id,
+) {
+  return ref.watch(pagesRepositoryProvider).shares(id);
 });

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../enums/page_type.dart';
+import '../models/page_share.dart';
 import '../models/workspace_page.dart';
 
 /// Talks to /api/v1/pages — the Docs / Whiteboard / Form workspace pages
@@ -101,4 +102,32 @@ class PagesRepository {
 
   /// Deletes a page (its author or an admin only, enforced server-side).
   Future<void> delete(int id) => _dio.delete<void>('/api/v1/pages/$id');
+
+  /// Sets a page's visibility: `'workspace'` (everyone) or `'private'`.
+  Future<void> setVisibility(int id, String visibility) => _dio.patch<void>(
+    '/api/v1/pages/$id/visibility',
+    data: <String, dynamic>{'visibility': visibility},
+  );
+
+  /// Lists the users a (private) page is shared with.
+  Future<List<PageShare>> shares(int id) async {
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/pages/$id/shares',
+    );
+    final List<dynamic> data = res.data ?? <dynamic>[];
+    return data
+        .map((dynamic e) => PageShare.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  /// Shares a page with a user at `'view'` or `'edit'` permission (upsert).
+  Future<void> addShare(int id, int userId, String permission) =>
+      _dio.post<void>(
+        '/api/v1/pages/$id/shares',
+        data: <String, dynamic>{'user_id': userId, 'permission': permission},
+      );
+
+  /// Revokes a user's access to a shared page.
+  Future<void> removeShare(int id, int userId) =>
+      _dio.delete<void>('/api/v1/pages/$id/shares/$userId');
 }
