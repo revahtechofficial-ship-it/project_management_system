@@ -21,6 +21,7 @@ import '../../features/settings/settings_page.dart';
 import '../../features/sprints/sprints_page.dart';
 import '../../features/tasks/tasks_page.dart';
 import '../../features/team/team_page.dart';
+import '../../features/time/time_page.dart';
 import '../../features/vikunja/vikunja_projects_page.dart';
 import '../../providers/auth_provider.dart';
 import '../widgets/app_shell.dart';
@@ -70,6 +71,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
             builder: (c, s) => const DashboardsPage(),
           ),
           GoRoute(path: '/planning', builder: (c, s) => const PlanningPage()),
+          GoRoute(path: '/time', builder: (c, s) => const TimePage()),
           GoRoute(path: '/team', builder: (c, s) => const TeamPage()),
           GoRoute(path: '/reports', builder: (c, s) => const ReportsPage()),
           GoRoute(path: '/settings', builder: (c, s) => const SettingsPage()),

@@ -288,6 +288,18 @@ type TaskTemplate struct {
 	CreatedAt       time.Time `json:"created_at"`
 }
 
+type TimeEntry struct {
+	ID          int64              `json:"id"`
+	UserID      int64              `json:"user_id"`
+	TaskID      *int64             `json:"task_id"`
+	Minutes     int32              `json:"minutes"`
+	StartedAt   time.Time          `json:"started_at"`
+	EndedAt     pgtype.Timestamptz `json:"ended_at"`
+	Description string             `json:"description"`
+	Billable    bool               `json:"billable"`
+	CreatedAt   time.Time          `json:"created_at"`
+}
+
 type User struct {
 	ID            int64              `json:"id"`
 	Email         string             `json:"email"`

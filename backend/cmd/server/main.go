@@ -133,6 +133,7 @@ func main() {
 		api.Mount("/api/v1/spaces", handler.NewSpaceHandler(queries).Routes())
 		api.Mount("/api/v1/pages", handler.NewPageHandler(queries, chatHub).Routes())
 		api.Mount("/api/v1/dashboards", handler.NewDashboardHandler(queries).Routes())
+		api.Mount("/api/v1/time-entries", handler.NewTimeHandler(queries).Routes())
 		teamHandler := handler.NewTeamHandler(queries)
 		api.Get("/api/v1/team", teamHandler.List)
 		api.Patch("/api/v1/team/{id}/role", teamHandler.SetRole)
