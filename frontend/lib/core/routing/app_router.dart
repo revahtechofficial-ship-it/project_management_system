@@ -9,6 +9,7 @@ import '../../features/auth/signup_page.dart';
 import '../../features/auth/verify_otp_page.dart';
 import '../../features/chat/chat_page.dart';
 import '../../features/dashboard/dashboard_page.dart';
+import '../../features/dashboard/dashboards_page.dart';
 import '../../features/landing/landing_page.dart';
 import '../../features/notifications/notifications_page.dart';
 import '../../features/pages/pages_page.dart';
@@ -64,6 +65,10 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/chat', builder: (c, s) => const ChatPage()),
           GoRoute(path: '/projects', builder: (c, s) => const ProjectsPage()),
           GoRoute(path: '/pages', builder: (c, s) => const PagesPage()),
+          GoRoute(
+            path: '/dashboards',
+            builder: (c, s) => const DashboardsPage(),
+          ),
           GoRoute(path: '/planning', builder: (c, s) => const PlanningPage()),
           GoRoute(path: '/team', builder: (c, s) => const TeamPage()),
           GoRoute(path: '/reports', builder: (c, s) => const ReportsPage()),

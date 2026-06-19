@@ -70,13 +70,15 @@ class _GreetingHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Text('${_greeting()}$who 👋',
-                style: const TextStyle(
-                    fontSize: 24, fontWeight: FontWeight.w800)),
+            Text(
+              '${_greeting()}$who 👋',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 4),
-            Text(formatLongDate(DateTime.now()),
-                style: TextStyle(
-                    fontSize: 14, color: scheme.onSurfaceVariant)),
+            Text(
+              formatLongDate(DateTime.now()),
+              style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
+            ),
           ],
         ),
         FilledButton.icon(
@@ -149,10 +151,12 @@ class _ChartsSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const ChartLegend(items: <LegendItem>[
-            LegendItem(AppColors.brand, 'Created'),
-            LegendItem(AppColors.teal, 'Completed'),
-          ]),
+          const ChartLegend(
+            items: <LegendItem>[
+              LegendItem(AppColors.brand, 'Created'),
+              LegendItem(AppColors.teal, 'Completed'),
+            ],
+          ),
         ],
       ),
     );
@@ -169,10 +173,12 @@ class _ChartsSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const ChartLegend(items: <LegendItem>[
-            LegendItem(AppColors.teal, 'Completed'),
-            LegendItem(AppColors.brand, 'Pending'),
-          ]),
+          const ChartLegend(
+            items: <LegendItem>[
+              LegendItem(AppColors.teal, 'Completed'),
+              LegendItem(AppColors.brand, 'Pending'),
+            ],
+          ),
         ],
       ),
     );
@@ -181,11 +187,7 @@ class _ChartsSection extends StatelessWidget {
       builder: (BuildContext context, BoxConstraints constraints) {
         if (constraints.maxWidth < 920) {
           return Column(
-            children: <Widget>[
-              weekly,
-              const SizedBox(height: 16),
-              status,
-            ],
+            children: <Widget>[weekly, const SizedBox(height: 16), status],
           );
         }
         return Row(
@@ -225,11 +227,7 @@ class _ListsSection extends StatelessWidget {
       builder: (BuildContext context, BoxConstraints constraints) {
         if (constraints.maxWidth < 920) {
           return Column(
-            children: <Widget>[
-              myTasks,
-              const SizedBox(height: 16),
-              recent,
-            ],
+            children: <Widget>[myTasks, const SizedBox(height: 16), recent],
           );
         }
         return Row(
@@ -259,9 +257,7 @@ class _MyTasksList extends StatelessWidget {
     }
     final List<Task> top = tasks.take(5).toList();
     return Column(
-      children: <Widget>[
-        for (final Task task in top) _MyTaskTile(task: task),
-      ],
+      children: <Widget>[for (final Task task in top) _MyTaskTile(task: task)],
     );
   }
 }
@@ -292,13 +288,17 @@ class _MyTaskTile extends ConsumerWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(task.title,
-                maxLines: 1, overflow: TextOverflow.ellipsis),
+            child: Text(
+              task.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           const SizedBox(width: 8),
-          Text(relativeTime(task.updatedAt),
-              style: TextStyle(
-                  fontSize: 12, color: scheme.onSurfaceVariant)),
+          Text(
+            relativeTime(task.updatedAt),
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -337,8 +337,8 @@ class _ActivityTile extends StatelessWidget {
     final (IconData icon, Color color, String verb) = task.done
         ? (Icons.check_circle_rounded, AppColors.green, 'Completed')
         : created
-            ? (Icons.add_circle_rounded, AppColors.brand, 'Created')
-            : (Icons.edit_rounded, AppColors.orange, 'Updated');
+        ? (Icons.add_circle_rounded, AppColors.brand, 'Created')
+        : (Icons.edit_rounded, AppColors.orange, 'Updated');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -355,16 +355,18 @@ class _ActivityTile extends StatelessWidget {
                 children: <InlineSpan>[
                   TextSpan(text: '$verb '),
                   TextSpan(
-                      text: task.title.isEmpty ? 'a task' : task.title,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                    text: task.title.isEmpty ? 'a task' : task.title,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(width: 8),
-          Text(relativeTime(task.updatedAt),
-              style: TextStyle(
-                  fontSize: 12, color: scheme.onSurfaceVariant)),
+          Text(
+            relativeTime(task.updatedAt),
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -386,9 +388,11 @@ class _EmptyState extends StatelessWidget {
           children: <Widget>[
             Icon(icon, size: 32, color: scheme.onSurfaceVariant),
             const SizedBox(height: 8),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: scheme.onSurfaceVariant)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
           ],
         ),
       ),
@@ -414,8 +418,10 @@ class _ErrorNotice extends StatelessWidget {
           Icon(Icons.error_outline, color: scheme.onErrorContainer),
           const SizedBox(width: 10),
           Expanded(
-            child: Text('Couldn\'t load tasks: $error',
-                style: TextStyle(color: scheme.onErrorContainer)),
+            child: Text(
+              'Couldn\'t load tasks: $error',
+              style: TextStyle(color: scheme.onErrorContainer),
+            ),
           ),
         ],
       ),
@@ -462,14 +468,18 @@ class _Metrics {
     for (int i = 6; i >= 0; i--) {
       final DateTime day = today.subtract(Duration(days: i));
       days.add(weekdayShort(day.weekday));
-      created.add(tasks
-          .where((Task t) => sameDay(t.createdAt.toLocal(), day))
-          .length
-          .toDouble());
-      done.add(tasks
-          .where((Task t) => t.done && sameDay(t.updatedAt.toLocal(), day))
-          .length
-          .toDouble());
+      created.add(
+        tasks
+            .where((Task t) => sameDay(t.createdAt.toLocal(), day))
+            .length
+            .toDouble(),
+      );
+      done.add(
+        tasks
+            .where((Task t) => t.done && sameDay(t.updatedAt.toLocal(), day))
+            .length
+            .toDouble(),
+      );
     }
 
     final List<Task> myTasks = tasks.where((Task t) => !t.done).toList()

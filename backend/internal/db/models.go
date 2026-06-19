@@ -73,6 +73,16 @@ type CustomField struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Dashboard struct {
+	ID         int64     `json:"id"`
+	Name       string    `json:"name"`
+	OwnerID    *int64    `json:"owner_id"`
+	Visibility string    `json:"visibility"`
+	Widgets    string    `json:"widgets"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
 type Folder struct {
 	ID        int64     `json:"id"`
 	SpaceID   int64     `json:"space_id"`
