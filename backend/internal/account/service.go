@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -18,6 +19,12 @@ var (
 	ErrEmailNotVerified   = errors.New("please verify your email before signing in")
 	ErrInvalidOTP         = errors.New("invalid or expired code")
 	ErrWrongPassword      = errors.New("current password is incorrect")
+	ErrAccountDisabled    = errors.New("this account has been deactivated")
+	ErrDomainNotAllowed   = errors.New("this email domain is not allowed to register")
+	// ErrTwoFactorRequired signals the password was correct but a second factor
+	// (an emailed code) is needed; the handler turns this into a 200 with
+	// requires_2fa rather than an error.
+	ErrTwoFactorRequired = errors.New("two-factor verification required")
 )
 
 const (
@@ -49,6 +56,9 @@ func (s *Service) Register(ctx context.Context, em, password, fullName string) e
 	}
 	if exists {
 		return ErrEmailTaken
+	}
+	if err := s.checkAllowedDomain(ctx, em); err != nil {
+		return err
 	}
 	hash, err := HashPassword(password)
 	if err != nil {
@@ -140,12 +150,75 @@ func (s *Service) Login(ctx context.Context, em, password string) (string, Claim
 	if !u.EmailVerified {
 		return "", Claims{}, ErrEmailNotVerified
 	}
+	if !u.IsActive {
+		return "", Claims{}, ErrAccountDisabled
+	}
+	if u.TwoFactorEnabled {
+		// Password was correct; require the emailed second factor next.
+		if err := s.issueOTP(ctx, em, "login"); err != nil {
+			return "", Claims{}, err
+		}
+		return "", Claims{}, ErrTwoFactorRequired
+	}
 	c := Claims{UserID: u.ID, Email: u.Email, Name: u.FullName, Role: u.Role}
 	tok, err := s.tokens.Issue(c, sessionTTL)
 	if err != nil {
 		return "", Claims{}, err
 	}
 	return tok, c, nil
+}
+
+// VerifyLoginOTP completes a two-factor login: it consumes the emailed code and
+// issues the session JWT.
+func (s *Service) VerifyLoginOTP(ctx context.Context, em, code string) (string, Claims, error) {
+	u, err := s.q.GetUserByEmail(ctx, em)
+	if err != nil {
+		return "", Claims{}, ErrInvalidCredentials
+	}
+	if !u.IsActive {
+		return "", Claims{}, ErrAccountDisabled
+	}
+	if err := s.checkOTP(ctx, em, "login", code); err != nil {
+		return "", Claims{}, err
+	}
+	c := Claims{UserID: u.ID, Email: u.Email, Name: u.FullName, Role: u.Role}
+	tok, err := s.tokens.Issue(c, sessionTTL)
+	if err != nil {
+		return "", Claims{}, err
+	}
+	return tok, c, nil
+}
+
+// SetTwoFactor toggles email two-factor authentication for a user.
+func (s *Service) SetTwoFactor(ctx context.Context, userID int64, enabled bool) error {
+	return s.q.SetUserTwoFactor(ctx, db.SetUserTwoFactorParams{
+		ID: userID, TwoFactorEnabled: enabled,
+	})
+}
+
+// checkAllowedDomain rejects registration when the workspace restricts signup
+// to a set of email domains and the address is outside it. An empty list (the
+// default) allows any domain.
+func (s *Service) checkAllowedDomain(ctx context.Context, em string) error {
+	ws, err := s.q.GetWorkspaceSettings(ctx)
+	if err != nil {
+		return nil
+	}
+	any := false
+	for _, d := range strings.Split(ws.AllowedDomains, ",") {
+		d = strings.TrimSpace(strings.ToLower(d))
+		if d == "" {
+			continue
+		}
+		any = true
+		if strings.HasSuffix(strings.ToLower(em), "@"+d) {
+			return nil
+		}
+	}
+	if any {
+		return ErrDomainNotAllowed
+	}
+	return nil
 }
 
 // ForgotPassword emails a reset OTP if the account exists. It always returns nil
@@ -178,7 +251,7 @@ func (s *Service) ResetPassword(ctx context.Context, em, code, newPassword strin
 
 // ResendOTP re-issues a code for the given purpose ("signup" | "reset").
 func (s *Service) ResendOTP(ctx context.Context, em, purpose string) error {
-	if purpose != "signup" && purpose != "reset" {
+	if purpose != "signup" && purpose != "reset" && purpose != "login" {
 		return ValidationError{"invalid purpose"}
 	}
 	return s.issueOTP(ctx, em, purpose)

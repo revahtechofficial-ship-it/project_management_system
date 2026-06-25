@@ -26,16 +26,17 @@ func normEmail(e string) string { return strings.ToLower(strings.TrimSpace(e)) }
 // used by login, /me, and the profile endpoints so every payload is identical.
 func userResponse(u db.User) map[string]any {
 	return map[string]any{
-		"id":         u.ID,
-		"email":      u.Email,
-		"name":       u.FullName,
-		"role":       u.Role,
-		"avatar_url": avatarURLPtr(u.Avatar),
-		"phone":      u.Phone,
-		"job_title":  u.JobTitle,
-		"department": u.Department,
-		"location":   u.Location,
-		"bio":        u.Bio,
+		"id":                 u.ID,
+		"email":              u.Email,
+		"name":               u.FullName,
+		"role":               u.Role,
+		"avatar_url":         avatarURLPtr(u.Avatar),
+		"phone":              u.Phone,
+		"job_title":          u.JobTitle,
+		"department":         u.Department,
+		"location":           u.Location,
+		"bio":                u.Bio,
+		"two_factor_enabled": u.TwoFactorEnabled,
 	}
 }
 
@@ -59,6 +60,10 @@ func (h *AccountHandler) accountError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, err)
 	case errors.Is(err, account.ErrWrongPassword):
 		writeError(w, http.StatusBadRequest, err)
+	case errors.Is(err, account.ErrAccountDisabled):
+		writeError(w, http.StatusForbidden, err)
+	case errors.Is(err, account.ErrDomainNotAllowed):
+		writeError(w, http.StatusForbidden, err)
 	default:
 		writeError(w, http.StatusInternalServerError, errors.New("something went wrong"))
 	}
@@ -125,17 +130,74 @@ func (h *AccountHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token, claims, err := h.svc.Login(r.Context(), normEmail(b.Email), b.Password)
+	if errors.Is(err, account.ErrTwoFactorRequired) {
+		// Password was correct; a code was emailed. The client must now call
+		// /auth/verify-login-otp with it.
+		writeJSON(w, http.StatusOK, map[string]any{
+			"requires_2fa": true,
+			"email":        normEmail(b.Email),
+		})
+		return
+	}
 	if err != nil {
 		h.accountError(w, err)
 		return
 	}
+	writeJSON(w, http.StatusOK, h.loginPayload(r, token, claims))
+}
+
+func (h *AccountHandler) loginPayload(r *http.Request, token string,
+	claims account.Claims) map[string]any {
 	var user map[string]any
 	if u, uerr := h.svc.GetUser(r.Context(), claims.UserID); uerr == nil {
 		user = userResponse(u)
 	} else {
 		user = claimsResponse(claims)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"token": token, "user": user})
+	return map[string]any{"token": token, "user": user}
+}
+
+type verifyLoginReq struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}
+
+// VerifyLoginOTP completes a two-factor login and returns the session JWT.
+func (h *AccountHandler) VerifyLoginOTP(w http.ResponseWriter, r *http.Request) {
+	var b verifyLoginReq
+	if err := decode(r, &b); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	token, claims, err := h.svc.VerifyLoginOTP(r.Context(), normEmail(b.Email), b.Code)
+	if err != nil {
+		h.accountError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, h.loginPayload(r, token, claims))
+}
+
+type twoFactorReq struct {
+	Enabled bool `json:"enabled"`
+}
+
+// SetTwoFactor toggles email two-factor auth for the authenticated user.
+func (h *AccountHandler) SetTwoFactor(w http.ResponseWriter, r *http.Request) {
+	claims, ok := account.FromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, errors.New("unauthenticated"))
+		return
+	}
+	var b twoFactorReq
+	if err := decode(r, &b); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if err := h.svc.SetTwoFactor(r.Context(), claims.UserID, b.Enabled); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"two_factor_enabled": b.Enabled})
 }
 
 // claimsResponse is a minimal user payload built from the JWT when the full row
@@ -145,6 +207,7 @@ func claimsResponse(c account.Claims) map[string]any {
 		"id": c.UserID, "email": c.Email, "name": c.Name, "role": c.Role,
 		"avatar_url": nil, "phone": "", "job_title": "",
 		"department": "", "location": "", "bio": "",
+		"two_factor_enabled": false,
 	}
 }
 

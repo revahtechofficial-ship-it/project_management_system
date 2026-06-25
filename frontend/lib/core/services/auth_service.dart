@@ -23,6 +23,13 @@ class AuthException implements Exception {
   String toString() => message;
 }
 
+/// Thrown by [AuthService.login] when the password was correct but a second
+/// factor (an emailed code) is required to finish signing in.
+class TwoFactorRequiredException implements Exception {
+  TwoFactorRequiredException(this.email);
+  final String email;
+}
+
 /// Talks to the BFF's custom auth API (`/api/v1/auth/*`) and persists the
 /// session in shared_preferences (AGENTS.md §1 `core/services`).
 class AuthService {
@@ -81,6 +88,26 @@ class AuthService {
       '/api/v1/auth/login',
       <String, dynamic>{'email': email, 'password': password},
     );
+    if (data['requires_2fa'] == true) {
+      throw TwoFactorRequiredException(data['email'] as String? ?? email);
+    }
+    return _persistSession(data);
+  }
+
+  /// Completes a two-factor login with the emailed [code] and persists the
+  /// returned session.
+  Future<AuthSession> verifyLoginOtp({
+    required String email,
+    required String code,
+  }) async {
+    final Map<String, dynamic> data = await _post(
+      '/api/v1/auth/verify-login-otp',
+      <String, dynamic>{'email': email, 'code': code},
+    );
+    return _persistSession(data);
+  }
+
+  Future<AuthSession> _persistSession(Map<String, dynamic> data) async {
     final String token = data['token'] as String;
     final AuthUser user =
         AuthUser.fromJson(data['user'] as Map<String, dynamic>);
@@ -88,6 +115,18 @@ class AuthService {
     await prefs.setString(_kToken, token);
     await prefs.setString(_kUser, jsonEncode(user.toJson()));
     return AuthSession(token: token, user: user);
+  }
+
+  /// Enables or disables email two-factor authentication for the signed-in
+  /// user.
+  Future<void> setTwoFactor(bool enabled) async {
+    final String token = await _token();
+    await _send(
+      'PATCH',
+      '/api/v1/security/two-factor',
+      <String, dynamic>{'enabled': enabled},
+      token,
+    );
   }
 
   /// Requests a password-reset OTP.

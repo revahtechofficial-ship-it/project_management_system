@@ -178,15 +178,21 @@ func (h *IntegrationHandler) connect(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	action := "integration.disconnected"
+	if b.Connected {
+		action = "integration.connected"
+	}
+	auditLog(r.Context(), h.q, action, provider, "")
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *IntegrationHandler) disconnect(w http.ResponseWriter, r *http.Request) {
-	if err := h.q.DeleteIntegration(r.Context(),
-		chi.URLParam(r, "provider")); err != nil {
+	provider := chi.URLParam(r, "provider")
+	if err := h.q.DeleteIntegration(r.Context(), provider); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	auditLog(r.Context(), h.q, "integration.disconnected", provider, "")
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -259,6 +265,7 @@ func (h *IntegrationHandler) createKey(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	auditLog(r.Context(), h.q, "apikey.created", name, "")
 	// The full token is returned exactly once, here.
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"id":         row.ID,

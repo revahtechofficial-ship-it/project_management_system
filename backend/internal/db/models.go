@@ -40,6 +40,16 @@ type Attachment struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type AuditLog struct {
+	ID        int64     `json:"id"`
+	ActorID   *int64    `json:"actor_id"`
+	ActorName string    `json:"actor_name"`
+	Action    string    `json:"action"`
+	Target    string    `json:"target"`
+	Detail    string    `json:"detail"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type AutomationRule struct {
 	ID         int64     `json:"id"`
 	Name       string    `json:"name"`
@@ -375,23 +385,25 @@ type TimeEntry struct {
 }
 
 type User struct {
-	ID            int64              `json:"id"`
-	Email         string             `json:"email"`
-	PasswordHash  string             `json:"password_hash"`
-	FullName      string             `json:"full_name"`
-	EmailVerified bool               `json:"email_verified"`
-	CreatedAt     time.Time          `json:"created_at"`
-	UpdatedAt     time.Time          `json:"updated_at"`
-	Role          string             `json:"role"`
-	Avatar        string             `json:"avatar"`
-	Status        string             `json:"status"`
-	StatusMessage string             `json:"status_message"`
-	LastSeenAt    pgtype.Timestamptz `json:"last_seen_at"`
-	Phone         string             `json:"phone"`
-	JobTitle      string             `json:"job_title"`
-	Department    string             `json:"department"`
-	Location      string             `json:"location"`
-	Bio           string             `json:"bio"`
+	ID               int64              `json:"id"`
+	Email            string             `json:"email"`
+	PasswordHash     string             `json:"password_hash"`
+	FullName         string             `json:"full_name"`
+	EmailVerified    bool               `json:"email_verified"`
+	CreatedAt        time.Time          `json:"created_at"`
+	UpdatedAt        time.Time          `json:"updated_at"`
+	Role             string             `json:"role"`
+	Avatar           string             `json:"avatar"`
+	Status           string             `json:"status"`
+	StatusMessage    string             `json:"status_message"`
+	LastSeenAt       pgtype.Timestamptz `json:"last_seen_at"`
+	Phone            string             `json:"phone"`
+	JobTitle         string             `json:"job_title"`
+	Department       string             `json:"department"`
+	Location         string             `json:"location"`
+	Bio              string             `json:"bio"`
+	IsActive         bool               `json:"is_active"`
+	TwoFactorEnabled bool               `json:"two_factor_enabled"`
 }
 
 type Webhook struct {
@@ -403,4 +415,13 @@ type Webhook struct {
 	Provider  string    `json:"provider"`
 	CreatedBy *int64    `json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type WorkspaceSetting struct {
+	ID             int32     `json:"id"`
+	Name           string    `json:"name"`
+	AllowedDomains string    `json:"allowed_domains"`
+	Require2fa     bool      `json:"require_2fa"`
+	SessionHours   int32     `json:"session_hours"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }

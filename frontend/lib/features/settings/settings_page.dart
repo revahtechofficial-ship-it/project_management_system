@@ -378,20 +378,68 @@ class _CustomFieldsCard extends ConsumerWidget {
   }
 }
 
-class _SecurityCard extends StatelessWidget {
+class _SecurityCard extends ConsumerWidget {
   const _SecurityCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool twoFactor = ref
+            .watch(authControllerProvider)
+            .asData
+            ?.value
+            .user
+            ?.twoFactorEnabled ??
+        false;
     return DashboardCard(
       title: 'Security',
-      child: _SettingTile(
-        icon: Icons.lock_outline,
-        title: 'Change password',
-        subtitle: 'Update your account password',
-        onTap: () => _changePassword(context),
+      child: Column(
+        children: <Widget>[
+          _SettingTile(
+            icon: Icons.lock_outline,
+            title: 'Change password',
+            subtitle: 'Update your account password',
+            onTap: () => _changePassword(context),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.shield_outlined),
+            title: const Text('Two-factor authentication'),
+            subtitle: const Text(
+              'Email a verification code at each sign-in',
+            ),
+            value: twoFactor,
+            onChanged: (bool v) => _setTwoFactor(context, ref, v),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _setTwoFactor(
+    BuildContext context,
+    WidgetRef ref,
+    bool enabled,
+  ) async {
+    try {
+      await ref.read(authControllerProvider.notifier).setTwoFactor(enabled);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              enabled
+                  ? 'Two-factor authentication enabled'
+                  : 'Two-factor authentication disabled',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not update 2FA: $e')));
+      }
+    }
   }
 
   Future<void> _changePassword(BuildContext context) async {

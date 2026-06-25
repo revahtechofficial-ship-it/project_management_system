@@ -60,6 +60,11 @@ func (s *Sender) SendOTP(to, code, purpose string) error {
 		headingText = "Reset your password"
 		intro = "Use the code below to reset your " + s.appName + " password. " +
 			"It keeps your account secure — never share it with anyone."
+	case "login":
+		subjectAction = "sign-in"
+		headingText = "Confirm your sign-in"
+		intro = "Use the code below to finish signing in to " + s.appName + ". " +
+			"If this wasn't you, change your password right away."
 	default:
 		subjectAction = "verification"
 		headingText = "Verify your email"

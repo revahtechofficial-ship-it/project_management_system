@@ -99,6 +99,7 @@ func main() {
 		sub.Post("/forgot-password", accountHandler.ForgotPassword)
 		sub.Post("/reset-password", accountHandler.ResetPassword)
 		sub.Post("/resend-otp", accountHandler.ResendOTP)
+		sub.Post("/verify-login-otp", accountHandler.VerifyLoginOTP)
 		sub.With(appTokens.Middleware).Get("/me", accountHandler.Me)
 		sub.With(appTokens.Middleware).Post("/change-password", accountHandler.ChangePassword)
 	})
@@ -115,8 +116,10 @@ func main() {
 		APIKey:    cfg.LiveKitAPIKey,
 		APISecret: cfg.LiveKitAPISecret,
 	})
+	handler.SetSSOConfigured(cfg.OIDCIssuer != "")
 	r.Group(func(api chi.Router) {
 		api.Use(handler.APIKeyMiddleware(queries, appTokens.Middleware))
+		api.Use(handler.GuestReadOnly)
 		api.Mount("/api/v1/tasks", taskHandler.Routes())
 		api.Mount("/api/v1/chat", chatHandler.Routes())
 		api.Mount("/api/v1/projects", handler.NewProjectHandler(queries).Routes())
@@ -139,6 +142,8 @@ func main() {
 		api.Mount("/api/v1/resources", handler.NewResourceHandler(queries).Routes())
 		api.Get("/api/v1/activity", handler.NewActivityHandler(queries).List)
 		api.Mount("/api/v1/integrations", handler.NewIntegrationHandler(queries).Routes())
+		api.Mount("/api/v1/admin", handler.NewAdminHandler(queries).Routes())
+		api.Patch("/api/v1/security/two-factor", accountHandler.SetTwoFactor)
 		teamHandler := handler.NewTeamHandler(queries)
 		api.Get("/api/v1/team", teamHandler.List)
 		api.Patch("/api/v1/team/{id}/role", teamHandler.SetRole)

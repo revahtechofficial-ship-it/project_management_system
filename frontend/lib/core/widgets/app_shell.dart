@@ -18,10 +18,11 @@ import 'user_avatar.dart';
 
 /// A navigation item in the sidebar.
 class _NavItem {
-  const _NavItem(this.icon, this.label, this.location);
+  const _NavItem(this.icon, this.label, this.location, {this.adminOnly = false});
   final IconData icon;
   final String label;
   final String location;
+  final bool adminOnly;
 }
 
 const List<_NavItem> _navItems = <_NavItem>[
@@ -42,6 +43,8 @@ const List<_NavItem> _navItems = <_NavItem>[
   _NavItem(Icons.history, 'Activity', '/activity'),
   _NavItem(Icons.bolt_outlined, 'Automation', '/automation'),
   _NavItem(Icons.extension_outlined, 'Integrations', '/integrations'),
+  _NavItem(Icons.admin_panel_settings_outlined, 'Admin', '/admin',
+      adminOnly: true),
   _NavItem(Icons.settings_outlined, 'Settings', '/settings'),
 ];
 
@@ -191,7 +194,11 @@ class _Sidebar extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   children: <Widget>[
                     for (final _NavItem item in _navItems)
-                      _NavTile(item: item, selected: location == item.location),
+                      if (!item.adminOnly || (user?.isAdmin ?? false))
+                        _NavTile(
+                          item: item,
+                          selected: location == item.location,
+                        ),
                   ],
                 ),
               ),

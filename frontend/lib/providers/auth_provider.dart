@@ -39,6 +39,31 @@ class AuthController extends AsyncNotifier<AuthState> {
     state = AsyncData<AuthState>(AuthState(session: session));
   }
 
+  /// Completes a two-factor login with the emailed code.
+  Future<void> verifyLoginOtp({
+    required String email,
+    required String code,
+  }) async {
+    final AuthSession session = await ref
+        .read(authServiceProvider)
+        .verifyLoginOtp(email: email, code: code);
+    state = AsyncData<AuthState>(AuthState(session: session));
+  }
+
+  /// Toggles email two-factor auth and refreshes the in-memory user.
+  Future<void> setTwoFactor(bool enabled) async {
+    await ref.read(authServiceProvider).setTwoFactor(enabled);
+    final AuthSession? current = state.asData?.value.session;
+    if (current != null) {
+      state = AsyncData<AuthState>(AuthState(
+        session: AuthSession(
+          token: current.token,
+          user: current.user.copyWith(twoFactorEnabled: enabled),
+        ),
+      ));
+    }
+  }
+
   Future<void> logout() async {
     await ref.read(authServiceProvider).logout();
     state = const AsyncData<AuthState>(AuthState.signedOut());

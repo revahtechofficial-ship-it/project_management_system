@@ -14,6 +14,7 @@ class AuthUser {
   final String department;
   final String location;
   final String bio;
+  final bool twoFactorEnabled;
 
   const AuthUser({
     required this.id,
@@ -26,10 +27,25 @@ class AuthUser {
     this.department = '',
     this.location = '',
     this.bio = '',
+    this.twoFactorEnabled = false,
   });
 
   /// Whether this user may perform admin-only actions.
   bool get isAdmin => role.isAdmin;
+
+  AuthUser copyWith({bool? twoFactorEnabled}) => AuthUser(
+        id: id,
+        email: email,
+        name: name,
+        role: role,
+        avatarUrl: avatarUrl,
+        phone: phone,
+        jobTitle: jobTitle,
+        department: department,
+        location: location,
+        bio: bio,
+        twoFactorEnabled: twoFactorEnabled ?? this.twoFactorEnabled,
+      );
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
         id: (json['id'] as num).toInt(),
@@ -42,6 +58,7 @@ class AuthUser {
         department: json['department'] as String? ?? '',
         location: json['location'] as String? ?? '',
         bio: json['bio'] as String? ?? '',
+        twoFactorEnabled: json['two_factor_enabled'] as bool? ?? false,
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -55,6 +72,7 @@ class AuthUser {
         'department': department,
         'location': location,
         'bio': bio,
+        'two_factor_enabled': twoFactorEnabled,
       };
 
   @override
@@ -74,9 +92,10 @@ class AuthUser {
           other.jobTitle == jobTitle &&
           other.department == department &&
           other.location == location &&
-          other.bio == bio;
+          other.bio == bio &&
+          other.twoFactorEnabled == twoFactorEnabled;
 
   @override
   int get hashCode => Object.hash(id, email, name, role, avatarUrl, phone,
-      jobTitle, department, location, bio);
+      jobTitle, department, location, bio, twoFactorEnabled);
 }
