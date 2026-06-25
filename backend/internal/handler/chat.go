@@ -58,6 +58,8 @@ func (h *ChatHandler) Routes() http.Handler {
 	r := chi.NewRouter()
 	r.Get("/conversations", h.listConversations)
 	r.Post("/conversations", h.createConversation)
+	r.Get("/channels", h.listPublicChannels)
+	r.Post("/conversations/{id}/join", h.joinChannel)
 	r.Get("/conversations/{id}/messages", h.listMessages)
 	r.Post("/conversations/{id}/messages", h.sendMessage)
 	r.Post("/conversations/{id}/upload", h.uploadMessage)
@@ -129,6 +131,14 @@ type memberResponse struct {
 	Email      string     `json:"email"`
 	AvatarURL  *string    `json:"avatar_url"`
 	LastReadAt *time.Time `json:"last_read_at"`
+}
+
+type publicChannelResponse struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	AvatarURL   *string   `json:"group_avatar_url"`
+	MemberCount int32     `json:"member_count"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 func conversationFromRow(r db.ListConversationsForUserRow) conversationResponse {
@@ -345,9 +355,10 @@ func (h *ChatHandler) listConversations(w http.ResponseWriter, r *http.Request) 
 }
 
 type createConvBody struct {
-	Type      string  `json:"type"`
-	Name      string  `json:"name"`
-	MemberIDs []int64 `json:"member_ids"`
+	Type       string  `json:"type"`
+	Name       string  `json:"name"`
+	MemberIDs  []int64 `json:"member_ids"`
+	Visibility string  `json:"visibility"`
 }
 
 func (h *ChatHandler) createConversation(w http.ResponseWriter, r *http.Request) {
@@ -410,7 +421,67 @@ func (h *ChatHandler) createConversation(w http.ResponseWriter, r *http.Request)
 			h.addMember(ctx, conv.ID, m, "member")
 		}
 	}
+	if strings.EqualFold(strings.TrimSpace(b.Visibility), "public") {
+		_ = h.q.SetConversationVisibility(ctx, db.SetConversationVisibilityParams{
+			ID: conv.ID, Visibility: "public",
+		})
+	}
 	writeJSON(w, http.StatusCreated, map[string]int64{"id": conv.ID})
+}
+
+// listPublicChannels returns public group channels the caller hasn't joined.
+func (h *ChatHandler) listPublicChannels(w http.ResponseWriter, r *http.Request) {
+	actor, ok := chatActor(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, errors.New("unauthenticated"))
+		return
+	}
+	rows, err := h.q.ListPublicChannels(r.Context(), actor)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	out := make([]publicChannelResponse, 0, len(rows))
+	for _, c := range rows {
+		out = append(out, publicChannelResponse{
+			ID:          c.ID,
+			Name:        c.Name,
+			AvatarURL:   avatarPtrFrom(&c.Avatar),
+			MemberCount: c.MemberCount,
+			CreatedAt:   c.CreatedAt,
+		})
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// joinChannel adds the caller to a public channel.
+func (h *ChatHandler) joinChannel(w http.ResponseWriter, r *http.Request) {
+	actor, ok := chatActor(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, errors.New("unauthenticated"))
+		return
+	}
+	convID, err := idParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	meta, err := h.q.GetConversationMeta(r.Context(), convID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, errors.New("channel not found"))
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if meta.Type != "group" || meta.Visibility != "public" {
+		writeError(w, http.StatusForbidden, errors.New("this channel is private"))
+		return
+	}
+	h.addMember(r.Context(), convID, actor, "member")
+	h.broadcastMembers(r.Context(), convID)
+	writeJSON(w, http.StatusOK, map[string]int64{"id": convID})
 }
 
 func (h *ChatHandler) addMember(ctx context.Context, convID, userID int64, role string) {

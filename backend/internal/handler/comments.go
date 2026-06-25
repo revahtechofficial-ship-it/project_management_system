@@ -51,6 +51,7 @@ func (h *TaskHandler) listComments(w http.ResponseWriter, r *http.Request) {
 
 type commentBody struct {
 	Body     string  `json:"body"`
+	ParentID *int64  `json:"parent_id"`
 	Mentions []int64 `json:"mentions"`
 }
 
@@ -73,6 +74,7 @@ func (h *TaskHandler) createComment(w http.ResponseWriter, r *http.Request) {
 	comment, err := h.q.CreateComment(r.Context(), db.CreateCommentParams{
 		TaskID:   id,
 		AuthorID: actorOf(r.Context()),
+		ParentID: b.ParentID,
 		Body:     body,
 	})
 	if err != nil {
@@ -81,7 +83,32 @@ func (h *TaskHandler) createComment(w http.ResponseWriter, r *http.Request) {
 	}
 	logActivity(r.Context(), h.q, id, "comment", "")
 	h.notifyOnComment(r.Context(), id, body, b.Mentions)
+	if b.ParentID != nil {
+		h.notifyOnReply(r.Context(), *b.ParentID, b.Mentions, body)
+	}
 	writeJSON(w, http.StatusCreated, comment)
+}
+
+// notifyOnReply tells the author of the parent comment that someone replied,
+// unless they replied to themselves or were already mentioned.
+func (h *TaskHandler) notifyOnReply(ctx context.Context, parentID int64,
+	mentions []int64, body string) {
+	parent, err := h.q.GetComment(ctx, parentID)
+	if err != nil || parent.AuthorID == nil {
+		return
+	}
+	target := *parent.AuthorID
+	actor := actorOf(ctx)
+	if actor != nil && *actor == target {
+		return
+	}
+	for _, m := range mentions {
+		if m == target {
+			return
+		}
+	}
+	notifyUser(ctx, h.q, target, "comment", "New reply to your comment",
+		body, "/tasks")
 }
 
 // notifyOnComment notifies each mentioned user, plus the task's assignee about

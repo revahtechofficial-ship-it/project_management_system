@@ -86,7 +86,7 @@ func (q *Queries) CountConversationAdmins(ctx context.Context, conversationID in
 const createConversation = `-- name: CreateConversation :one
 INSERT INTO conversations (type, name, created_by)
 VALUES ($1, $2, $3)
-RETURNING id, type, name, created_by, created_at, avatar
+RETURNING id, type, name, created_by, created_at, avatar, visibility
 `
 
 type CreateConversationParams struct {
@@ -105,6 +105,7 @@ func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversation
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.Avatar,
+		&i.Visibility,
 	)
 	return i, err
 }
@@ -217,6 +218,29 @@ func (q *Queries) GetConversationMemberRole(ctx context.Context, arg GetConversa
 	var role string
 	err := row.Scan(&role)
 	return role, err
+}
+
+const getConversationMeta = `-- name: GetConversationMeta :one
+SELECT id, type, name, visibility FROM conversations WHERE id = $1
+`
+
+type GetConversationMetaRow struct {
+	ID         int64  `json:"id"`
+	Type       string `json:"type"`
+	Name       string `json:"name"`
+	Visibility string `json:"visibility"`
+}
+
+func (q *Queries) GetConversationMeta(ctx context.Context, id int64) (GetConversationMetaRow, error) {
+	row := q.db.QueryRow(ctx, getConversationMeta, id)
+	var i GetConversationMetaRow
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.Name,
+		&i.Visibility,
+	)
+	return i, err
 }
 
 const getMessageWithSender = `-- name: GetMessageWithSender :one
@@ -604,6 +628,53 @@ func (q *Queries) ListPinnedMessages(ctx context.Context, conversationID int64) 
 	return items, nil
 }
 
+const listPublicChannels = `-- name: ListPublicChannels :many
+SELECT c.id, c.name, c.avatar, c.created_at,
+       (SELECT COUNT(*) FROM conversation_members cm2
+        WHERE cm2.conversation_id = c.id)::int AS member_count
+FROM conversations c
+WHERE c.type = 'group' AND c.visibility = 'public'
+  AND NOT EXISTS (
+    SELECT 1 FROM conversation_members cm
+    WHERE cm.conversation_id = c.id AND cm.user_id = $1
+  )
+ORDER BY c.created_at DESC
+`
+
+type ListPublicChannelsRow struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Avatar      string    `json:"avatar"`
+	CreatedAt   time.Time `json:"created_at"`
+	MemberCount int32     `json:"member_count"`
+}
+
+func (q *Queries) ListPublicChannels(ctx context.Context, userID int64) ([]ListPublicChannelsRow, error) {
+	rows, err := q.db.Query(ctx, listPublicChannels, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPublicChannelsRow{}
+	for rows.Next() {
+		var i ListPublicChannelsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Avatar,
+			&i.CreatedAt,
+			&i.MemberCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listReactionsForConversation = `-- name: ListReactionsForConversation :many
 SELECT r.message_id, r.emoji, r.user_id
 FROM message_reactions r
@@ -804,6 +875,21 @@ type SetConversationMemberRoleParams struct {
 
 func (q *Queries) SetConversationMemberRole(ctx context.Context, arg SetConversationMemberRoleParams) error {
 	_, err := q.db.Exec(ctx, setConversationMemberRole, arg.Role, arg.ConversationID, arg.UserID)
+	return err
+}
+
+const setConversationVisibility = `-- name: SetConversationVisibility :exec
+UPDATE conversations SET visibility = $1
+WHERE id = $2
+`
+
+type SetConversationVisibilityParams struct {
+	Visibility string `json:"visibility"`
+	ID         int64  `json:"id"`
+}
+
+func (q *Queries) SetConversationVisibility(ctx context.Context, arg SetConversationVisibilityParams) error {
+	_, err := q.db.Exec(ctx, setConversationVisibility, arg.Visibility, arg.ID)
 	return err
 }
 

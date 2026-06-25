@@ -33,19 +33,26 @@ func (q *Queries) CreateActivity(ctx context.Context, arg CreateActivityParams) 
 }
 
 const createComment = `-- name: CreateComment :one
-INSERT INTO comments (task_id, author_id, body)
-VALUES ($1, $2, $3)
-RETURNING id, task_id, author_id, body, created_at
+INSERT INTO comments (task_id, author_id, parent_id, body)
+VALUES ($1, $2, $3,
+        $4)
+RETURNING id, task_id, author_id, body, created_at, parent_id
 `
 
 type CreateCommentParams struct {
 	TaskID   int64  `json:"task_id"`
 	AuthorID *int64 `json:"author_id"`
+	ParentID *int64 `json:"parent_id"`
 	Body     string `json:"body"`
 }
 
 func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (Comment, error) {
-	row := q.db.QueryRow(ctx, createComment, arg.TaskID, arg.AuthorID, arg.Body)
+	row := q.db.QueryRow(ctx, createComment,
+		arg.TaskID,
+		arg.AuthorID,
+		arg.ParentID,
+		arg.Body,
+	)
 	var i Comment
 	err := row.Scan(
 		&i.ID,
@@ -53,6 +60,7 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (C
 		&i.AuthorID,
 		&i.Body,
 		&i.CreatedAt,
+		&i.ParentID,
 	)
 	return i, err
 }
@@ -68,7 +76,7 @@ func (q *Queries) DeleteComment(ctx context.Context, id int64) error {
 }
 
 const getComment = `-- name: GetComment :one
-SELECT id, task_id, author_id, body, created_at FROM comments
+SELECT id, task_id, author_id, body, created_at, parent_id FROM comments
 WHERE id = $1
 `
 
@@ -81,6 +89,7 @@ func (q *Queries) GetComment(ctx context.Context, id int64) (Comment, error) {
 		&i.AuthorID,
 		&i.Body,
 		&i.CreatedAt,
+		&i.ParentID,
 	)
 	return i, err
 }
@@ -134,7 +143,7 @@ func (q *Queries) ListActivity(ctx context.Context, taskID int64) ([]ListActivit
 }
 
 const listComments = `-- name: ListComments :many
-SELECT c.id, c.task_id, c.author_id, c.body, c.created_at,
+SELECT c.id, c.task_id, c.author_id, c.parent_id, c.body, c.created_at,
        u.full_name AS author_name
 FROM comments c
 LEFT JOIN users u ON u.id = c.author_id
@@ -146,6 +155,7 @@ type ListCommentsRow struct {
 	ID         int64     `json:"id"`
 	TaskID     int64     `json:"task_id"`
 	AuthorID   *int64    `json:"author_id"`
+	ParentID   *int64    `json:"parent_id"`
 	Body       string    `json:"body"`
 	CreatedAt  time.Time `json:"created_at"`
 	AuthorName *string   `json:"author_name"`
@@ -164,9 +174,61 @@ func (q *Queries) ListComments(ctx context.Context, taskID int64) ([]ListComment
 			&i.ID,
 			&i.TaskID,
 			&i.AuthorID,
+			&i.ParentID,
 			&i.Body,
 			&i.CreatedAt,
 			&i.AuthorName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRecentActivity = `-- name: ListRecentActivity :many
+SELECT a.id, a.task_id, a.actor_id, a.action, a.detail, a.created_at,
+       COALESCE(u.full_name, '')::text AS actor_name,
+       COALESCE(t.title, '')::text     AS task_title
+FROM activity a
+LEFT JOIN users u ON u.id = a.actor_id
+LEFT JOIN tasks t ON t.id = a.task_id
+ORDER BY a.created_at DESC
+LIMIT 200
+`
+
+type ListRecentActivityRow struct {
+	ID        int64     `json:"id"`
+	TaskID    int64     `json:"task_id"`
+	ActorID   *int64    `json:"actor_id"`
+	Action    string    `json:"action"`
+	Detail    string    `json:"detail"`
+	CreatedAt time.Time `json:"created_at"`
+	ActorName string    `json:"actor_name"`
+	TaskTitle string    `json:"task_title"`
+}
+
+func (q *Queries) ListRecentActivity(ctx context.Context) ([]ListRecentActivityRow, error) {
+	rows, err := q.db.Query(ctx, listRecentActivity)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListRecentActivityRow{}
+	for rows.Next() {
+		var i ListRecentActivityRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TaskID,
+			&i.ActorID,
+			&i.Action,
+			&i.Detail,
+			&i.CreatedAt,
+			&i.ActorName,
+			&i.TaskTitle,
 		); err != nil {
 			return nil, err
 		}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/user_avatar.dart';
+import '../../../data/models/public_channel.dart';
 import '../../../data/models/team_member.dart';
 import '../../../providers/auth_provider.dart';
 import '../../team/providers/team_providers.dart';
@@ -93,6 +94,7 @@ class _GroupDialogState extends ConsumerState<_GroupDialog> {
   final TextEditingController _name = TextEditingController();
   final Set<int> _selected = <int>{};
   bool _saving = false;
+  bool _public = false;
 
   @override
   void dispose() {
@@ -102,14 +104,15 @@ class _GroupDialogState extends ConsumerState<_GroupDialog> {
 
   Future<void> _create() async {
     final String name = _name.text.trim();
-    if (name.isEmpty || _selected.isEmpty) {
+    // A public channel can start with no members (people join it themselves).
+    if (name.isEmpty || (_selected.isEmpty && !_public)) {
       return;
     }
     setState(() => _saving = true);
     try {
       final int id = await ref
           .read(chatRepositoryProvider)
-          .createGroup(name, _selected.toList());
+          .createGroup(name, _selected.toList(), public: _public);
       if (mounted) {
         Navigator.of(context).pop(id);
       }
@@ -148,7 +151,16 @@ class _GroupDialogState extends ConsumerState<_GroupDialog> {
                 prefixIcon: Icon(Icons.groups_outlined),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: const Icon(Icons.public),
+              title: const Text('Public channel'),
+              subtitle: const Text('Anyone can find and join this channel'),
+              value: _public,
+              onChanged: (bool v) => setState(() => _public = v),
+            ),
+            const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -197,6 +209,84 @@ class _GroupDialogState extends ConsumerState<_GroupDialog> {
         FilledButton(
           onPressed: _saving ? null : _create,
           child: Text(_saving ? 'Creating…' : 'Create'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Lists public channels the user can join. Returns the id of a channel they
+/// joined (so the caller can open it), or null if cancelled.
+Future<int?> browsePublicChannels(BuildContext context, WidgetRef ref) {
+  return showDialog<int>(
+    context: context,
+    builder: (BuildContext context) => const _BrowseChannelsDialog(),
+  );
+}
+
+class _BrowseChannelsDialog extends ConsumerWidget {
+  const _BrowseChannelsDialog();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<PublicChannel>> async = ref.watch(
+      publicChannelsProvider,
+    );
+    return AlertDialog(
+      title: const Text('Browse channels'),
+      content: SizedBox(
+        width: 380,
+        child: async.when(
+          loading: () => const SizedBox(
+            height: 120,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (Object e, _) => Text('Could not load channels:\n$e'),
+          data: (List<PublicChannel> channels) {
+            if (channels.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Text('No public channels to join right now.'),
+              );
+            }
+            return ListView(
+              shrinkWrap: true,
+              children: <Widget>[
+                for (final PublicChannel c in channels)
+                  ListTile(
+                    leading: UserAvatar(
+                      name: c.name,
+                      radius: 18,
+                      imageUrl: c.avatarUrl,
+                    ),
+                    title: Text(c.name),
+                    subtitle: Text(
+                      '${c.memberCount} '
+                      '${c.memberCount == 1 ? 'member' : 'members'}',
+                    ),
+                    trailing: FilledButton(
+                      onPressed: () async {
+                        await ref
+                            .read(chatRepositoryProvider)
+                            .joinChannel(c.id);
+                        ref.invalidate(publicChannelsProvider);
+                        ref.invalidate(conversationsProvider);
+                        if (context.mounted) {
+                          Navigator.of(context).pop(c.id);
+                        }
+                      },
+                      child: const Text('Join'),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
         ),
       ],
     );

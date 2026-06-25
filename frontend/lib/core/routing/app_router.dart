@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/activity/activity_page.dart';
 import '../../features/auth/forgot_password_page.dart';
 import '../../features/auth/login_page.dart';
 import '../../features/auth/reset_password_page.dart';
@@ -82,6 +83,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/goals', builder: (c, s) => const GoalsPage()),
           GoRoute(path: '/team', builder: (c, s) => const TeamPage()),
           GoRoute(path: '/reports', builder: (c, s) => const ReportsPage()),
+          GoRoute(path: '/activity', builder: (c, s) => const ActivityPage()),
           GoRoute(
             path: '/automation',
             builder: (c, s) => const AutomationPage(),

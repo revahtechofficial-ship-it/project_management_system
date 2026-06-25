@@ -39,6 +39,7 @@ const List<_NavItem> _navItems = <_NavItem>[
   _NavItem(Icons.timer_outlined, 'Time', '/time'),
   _NavItem(Icons.groups_outlined, 'Team', '/team'),
   _NavItem(Icons.bar_chart_outlined, 'Reports', '/reports'),
+  _NavItem(Icons.history, 'Activity', '/activity'),
   _NavItem(Icons.bolt_outlined, 'Automation', '/automation'),
   _NavItem(Icons.settings_outlined, 'Settings', '/settings'),
 ];

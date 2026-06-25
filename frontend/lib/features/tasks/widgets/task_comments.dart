@@ -85,11 +85,36 @@ class TaskCommentsSection extends ConsumerStatefulWidget {
 class _TaskCommentsSectionState extends ConsumerState<TaskCommentsSection> {
   final TextEditingController _input = TextEditingController();
   bool _busy = false;
+  Comment? _replyTo;
 
   @override
   void dispose() {
     _input.dispose();
     super.dispose();
+  }
+
+  /// Flattens the comments into a render order with a nesting [depth], so
+  /// threaded replies sit indented under the comment they answer.
+  List<({Comment comment, int depth})> _threaded(List<Comment> comments) {
+    final Set<int> ids = <int>{for (final Comment c in comments) c.id};
+    final Map<int?, List<Comment>> byParent = <int?, List<Comment>>{};
+    for (final Comment c in comments) {
+      final int? key = (c.parentId != null && ids.contains(c.parentId))
+          ? c.parentId
+          : null;
+      byParent.putIfAbsent(key, () => <Comment>[]).add(c);
+    }
+    final List<({Comment comment, int depth})> out =
+        <({Comment comment, int depth})>[];
+    void walk(int? parent, int depth) {
+      for (final Comment c in byParent[parent] ?? const <Comment>[]) {
+        out.add((comment: c, depth: depth));
+        walk(c.id, depth + 1);
+      }
+    }
+
+    walk(null, 0);
+    return out;
   }
 
   Future<void> _send(Map<String, int> tokens) async {
@@ -101,9 +126,12 @@ class _TaskCommentsSectionState extends ConsumerState<TaskCommentsSection> {
     final List<int> mentions = _parseMentions(body, tokens);
     await ref
         .read(commentsRepositoryProvider)
-        .add(widget.taskId, body, mentions);
+        .add(widget.taskId, body, mentions, parentId: _replyTo?.id);
     _input.clear();
-    setState(() => _busy = false);
+    setState(() {
+      _busy = false;
+      _replyTo = null;
+    });
     ref.invalidate(commentsProvider(widget.taskId));
     ref.invalidate(activityProvider(widget.taskId));
     if (mentions.isNotEmpty) {
@@ -140,14 +168,53 @@ class _TaskCommentsSectionState extends ConsumerState<TaskCommentsSection> {
             'No comments yet — start the conversation.',
             style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
           ),
-        for (final Comment c in comments)
-          _CommentTile(
-            comment: c,
-            valid: valid,
-            canDelete: admin || (me != null && c.authorId == me),
-            onDelete: () => _delete(c.id),
+        for (final ({Comment comment, int depth}) e in _threaded(comments))
+          Padding(
+            padding: EdgeInsets.only(left: e.depth.clamp(0, 4) * 18.0),
+            child: _CommentTile(
+              comment: e.comment,
+              valid: valid,
+              isReply: e.depth > 0,
+              canDelete: admin || (me != null && e.comment.authorId == me),
+              onDelete: () => _delete(e.comment.id),
+              onReply: () => setState(() => _replyTo = e.comment),
+            ),
           ),
         const SizedBox(height: 8),
+        if (_replyTo != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: <Widget>[
+                Icon(Icons.reply_rounded, size: 16, color: AppColors.brand),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Replying to ${_replyTo!.authorName ?? 'comment'}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => setState(() => _replyTo = null),
+                  child: Icon(
+                    Icons.close,
+                    size: 16,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
@@ -156,8 +223,10 @@ class _TaskCommentsSectionState extends ConsumerState<TaskCommentsSection> {
                 controller: _input,
                 minLines: 1,
                 maxLines: 4,
-                decoration: const InputDecoration(
-                  hintText: 'Write a comment… use @ to mention',
+                decoration: InputDecoration(
+                  hintText: _replyTo == null
+                      ? 'Write a comment… use @ to mention'
+                      : 'Write a reply… use @ to mention',
                   isDense: true,
                 ),
                 onSubmitted: (_) => _send(tokens),
@@ -187,12 +256,16 @@ class _CommentTile extends StatelessWidget {
     required this.valid,
     required this.canDelete,
     required this.onDelete,
+    required this.onReply,
+    this.isReply = false,
   });
 
   final Comment comment;
   final Set<String> valid;
   final bool canDelete;
+  final bool isReply;
   final VoidCallback onDelete;
+  final VoidCallback onReply;
 
   @override
   Widget build(BuildContext context) {
@@ -202,7 +275,7 @@ class _CommentTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          UserAvatar(name: comment.authorName ?? '', radius: 16),
+          UserAvatar(name: comment.authorName ?? '', radius: isReply ? 13 : 16),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -226,6 +299,21 @@ class _CommentTile extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
+                    InkWell(
+                      onTap: onReply,
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        child: Icon(
+                          Icons.reply_rounded,
+                          size: 15,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                     if (canDelete)
                       InkWell(
                         onTap: onDelete,

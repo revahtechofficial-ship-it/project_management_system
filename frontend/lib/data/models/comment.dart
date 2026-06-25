@@ -5,6 +5,7 @@ class Comment {
   final int taskId;
   final int? authorId;
   final String? authorName;
+  final int? parentId;
   final String body;
   final DateTime createdAt;
 
@@ -14,6 +15,7 @@ class Comment {
     required this.createdAt,
     this.authorId,
     this.authorName,
+    this.parentId,
     this.body = '',
   });
 
@@ -22,6 +24,7 @@ class Comment {
         taskId: json['task_id'] as int,
         authorId: json['author_id'] as int?,
         authorName: json['author_name'] as String?,
+        parentId: json['parent_id'] as int?,
         body: json['body'] as String? ?? '',
         createdAt: DateTime.parse(json['created_at'] as String),
       );
@@ -31,6 +34,7 @@ class Comment {
         'task_id': taskId,
         'author_id': authorId,
         'author_name': authorName,
+        'parent_id': parentId,
         'body': body,
         'created_at': createdAt.toIso8601String(),
       };
@@ -46,10 +50,11 @@ class Comment {
           other.taskId == taskId &&
           other.authorId == authorId &&
           other.authorName == authorName &&
+          other.parentId == parentId &&
           other.body == body &&
           other.createdAt == createdAt;
 
   @override
   int get hashCode =>
-      Object.hash(id, taskId, authorId, authorName, body, createdAt);
+      Object.hash(id, taskId, authorId, authorName, parentId, body, createdAt);
 }

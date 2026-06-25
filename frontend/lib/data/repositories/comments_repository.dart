@@ -20,11 +20,21 @@ class CommentsRepository {
         .toList(growable: false);
   }
 
-  /// Posts a comment. [mentions] are the ids of mentioned members.
-  Future<void> add(int taskId, String body, List<int> mentions) =>
+  /// Posts a comment. [mentions] are the ids of mentioned members; pass
+  /// [parentId] to post a threaded reply to another comment.
+  Future<void> add(
+    int taskId,
+    String body,
+    List<int> mentions, {
+    int? parentId,
+  }) =>
       _dio.post<Map<String, dynamic>>(
         '/api/v1/tasks/$taskId/comments',
-        data: <String, dynamic>{'body': body, 'mentions': mentions},
+        data: <String, dynamic>{
+          'body': body,
+          'mentions': mentions,
+          'parent_id': ?parentId,
+        },
       );
 
   /// Deletes a comment (author or admin on the server).

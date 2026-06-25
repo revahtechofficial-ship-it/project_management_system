@@ -4,6 +4,7 @@ import '../../../core/constants/app_config.dart';
 import '../../../data/models/chat_member.dart';
 import '../../../data/models/conversation.dart';
 import '../../../data/models/link_preview.dart';
+import '../../../data/models/public_channel.dart';
 import '../../../data/models/user_presence.dart';
 import '../../../data/repositories/chat_repository.dart';
 import '../../../data/repositories/giphy_repository.dart';
@@ -21,6 +22,13 @@ final Provider<ChatRepository> chatRepositoryProvider =
 final FutureProvider<List<Conversation>> conversationsProvider =
     FutureProvider<List<Conversation>>((ref) {
       return ref.watch(chatRepositoryProvider).conversations();
+    });
+
+/// Public channels the current user can discover and join. Invalidate to
+/// refresh (e.g. after joining one).
+final FutureProvider<List<PublicChannel>> publicChannelsProvider =
+    FutureProvider<List<PublicChannel>>((ref) {
+      return ref.watch(chatRepositoryProvider).publicChannels();
     });
 
 /// The members (with roles) of a conversation. Invalidate to refresh after a

@@ -11,6 +11,7 @@ import '../models/chat_message.dart';
 import '../models/chat_reaction.dart';
 import '../models/conversation.dart';
 import '../models/link_preview.dart';
+import '../models/public_channel.dart';
 import '../models/user_presence.dart';
 
 /// Talks to the backend's /api/v1/chat endpoints (AGENTS.md §1
@@ -44,8 +45,13 @@ class ChatRepository {
     return (res.data ?? const <String, dynamic>{})['id'] as int;
   }
 
-  /// Creates a group conversation; returns its id.
-  Future<int> createGroup(String name, List<int> memberIds) async {
+  /// Creates a group conversation; returns its id. Set [public] true to make
+  /// it a public channel anyone can discover and join.
+  Future<int> createGroup(
+    String name,
+    List<int> memberIds, {
+    bool public = false,
+  }) async {
     final Response<Map<String, dynamic>> res = await _dio
         .post<Map<String, dynamic>>(
           '/api/v1/chat/conversations',
@@ -53,10 +59,27 @@ class ChatRepository {
             'type': 'group',
             'name': name,
             'member_ids': memberIds,
+            'visibility': public ? 'public' : 'private',
           },
         );
     return (res.data ?? const <String, dynamic>{})['id'] as int;
   }
+
+  /// Public channels the current user can join (excludes ones already joined).
+  Future<List<PublicChannel>> publicChannels() async {
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/chat/channels',
+    );
+    final List<dynamic> data = res.data ?? <dynamic>[];
+    return data
+        .map((dynamic e) => PublicChannel.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  /// Joins a public channel by id.
+  Future<void> joinChannel(int conversationId) => _dio.post<void>(
+    '/api/v1/chat/conversations/$conversationId/join',
+  );
 
   /// Messages in a conversation, newest first (server order).
   Future<List<ChatMessage>> messages(

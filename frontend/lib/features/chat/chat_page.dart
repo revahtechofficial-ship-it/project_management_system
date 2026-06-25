@@ -1071,6 +1071,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
+  Future<void> _browseChannels() async {
+    final int? id = await browsePublicChannels(context, ref);
+    if (id != null) {
+      ref.invalidate(conversationsProvider);
+      await _open(id);
+    }
+  }
+
   Conversation? _selectedFrom(List<Conversation> list) {
     for (final Conversation c in list) {
       if (c.id == _selectedId) {
@@ -1173,8 +1181,11 @@ class _ListPane extends StatelessWidget {
                 PopupMenuButton<String>(
                   tooltip: 'New conversation',
                   icon: const Icon(Icons.edit_square),
-                  onSelected: (String v) =>
-                      v == 'dm' ? state._newDm() : state._newGroup(),
+                  onSelected: (String v) => switch (v) {
+                    'dm' => state._newDm(),
+                    'group' => state._newGroup(),
+                    _ => state._browseChannels(),
+                  },
                   itemBuilder: (BuildContext context) =>
                       const <PopupMenuEntry<String>>[
                         PopupMenuItem<String>(
@@ -1189,6 +1200,13 @@ class _ListPane extends StatelessWidget {
                           child: ListTile(
                             leading: Icon(Icons.group_add),
                             title: Text('New group'),
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'browse',
+                          child: ListTile(
+                            leading: Icon(Icons.tag),
+                            title: Text('Browse channels'),
                           ),
                         ),
                       ],

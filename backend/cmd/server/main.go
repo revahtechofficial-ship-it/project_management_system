@@ -137,6 +137,7 @@ func main() {
 		api.Mount("/api/v1/objectives", handler.NewObjectiveHandler(queries).Routes())
 		api.Mount("/api/v1/automations", handler.NewAutomationHandler(queries).Routes())
 		api.Mount("/api/v1/resources", handler.NewResourceHandler(queries).Routes())
+		api.Get("/api/v1/activity", handler.NewActivityHandler(queries).List)
 		teamHandler := handler.NewTeamHandler(queries)
 		api.Get("/api/v1/team", teamHandler.List)
 		api.Patch("/api/v1/team/{id}/role", teamHandler.SetRole)

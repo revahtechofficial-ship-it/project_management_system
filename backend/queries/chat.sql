@@ -8,6 +8,25 @@ INSERT INTO conversation_members (conversation_id, user_id, role)
 VALUES (sqlc.arg(conversation_id), sqlc.arg(user_id), sqlc.arg(role))
 ON CONFLICT (conversation_id, user_id) DO NOTHING;
 
+-- name: SetConversationVisibility :exec
+UPDATE conversations SET visibility = sqlc.arg(visibility)
+WHERE id = sqlc.arg(id);
+
+-- name: GetConversationMeta :one
+SELECT id, type, name, visibility FROM conversations WHERE id = $1;
+
+-- name: ListPublicChannels :many
+SELECT c.id, c.name, c.avatar, c.created_at,
+       (SELECT COUNT(*) FROM conversation_members cm2
+        WHERE cm2.conversation_id = c.id)::int AS member_count
+FROM conversations c
+WHERE c.type = 'group' AND c.visibility = 'public'
+  AND NOT EXISTS (
+    SELECT 1 FROM conversation_members cm
+    WHERE cm.conversation_id = c.id AND cm.user_id = sqlc.arg(user_id)
+  )
+ORDER BY c.created_at DESC;
+
 -- name: RemoveConversationMember :exec
 DELETE FROM conversation_members
 WHERE conversation_id = sqlc.arg(conversation_id)
