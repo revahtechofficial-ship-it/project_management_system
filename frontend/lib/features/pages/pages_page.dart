@@ -7,6 +7,7 @@ import '../../core/widgets/async_states.dart';
 import '../../core/widgets/page_header.dart';
 import '../../data/enums/page_type.dart';
 import '../../data/models/workspace_page.dart';
+import 'form_templates.dart';
 import 'providers/pages_providers.dart';
 import 'widgets/doc_editor_screen.dart';
 import 'widgets/form_editor_screen.dart';
@@ -56,6 +57,30 @@ class _PagesPageState extends ConsumerState<PagesPage> {
       ref.invalidate(pagesByTypeProvider(type));
       if (mounted) {
         await _openPage(page.id, type);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not create: $e')));
+      }
+    }
+  }
+
+  /// Creates a new form pre-filled from a built-in [starter] (Lead capture,
+  /// Request, Bug report or Survey) and opens it.
+  Future<void> _createFromStarter(FormStarter starter) async {
+    try {
+      final WorkspacePage page = await ref
+          .read(pagesRepositoryProvider)
+          .create(
+            type: PageType.form,
+            title: starter.title,
+            body: starter.body(),
+          );
+      ref.invalidate(pagesByTypeProvider(PageType.form));
+      if (mounted) {
+        await _openPage(page.id, PageType.form);
       }
     } catch (e) {
       if (mounted) {
@@ -120,6 +145,8 @@ class _PagesPageState extends ConsumerState<PagesPage> {
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('New whiteboard'),
                 ),
+              if (_tab == PageType.form)
+                _FormStarterMenu(onPick: _createFromStarter),
               if (_tab == PageType.form)
                 FilledButton.icon(
                   onPressed: () => _create(PageType.form),
@@ -439,6 +466,52 @@ class _TemplateMenu extends ConsumerWidget {
             Icon(Icons.bookmark_outline, size: 18),
             SizedBox(width: 8),
             Text('From template'),
+            Icon(Icons.arrow_drop_down, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A "Templates" menu beside "New form" offering the built-in starter forms
+/// (Lead capture, Request, Bug report, Survey).
+class _FormStarterMenu extends StatelessWidget {
+  const _FormStarterMenu({required this.onPick});
+
+  final ValueChanged<FormStarter> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return PopupMenuButton<FormStarter>(
+      tooltip: 'Start from a template',
+      onSelected: onPick,
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<FormStarter>>[
+        for (final FormStarter s in formStarters())
+          PopupMenuItem<FormStarter>(
+            value: s,
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              leading: Icon(s.icon, color: AppColors.sky),
+              title: Text(s.label),
+              subtitle: Text(s.description),
+            ),
+          ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          border: Border.all(color: scheme.outline),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.bookmark_outline, size: 18),
+            SizedBox(width: 8),
+            Text('Templates'),
             Icon(Icons.arrow_drop_down, size: 18),
           ],
         ),

@@ -6,9 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../data/enums/form_field_type.dart';
+import '../../../data/enums/task_priority.dart';
 import '../../../data/models/form_field.dart' as model;
 import '../../../data/models/form_response_entry.dart';
+import '../../../data/models/form_task_config.dart';
+import '../../../data/models/project.dart';
 import '../../../data/models/workspace_page.dart';
+import '../../projects/providers/projects_providers.dart';
 import '../providers/pages_providers.dart';
 
 enum _FormView { build, fill, responses }
@@ -28,6 +32,7 @@ class FormEditorScreen extends ConsumerStatefulWidget {
 class _FormEditorScreenState extends ConsumerState<FormEditorScreen> {
   final TextEditingController _title = TextEditingController();
   List<model.FormField> _fields = <model.FormField>[];
+  FormTaskConfig _taskConfig = const FormTaskConfig();
   WorkspacePage? _page;
   _FormView _view = _FormView.fill;
   bool _loading = true;
@@ -64,6 +69,7 @@ class _FormEditorScreenState extends ConsumerState<FormEditorScreen> {
           .get(widget.pageId);
       _title.text = page.title;
       _fields = _parse(page.body);
+      _taskConfig = _parseTaskConfig(page.body);
       if (mounted) {
         setState(() {
           _page = page;
@@ -96,11 +102,34 @@ class _FormEditorScreenState extends ConsumerState<FormEditorScreen> {
     }
   }
 
+  FormTaskConfig _parseTaskConfig(String body) {
+    if (body.trim().isEmpty) {
+      return const FormTaskConfig();
+    }
+    try {
+      final Map<String, dynamic> data =
+          jsonDecode(body) as Map<String, dynamic>;
+      final Object? ct = data['create_task'];
+      if (ct is Map<String, dynamic>) {
+        return FormTaskConfig.fromJson(ct);
+      }
+    } catch (_) {
+      // Fall through to the default config below.
+    }
+    return const FormTaskConfig();
+  }
+
   String _serialize() => jsonEncode(<String, dynamic>{
     'fields': <Map<String, dynamic>>[
       for (final model.FormField f in _fields) f.toJson(),
     ],
+    'create_task': _taskConfig.toJson(),
   });
+
+  void _setTaskConfig(FormTaskConfig config) {
+    setState(() => _taskConfig = config);
+    _saveDefinition(silent: true);
+  }
 
   Future<void> _saveDefinition({bool silent = false}) async {
     setState(() => _saving = true);
@@ -301,6 +330,8 @@ class _FormEditorScreenState extends ConsumerState<FormEditorScreen> {
     return switch (_view) {
       _FormView.build => _BuildView(
         fields: _fields,
+        taskConfig: _taskConfig,
+        onTaskConfigChanged: _setTaskConfig,
         onAdd: () => _editField(),
         onEdit: _editField,
         onRemove: _remove,
@@ -327,6 +358,8 @@ class _FormEditorScreenState extends ConsumerState<FormEditorScreen> {
 class _BuildView extends StatelessWidget {
   const _BuildView({
     required this.fields,
+    required this.taskConfig,
+    required this.onTaskConfigChanged,
     required this.onAdd,
     required this.onEdit,
     required this.onRemove,
@@ -334,6 +367,8 @@ class _BuildView extends StatelessWidget {
   });
 
   final List<model.FormField> fields;
+  final FormTaskConfig taskConfig;
+  final ValueChanged<FormTaskConfig> onTaskConfigChanged;
   final VoidCallback onAdd;
   final ValueChanged<model.FormField> onEdit;
   final ValueChanged<model.FormField> onRemove;
@@ -386,7 +421,148 @@ class _BuildView extends StatelessWidget {
           icon: const Icon(Icons.add),
           label: const Text('Add field'),
         ),
+        const SizedBox(height: 24),
+        _TaskSettingsCard(
+          fields: fields,
+          config: taskConfig,
+          onChanged: onTaskConfigChanged,
+        ),
       ],
+    );
+  }
+}
+
+// --- Auto-task settings ----------------------------------------------------
+
+/// The "create a task from each submission" panel in the Build view
+/// (Automatic Task Creation from Forms).
+class _TaskSettingsCard extends ConsumerWidget {
+  const _TaskSettingsCard({
+    required this.fields,
+    required this.config,
+    required this.onChanged,
+  });
+
+  final List<model.FormField> fields;
+  final FormTaskConfig config;
+  final ValueChanged<FormTaskConfig> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final List<Project> projects =
+        ref.watch(projectsProvider).asData?.value ?? const <Project>[];
+    // Only offer fields that still exist as the title source.
+    final Set<String> ids = <String>{
+      for (final model.FormField f in fields) f.id,
+    };
+    final String? titleValue = ids.contains(config.titleField)
+        ? config.titleField
+        : null;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              secondary: Icon(Icons.bolt_outlined, color: AppColors.amber),
+              title: const Text(
+                'Create a task from each submission',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text(
+                'New submissions are turned into tasks automatically.',
+              ),
+              value: config.enabled,
+              onChanged: (bool v) => onChanged(config.copyWith(enabled: v)),
+            ),
+            if (config.enabled)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    DropdownButtonFormField<int?>(
+                      initialValue: projects.any(
+                        (Project p) => p.id == config.projectId,
+                      )
+                          ? config.projectId
+                          : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Project',
+                        helperText: 'Where created tasks land',
+                      ),
+                      items: <DropdownMenuItem<int?>>[
+                        const DropdownMenuItem<int?>(
+                          child: Text('No project'),
+                        ),
+                        for (final Project p in projects)
+                          DropdownMenuItem<int?>(
+                            value: p.id,
+                            child: Text(p.name),
+                          ),
+                      ],
+                      onChanged: (int? v) => onChanged(
+                        config.copyWith(projectId: v, clearProject: v == null),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String?>(
+                      initialValue: titleValue,
+                      decoration: const InputDecoration(
+                        labelText: 'Use answer as task title',
+                      ),
+                      items: <DropdownMenuItem<String?>>[
+                        const DropdownMenuItem<String?>(
+                          child: Text('Form name'),
+                        ),
+                        for (final model.FormField f in fields)
+                          DropdownMenuItem<String?>(
+                            value: f.id,
+                            child: Text(
+                              f.label.isEmpty ? 'Untitled field' : f.label,
+                            ),
+                          ),
+                      ],
+                      onChanged: (String? v) =>
+                          onChanged(config.copyWith(titleField: v ?? '')),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<TaskPriority>(
+                      initialValue: TaskPriority.fromJson(config.priority),
+                      decoration: const InputDecoration(
+                        labelText: 'Task priority',
+                      ),
+                      items: <DropdownMenuItem<TaskPriority>>[
+                        for (final TaskPriority p in TaskPriority.values)
+                          DropdownMenuItem<TaskPriority>(
+                            value: p,
+                            child: Text(p.label),
+                          ),
+                      ],
+                      onChanged: (TaskPriority? p) => onChanged(
+                        config.copyWith(
+                          priority: (p ?? TaskPriority.none).toJson(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tasks inherit any matching automation rules.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

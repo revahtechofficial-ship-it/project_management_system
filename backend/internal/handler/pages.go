@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -565,7 +566,78 @@ func (h *PageHandler) submitResponse(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	h.maybeCreateTaskFromForm(r.Context(), row, b.Answers)
 	w.WriteHeader(http.StatusCreated)
+}
+
+// formTaskConfig is the "turn each submission into a task" setting stored in a
+// form page's body alongside its fields.
+type formTaskConfig struct {
+	Enabled    bool   `json:"enabled"`
+	ProjectID  *int64 `json:"project_id"`
+	TitleField string `json:"title_field"`
+	Priority   string `json:"priority"`
+}
+
+// formDefinition is the JSON shape of a form page's body: the field list plus
+// the optional auto-task-creation config.
+type formDefinition struct {
+	Fields []struct {
+		ID    string `json:"id"`
+		Label string `json:"label"`
+	} `json:"fields"`
+	CreateTask formTaskConfig `json:"create_task"`
+}
+
+// maybeCreateTaskFromForm turns a form submission into a task when the form is
+// configured to do so (Automatic Task Creation from Forms). Best-effort: any
+// failure is swallowed so it never blocks recording the response.
+func (h *PageHandler) maybeCreateTaskFromForm(ctx context.Context, page db.GetPageRow, answers map[string]any) {
+	var def formDefinition
+	if err := json.Unmarshal([]byte(page.Body), &def); err != nil || !def.CreateTask.Enabled {
+		return
+	}
+	// The filler keys answers by field label (falling back to the id when the
+	// label is blank), so mirror that to resolve values here.
+	title := ""
+	lines := make([]string, 0, len(def.Fields))
+	for _, f := range def.Fields {
+		label := f.Label
+		if strings.TrimSpace(label) == "" {
+			label = f.ID
+		}
+		v, ok := answers[label]
+		if !ok {
+			continue
+		}
+		val := fmt.Sprintf("%v", v)
+		lines = append(lines, label+": "+val)
+		if f.ID == def.CreateTask.TitleField {
+			title = strings.TrimSpace(val)
+		}
+	}
+	if title == "" {
+		title = strings.TrimSpace(page.Title)
+	}
+	if title == "" {
+		title = "Form submission"
+	}
+	description := "Submitted via form \"" + page.Title + "\".\n\n" +
+		strings.Join(lines, "\n")
+	task, err := h.q.CreateTask(ctx, db.CreateTaskParams{
+		Title:       title,
+		Description: description,
+		ProjectID:   def.CreateTask.ProjectID,
+		Status:      statusOrTodo(""),
+		Recurrence:  "none",
+		Priority:    priorityOrNone(def.CreateTask.Priority),
+		Tags:        []string{},
+	})
+	if err != nil {
+		return
+	}
+	logActivity(ctx, h.q, task.ID, "created", "from form")
+	runAutomations(ctx, h.q, task.ID, "task_created")
 }
 
 // listResponses returns a form's submissions; restricted to its owner/admin.
