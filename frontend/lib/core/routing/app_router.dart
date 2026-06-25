@@ -19,6 +19,7 @@ import '../../features/planning/planning_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/projects/projects_page.dart';
 import '../../features/reports/reports_page.dart';
+import '../../features/resources/resources_page.dart';
 import '../../features/settings/settings_page.dart';
 import '../../features/sprints/sprints_page.dart';
 import '../../features/tasks/tasks_page.dart';
@@ -73,6 +74,10 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
             builder: (c, s) => const DashboardsPage(),
           ),
           GoRoute(path: '/planning', builder: (c, s) => const PlanningPage()),
+          GoRoute(
+            path: '/resources',
+            builder: (c, s) => const ResourcesPage(),
+          ),
           GoRoute(path: '/time', builder: (c, s) => const TimePage()),
           GoRoute(path: '/goals', builder: (c, s) => const GoalsPage()),
           GoRoute(path: '/team', builder: (c, s) => const TeamPage()),

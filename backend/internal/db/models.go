@@ -42,6 +42,17 @@ type AutomationRule struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+type Availability struct {
+	ID        int64       `json:"id"`
+	UserID    int64       `json:"user_id"`
+	StartDate pgtype.Date `json:"start_date"`
+	EndDate   pgtype.Date `json:"end_date"`
+	Kind      string      `json:"kind"`
+	Note      string      `json:"note"`
+	CreatedBy *int64      `json:"created_by"`
+	CreatedAt time.Time   `json:"created_at"`
+}
+
 type ChecklistItem struct {
 	ID        int64     `json:"id"`
 	TaskID    int64     `json:"task_id"`
@@ -121,6 +132,12 @@ type KeyResult struct {
 	Unit         string    `json:"unit"`
 	Position     int32     `json:"position"`
 	CreatedAt    time.Time `json:"created_at"`
+}
+
+type MemberCapacity struct {
+	UserID      int64     `json:"user_id"`
+	WeeklyHours int32     `json:"weekly_hours"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type Message struct {
