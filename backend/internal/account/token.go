@@ -112,6 +112,12 @@ func FromContext(ctx context.Context) (Claims, bool) {
 	return c, ok
 }
 
+// WithClaims injects Claims into a context, for callers (such as API-key
+// authentication) that authenticate a request without the JWT middleware.
+func WithClaims(ctx context.Context, c Claims) context.Context {
+	return context.WithValue(ctx, claimsKey, c)
+}
+
 func unauthorized(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)

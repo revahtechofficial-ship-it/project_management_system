@@ -19,6 +19,16 @@ type Activity struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type ApiKey struct {
+	ID         int64              `json:"id"`
+	UserID     int64              `json:"user_id"`
+	Name       string             `json:"name"`
+	TokenHash  string             `json:"token_hash"`
+	Prefix     string             `json:"prefix"`
+	LastUsedAt pgtype.Timestamptz `json:"last_used_at"`
+	CreatedAt  time.Time          `json:"created_at"`
+}
+
 type Attachment struct {
 	ID          int64     `json:"id"`
 	TaskID      int64     `json:"task_id"`
@@ -122,6 +132,14 @@ type FormResponse struct {
 	SubmittedBy *int64    `json:"submitted_by"`
 	Answers     string    `json:"answers"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type Integration struct {
+	Provider  string    `json:"provider"`
+	Connected bool      `json:"connected"`
+	Config    string    `json:"config"`
+	UpdatedBy *int64    `json:"updated_by"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type KeyResult struct {
@@ -374,4 +392,15 @@ type User struct {
 	Department    string             `json:"department"`
 	Location      string             `json:"location"`
 	Bio           string             `json:"bio"`
+}
+
+type Webhook struct {
+	ID        int64     `json:"id"`
+	Url       string    `json:"url"`
+	Secret    string    `json:"secret"`
+	Events    string    `json:"events"`
+	Active    bool      `json:"active"`
+	Provider  string    `json:"provider"`
+	CreatedBy *int64    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
 }

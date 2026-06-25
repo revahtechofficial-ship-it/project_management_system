@@ -446,6 +446,8 @@ func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
 		notifyAssigned(r.Context(), h.q, &assignees[i], task.Title)
 	}
 	runAutomations(r.Context(), h.q, task.ID, "task_created")
+	dispatchTaskEvent(h.q, "task.created", task.Title,
+		actorName(r.Context()), "", task.ID)
 	writeJSON(w, http.StatusCreated, h.taskWithAssignees(r.Context(), task))
 }
 
@@ -635,6 +637,13 @@ func (h *TaskHandler) setStatus(w http.ResponseWriter, r *http.Request) {
 	runAutomations(r.Context(), h.q, id, "status_changed")
 	if body.Status == "done" && !prior.Done {
 		runAutomations(r.Context(), h.q, id, "task_completed")
+	}
+	if body.Status == "done" && !prior.Done {
+		dispatchTaskEvent(h.q, "task.completed", task.Title,
+			actorName(r.Context()), "", id)
+	} else {
+		dispatchTaskEvent(h.q, "task.updated", task.Title,
+			actorName(r.Context()), body.Status, id)
 	}
 	writeJSON(w, http.StatusOK, h.taskWithAssignees(r.Context(), task))
 }

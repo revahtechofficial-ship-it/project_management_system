@@ -86,6 +86,10 @@ func (h *TaskHandler) createComment(w http.ResponseWriter, r *http.Request) {
 	if b.ParentID != nil {
 		h.notifyOnReply(r.Context(), *b.ParentID, b.Mentions, body)
 	}
+	if t, terr := h.q.GetTask(r.Context(), id); terr == nil {
+		dispatchTaskEvent(h.q, "comment.created", t.Title,
+			actorName(r.Context()), body, id)
+	}
 	writeJSON(w, http.StatusCreated, comment)
 }
 

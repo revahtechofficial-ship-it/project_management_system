@@ -116,7 +116,7 @@ func main() {
 		APISecret: cfg.LiveKitAPISecret,
 	})
 	r.Group(func(api chi.Router) {
-		api.Use(appTokens.Middleware)
+		api.Use(handler.APIKeyMiddleware(queries, appTokens.Middleware))
 		api.Mount("/api/v1/tasks", taskHandler.Routes())
 		api.Mount("/api/v1/chat", chatHandler.Routes())
 		api.Mount("/api/v1/projects", handler.NewProjectHandler(queries).Routes())
@@ -138,6 +138,7 @@ func main() {
 		api.Mount("/api/v1/automations", handler.NewAutomationHandler(queries).Routes())
 		api.Mount("/api/v1/resources", handler.NewResourceHandler(queries).Routes())
 		api.Get("/api/v1/activity", handler.NewActivityHandler(queries).List)
+		api.Mount("/api/v1/integrations", handler.NewIntegrationHandler(queries).Routes())
 		teamHandler := handler.NewTeamHandler(queries)
 		api.Get("/api/v1/team", teamHandler.List)
 		api.Patch("/api/v1/team/{id}/role", teamHandler.SetRole)
