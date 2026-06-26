@@ -21,6 +21,7 @@ import (
 	"github.com/pressly/goose/v3"
 
 	"github.com/revah-tech/revahms/backend/internal/account"
+	"github.com/revah-tech/revahms/backend/internal/ai"
 	"github.com/revah-tech/revahms/backend/internal/auth"
 	"github.com/revah-tech/revahms/backend/internal/config"
 	"github.com/revah-tech/revahms/backend/internal/db"
@@ -117,6 +118,7 @@ func main() {
 		APISecret: cfg.LiveKitAPISecret,
 	})
 	handler.SetSSOConfigured(cfg.OIDCIssuer != "")
+	aiClient := ai.New(cfg.AnthropicAPIKey, cfg.AIModel)
 	r.Group(func(api chi.Router) {
 		api.Use(handler.APIKeyMiddleware(queries, appTokens.Middleware))
 		api.Use(handler.GuestReadOnly)
@@ -144,6 +146,7 @@ func main() {
 		api.Get("/api/v1/activity", handler.NewActivityHandler(queries).List)
 		api.Mount("/api/v1/integrations", handler.NewIntegrationHandler(queries).Routes())
 		api.Mount("/api/v1/admin", handler.NewAdminHandler(queries).Routes())
+		api.Mount("/api/v1/ai", handler.NewAIHandler(queries, aiClient).Routes())
 		productivity := handler.NewProductivityHandler(queries)
 		api.Mount("/api/v1/favorites", productivity.FavoriteRoutes())
 		api.Mount("/api/v1/saved-filters", productivity.FilterRoutes())

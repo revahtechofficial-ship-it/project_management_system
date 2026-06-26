@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/activity/activity_page.dart';
 import '../../features/admin/admin_page.dart';
+import '../../features/ai/assistant_page.dart';
 import '../../features/auth/forgot_password_page.dart';
 import '../../features/auth/login_page.dart';
 import '../../features/auth/reset_password_page.dart';
@@ -93,6 +94,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
             builder: (c, s) => const IntegrationsPage(),
           ),
           GoRoute(path: '/admin', builder: (c, s) => const AdminPage()),
+          GoRoute(path: '/ai', builder: (c, s) => const AssistantPage()),
           GoRoute(
             path: '/automation',
             builder: (c, s) => const AutomationPage(),

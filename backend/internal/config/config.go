@@ -51,6 +51,12 @@ type Config struct {
 	LiveKitURL       string
 	LiveKitAPIKey    string
 	LiveKitAPISecret string
+
+	// AnthropicAPIKey powers the AI assistant (Claude). When empty, the AI
+	// endpoints report that AI is not configured. AIModel is the Claude model
+	// id (defaults to Opus 4.8).
+	AnthropicAPIKey string
+	AIModel         string
 }
 
 // Load reads configuration from the environment. A .env file in the working
@@ -80,6 +86,8 @@ func Load() Config {
 		LiveKitURL:       getenv("LIVEKIT_URL", "ws://localhost:7880"),
 		LiveKitAPIKey:    getenv("LIVEKIT_API_KEY", "devkey"),
 		LiveKitAPISecret: getenv("LIVEKIT_API_SECRET", "secret"),
+		AnthropicAPIKey:  getenv("ANTHROPIC_API_KEY", ""),
+		AIModel:          getenv("AI_MODEL", "claude-opus-4-8"),
 	}
 }
 

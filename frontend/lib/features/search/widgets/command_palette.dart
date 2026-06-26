@@ -54,6 +54,7 @@ const List<_QuickAction> _quickActions = <_QuickAction>[
     icon: Icons.notifications_active_outlined,
     kind: _ActionKind.reminder,
   ),
+  _QuickAction(label: 'Ask AI Assistant', icon: Icons.auto_awesome, kind: _ActionKind.navigate, route: '/ai'),
   _QuickAction(label: 'Go to Dashboard', icon: Icons.dashboard_outlined, kind: _ActionKind.navigate, route: '/'),
   _QuickAction(label: 'Go to Tasks', icon: Icons.check_circle_outline, kind: _ActionKind.navigate, route: '/tasks'),
   _QuickAction(label: 'Go to Projects', icon: Icons.folder_outlined, kind: _ActionKind.navigate, route: '/projects'),
