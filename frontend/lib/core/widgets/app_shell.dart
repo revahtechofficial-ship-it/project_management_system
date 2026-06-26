@@ -11,7 +11,9 @@ import '../../features/chat/widgets/status_picker.dart';
 import '../../features/notifications/providers/notifications_providers.dart';
 import '../../features/search/widgets/command_palette.dart';
 import '../../features/search/widgets/shortcuts_help.dart';
+import '../../data/models/auth_user.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/sidebar_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../constants/app_colors.dart';
 import 'glass.dart';
@@ -153,7 +155,7 @@ class AppShell extends ConsumerWidget {
             ),
             drawer: Drawer(
               backgroundColor: Colors.transparent,
-              child: _Sidebar(location: location),
+              child: _Sidebar(location: location, collapsible: false),
             ),
             body: AppBackground(child: child),
           );
@@ -199,8 +201,12 @@ class _Chrome extends StatelessWidget {
 }
 
 class _Sidebar extends ConsumerStatefulWidget {
-  const _Sidebar({required this.location});
+  const _Sidebar({required this.location, this.collapsible = true});
   final String location;
+
+  /// Whether this sidebar may collapse to an icon rail. False in the mobile
+  /// drawer, where collapsing makes no sense.
+  final bool collapsible;
 
   @override
   ConsumerState<_Sidebar> createState() => _SidebarState();
@@ -222,101 +228,212 @@ class _SidebarState extends ConsumerState<_Sidebar> {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final user = ref.watch(authControllerProvider).asData?.value.user;
+    final AuthUser? user = ref.watch(authControllerProvider).asData?.value.user;
     final String location = widget.location;
     final bool isAdmin = user?.isAdmin ?? false;
+    final bool rail =
+        widget.collapsible && ref.watch(sidebarCollapsedProvider);
 
     return _Chrome(
       border: Border(right: BorderSide(color: scheme.outlineVariant)),
-      child: SizedBox(
-        width: 256,
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () => context.go('/'),
-                    child: const RevahLogo(height: 30),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeInOut,
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: rail ? 76 : 256,
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                _header(context, rail),
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: rail ? 14 : 12,
+                      vertical: rail ? 4 : 0,
+                    ),
+                    children: _navChildren(location, isAdmin, rail),
                   ),
                 ),
-              ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  children: <Widget>[
-                    _NavTile(
-                      item: _dashboardItem,
-                      selected: location == _dashboardItem.location,
-                    ),
-                    const SizedBox(height: 4),
-                    for (final _NavGroup group in _navGroups)
-                      ..._buildGroup(group, location, isAdmin),
-                  ],
-                ),
-              ),
-              Divider(color: scheme.outlineVariant.withValues(alpha: 0.6)),
-              ListTile(
-                onTap: () => context.push('/profile'),
-                leading: UserAvatar(
-                  name: user?.name ?? '',
-                  radius: 18,
-                  imageUrl: user?.avatarUrl,
-                ),
-                title: Text(
-                  user?.name ?? 'User',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  user?.email ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.logout),
-                title: const Text('Sign out'),
-                onTap: () => ref.read(authControllerProvider.notifier).logout(),
-              ),
-              const SizedBox(height: 8),
-            ],
+                Divider(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+                _footer(context, user, rail),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  /// Builds a section header plus its tiles (hidden when collapsed). Admin-only
-  /// items are filtered, and an empty group is dropped entirely.
-  List<Widget> _buildGroup(_NavGroup group, String location, bool isAdmin) {
-    final List<_NavItem> items = <_NavItem>[
-      for (final _NavItem item in group.items)
-        if (!item.adminOnly || isAdmin) item,
-    ];
-    if (items.isEmpty) {
-      return const <Widget>[];
+  Widget _header(BuildContext context, bool rail) {
+    if (rail) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 14),
+        child: Center(child: _CollapseButton(collapsed: true)),
+      );
     }
-    final bool collapsed = _collapsed.contains(group.title);
-    return <Widget>[
-      _SectionHeader(
-        title: group.title,
-        collapsed: collapsed,
-        onTap: () => _toggle(group.title),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 8, 16),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => context.go('/'),
+                child: const RevahLogo(height: 30),
+              ),
+            ),
+          ),
+          if (widget.collapsible) const _CollapseButton(collapsed: false),
+        ],
       ),
-      if (!collapsed)
-        for (final _NavItem item in items)
-          _NavTile(item: item, selected: location == item.location),
-      const SizedBox(height: 6),
+    );
+  }
+
+  Widget _footer(BuildContext context, AuthUser? user, bool rail) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    if (rail) {
+      return Column(
+        children: <Widget>[
+          Tooltip(
+            message: user?.name ?? 'Profile',
+            child: IconButton(
+              onPressed: () => context.push('/profile'),
+              icon: UserAvatar(
+                name: user?.name ?? '',
+                radius: 16,
+                imageUrl: user?.avatarUrl,
+              ),
+            ),
+          ),
+          Tooltip(
+            message: 'Sign out',
+            child: IconButton(
+              onPressed: () =>
+                  ref.read(authControllerProvider.notifier).logout(),
+              icon: const Icon(Icons.logout),
+            ),
+          ),
+        ],
+      );
+    }
+    return Column(
+      children: <Widget>[
+        ListTile(
+          onTap: () => context.push('/profile'),
+          leading: UserAvatar(
+            name: user?.name ?? '',
+            radius: 18,
+            imageUrl: user?.avatarUrl,
+          ),
+          title: Text(
+            user?.name ?? 'User',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(
+            user?.email ?? '',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+        ),
+        ListTile(
+          leading: const Icon(Icons.logout),
+          title: const Text('Sign out'),
+          onTap: () => ref.read(authControllerProvider.notifier).logout(),
+        ),
+      ],
+    );
+  }
+
+  /// Builds the nav list. In rail mode, section headers are replaced by thin
+  /// dividers and tiles render icon-only with tooltips; otherwise groups carry
+  /// collapsible headers. Admin-only items and empty groups are filtered out.
+  List<Widget> _navChildren(String location, bool isAdmin, bool rail) {
+    final List<Widget> children = <Widget>[
+      _NavTile(
+        item: _dashboardItem,
+        selected: location == _dashboardItem.location,
+        collapsed: rail,
+      ),
+      if (!rail) const SizedBox(height: 4),
     ];
+    for (final _NavGroup group in _navGroups) {
+      final List<_NavItem> items = <_NavItem>[
+        for (final _NavItem item in group.items)
+          if (!item.adminOnly || isAdmin) item,
+      ];
+      if (items.isEmpty) {
+        continue;
+      }
+      if (rail) {
+        children.add(const _RailDivider());
+        for (final _NavItem item in items) {
+          children.add(
+            _NavTile(
+              item: item,
+              selected: location == item.location,
+              collapsed: true,
+            ),
+          );
+        }
+      } else {
+        final bool groupCollapsed = _collapsed.contains(group.title);
+        children.add(
+          _SectionHeader(
+            title: group.title,
+            collapsed: groupCollapsed,
+            onTap: () => _toggle(group.title),
+          ),
+        );
+        if (!groupCollapsed) {
+          for (final _NavItem item in items) {
+            children.add(
+              _NavTile(item: item, selected: location == item.location),
+            );
+          }
+        }
+        children.add(const SizedBox(height: 6));
+      }
+    }
+    return children;
+  }
+}
+
+/// A one-tap button that collapses the sidebar to an icon rail (and back).
+class _CollapseButton extends ConsumerWidget {
+  const _CollapseButton({required this.collapsed});
+  final bool collapsed;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return IconButton(
+      tooltip: collapsed ? 'Expand sidebar' : 'Collapse sidebar',
+      icon: Icon(collapsed ? Icons.menu : Icons.menu_open),
+      onPressed: () => ref.read(sidebarCollapsedProvider.notifier).toggle(),
+    );
+  }
+}
+
+/// A hairline separator between icon groups in the collapsed rail.
+class _RailDivider extends StatelessWidget {
+  const _RailDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+      child: Divider(
+        height: 1,
+        color: scheme.outlineVariant.withValues(alpha: 0.5),
+      ),
+    );
   }
 }
 
@@ -372,14 +489,39 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _NavTile extends StatelessWidget {
-  const _NavTile({required this.item, required this.selected});
+  const _NavTile({
+    required this.item,
+    required this.selected,
+    this.collapsed = false,
+  });
   final _NavItem item;
   final bool selected;
+  final bool collapsed;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    return Padding(
+    final Color iconColor = selected ? Colors.white : scheme.onSurfaceVariant;
+    final Widget inner = collapsed
+        ? Center(child: Icon(item.icon, size: 22, color: iconColor))
+        : Row(
+            children: <Widget>[
+              Icon(item.icon, size: 20, color: iconColor),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? Colors.white : scheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          );
+    final Widget tile = Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -402,29 +544,16 @@ class _NavTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             onTap: () => context.go(item.location),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-              child: Row(
-                children: <Widget>[
-                  Icon(
-                    item.icon,
-                    size: 20,
-                    color: selected ? Colors.white : scheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    item.label,
-                    style: TextStyle(
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      color: selected ? Colors.white : scheme.onSurface,
-                    ),
-                  ),
-                ],
-              ),
+              padding: collapsed
+                  ? const EdgeInsets.symmetric(vertical: 12)
+                  : const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+              child: inner,
             ),
           ),
         ),
       ),
     );
+    return collapsed ? Tooltip(message: item.label, child: tile) : tile;
   }
 }
 
