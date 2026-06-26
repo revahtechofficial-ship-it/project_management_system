@@ -6,6 +6,8 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
 import '../../core/widgets/chart_legend.dart';
 import '../../core/widgets/dashboard_card.dart';
+import '../../core/widgets/glass.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/stat_card.dart';
 import '../../core/widgets/task_status_chart.dart';
 import '../../core/widgets/weekly_activity_chart.dart';
@@ -32,29 +34,29 @@ class DashboardPage extends ConsumerWidget {
         ref.watch(authControllerProvider).asData?.value.user?.name ?? '';
     final _Metrics metrics = _Metrics.from(tasks);
 
+    final bool firstLoad = tasksAsync.isLoading && !tasksAsync.hasValue;
     return ListView(
       padding: const EdgeInsets.all(24),
       children: <Widget>[
         _GreetingHeader(name: name),
-        if (tasksAsync.isLoading)
-          const Padding(
-            padding: EdgeInsets.only(top: 16),
-            child: LinearProgressIndicator(minHeight: 2),
-          ),
         if (tasksAsync.hasError)
           Padding(
             padding: const EdgeInsets.only(top: 16),
             child: _ErrorNotice(error: tasksAsync.error!),
           ),
         const SizedBox(height: 20),
-        _KpiSection(metrics: metrics),
-        const SizedBox(height: 20),
-        const _QuickAccessSection(),
-        const SizedBox(height: 20),
-        _ChartsSection(metrics: metrics),
-        const SizedBox(height: 20),
-        _ListsSection(metrics: metrics),
-        const SizedBox(height: 8),
+        if (firstLoad)
+          const _DashboardSkeleton()
+        else ...<Widget>[
+          _KpiSection(metrics: metrics),
+          const SizedBox(height: 20),
+          const _QuickAccessSection(),
+          const SizedBox(height: 20),
+          _ChartsSection(metrics: metrics),
+          const SizedBox(height: 20),
+          _ListsSection(metrics: metrics),
+          const SizedBox(height: 8),
+        ],
       ],
     );
   }
@@ -66,17 +68,23 @@ class _QuickAccessSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<Favorite>> favAsync = ref.watch(favoritesProvider);
+    final AsyncValue<List<Reminder>> remAsync = ref.watch(remindersProvider);
     final List<Favorite> favorites =
-        ref.watch(favoritesProvider).asData?.value ?? const <Favorite>[];
+        favAsync.asData?.value ?? const <Favorite>[];
     final List<Reminder> reminders =
-        (ref.watch(remindersProvider).asData?.value ?? const <Reminder>[])
+        (remAsync.asData?.value ?? const <Reminder>[])
             .where((Reminder r) => !r.sent)
             .toList(growable: false);
+    final bool favLoading = favAsync.isLoading && !favAsync.hasValue;
+    final bool remLoading = remAsync.isLoading && !remAsync.hasValue;
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints c) {
         final bool wide = c.maxWidth >= 720;
-        final Widget favCard = _FavoritesCard(favorites: favorites);
-        final Widget remCard = _RemindersCard(reminders: reminders);
+        final Widget favCard =
+            _FavoritesCard(favorites: favorites, loading: favLoading);
+        final Widget remCard =
+            _RemindersCard(reminders: reminders, loading: remLoading);
         if (!wide) {
           return Column(
             children: <Widget>[favCard, const SizedBox(height: 16), remCard],
@@ -96,15 +104,18 @@ class _QuickAccessSection extends ConsumerWidget {
 }
 
 class _FavoritesCard extends StatelessWidget {
-  const _FavoritesCard({required this.favorites});
+  const _FavoritesCard({required this.favorites, this.loading = false});
 
   final List<Favorite> favorites;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
     return DashboardCard(
       title: 'Favorites',
-      child: favorites.isEmpty
+      child: loading
+          ? const SkeletonLines(lines: 3)
+          : favorites.isEmpty
           ? const _EmptyState(
               icon: Icons.star_border_rounded,
               message: 'Star tasks, projects or pages to pin them here.',
@@ -134,9 +145,10 @@ class _FavoritesCard extends StatelessWidget {
 }
 
 class _RemindersCard extends ConsumerWidget {
-  const _RemindersCard({required this.reminders});
+  const _RemindersCard({required this.reminders, this.loading = false});
 
   final List<Reminder> reminders;
+  final bool loading;
 
   static String _remindLabel(DateTime d) {
     final String hh = d.hour.toString().padLeft(2, '0');
@@ -153,7 +165,9 @@ class _RemindersCard extends ConsumerWidget {
         icon: const Icon(Icons.add, size: 16),
         label: const Text('Add'),
       ),
-      child: reminders.isEmpty
+      child: loading
+          ? const SkeletonLines(lines: 3)
+          : reminders.isEmpty
           ? const _EmptyState(
               icon: Icons.notifications_none_rounded,
               message: 'No reminders yet — add one to get a nudge later.',
@@ -234,6 +248,7 @@ class _KpiSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    void openTasks() => GoRouter.of(context).go('/tasks');
     return StatCardGrid(
       cards: <Widget>[
         StatCard(
@@ -242,6 +257,10 @@ class _KpiSection extends StatelessWidget {
           label: 'Total tasks',
           value: '${metrics.total}',
           footer: 'across all projects',
+          trend: metrics.createdThisWeek > 0
+              ? '+${metrics.createdThisWeek} this week'
+              : null,
+          onTap: openTasks,
         ),
         StatCard(
           icon: Icons.check_circle_rounded,
@@ -249,6 +268,10 @@ class _KpiSection extends StatelessWidget {
           label: 'Completed',
           value: '${metrics.completed}',
           footer: 'done so far',
+          trend: metrics.completedThisWeek > 0
+              ? '+${metrics.completedThisWeek} this week'
+              : null,
+          onTap: openTasks,
         ),
         StatCard(
           icon: Icons.timelapse_rounded,
@@ -256,6 +279,7 @@ class _KpiSection extends StatelessWidget {
           label: 'In progress',
           value: '${metrics.pending}',
           footer: 'still open',
+          onTap: openTasks,
         ),
         StatCard(
           icon: Icons.donut_large_rounded,
@@ -263,6 +287,7 @@ class _KpiSection extends StatelessWidget {
           label: 'Completion rate',
           value: '${metrics.completionRate}%',
           progress: metrics.completionRate / 100,
+          onTap: () => GoRouter.of(context).go('/reports'),
         ),
       ],
     );
@@ -620,6 +645,75 @@ class _ErrorNotice extends StatelessWidget {
   }
 }
 
+/// Shimmering stand-in for the whole dashboard on first load, so the page
+/// never flashes empty (or a transient provider error) before tasks arrive.
+class _DashboardSkeleton extends StatelessWidget {
+  const _DashboardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        StatCardGrid(
+          cards: <Widget>[for (int i = 0; i < 4; i++) const _StatSkeleton()],
+        ),
+        const SizedBox(height: 20),
+        const _CardSkeleton(blockHeight: 240),
+        const SizedBox(height: 16),
+        const _CardSkeleton(lines: 4),
+      ],
+    );
+  }
+}
+
+class _StatSkeleton extends StatelessWidget {
+  const _StatSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const GlassSurface(
+      borderRadius: 18,
+      child: Padding(
+        padding: EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Skeleton(width: 42, height: 42, radius: 12),
+            SizedBox(height: 14),
+            Skeleton(width: 64, height: 26),
+            SizedBox(height: 8),
+            Skeleton(width: 96, height: 13),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CardSkeleton extends StatelessWidget {
+  const _CardSkeleton({this.lines = 3, this.blockHeight});
+  final int lines;
+  final double? blockHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return DashboardCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Skeleton(width: 140, height: 16),
+          const SizedBox(height: 16),
+          if (blockHeight != null)
+            Skeleton(width: double.infinity, height: blockHeight!, radius: 12)
+          else
+            SkeletonLines(lines: lines),
+        ],
+      ),
+    );
+  }
+}
+
 /// Derived dashboard view-model. Feature-scoped (not an API DTO), so it stays
 /// here rather than in `data/models`.
 class _Metrics {
@@ -631,6 +725,8 @@ class _Metrics {
     required this.days,
     required this.created,
     required this.done,
+    required this.createdThisWeek,
+    required this.completedThisWeek,
     required this.myTasks,
     required this.recent,
   });
@@ -642,6 +738,8 @@ class _Metrics {
   final List<String> days;
   final List<double> created;
   final List<double> done;
+  final int createdThisWeek;
+  final int completedThisWeek;
   final List<Task> myTasks;
   final List<Task> recent;
 
@@ -673,6 +771,11 @@ class _Metrics {
       );
     }
 
+    final int createdThisWeek =
+        created.fold(0, (int a, double b) => a + b.toInt());
+    final int completedThisWeek =
+        done.fold(0, (int a, double b) => a + b.toInt());
+
     final List<Task> myTasks = tasks.where((Task t) => !t.done).toList()
       ..sort((Task a, Task b) => b.updatedAt.compareTo(a.updatedAt));
     final List<Task> recent = <Task>[...tasks]
@@ -686,6 +789,8 @@ class _Metrics {
       days: days,
       created: created,
       done: done,
+      createdThisWeek: createdThisWeek,
+      completedThisWeek: completedThisWeek,
       myTasks: myTasks,
       recent: recent,
     );

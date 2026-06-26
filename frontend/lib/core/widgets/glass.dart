@@ -120,9 +120,9 @@ class GlassSurface extends StatelessWidget {
         boxShadow: shadow
             ? <BoxShadow>[
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: dark ? 0.28 : 0.06),
-                  blurRadius: 24,
-                  offset: const Offset(0, 12),
+                  color: Colors.black.withValues(alpha: dark ? 0.30 : 0.09),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
                 ),
               ]
             : null,
@@ -138,8 +138,8 @@ class GlassSurface extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: <Color>[
-                  baseTint.withValues(alpha: dark ? 0.55 : 0.74),
-                  baseTint.withValues(alpha: dark ? 0.34 : 0.55),
+                  baseTint.withValues(alpha: dark ? 0.55 : 0.82),
+                  baseTint.withValues(alpha: dark ? 0.34 : 0.66),
                 ],
               ),
               border: border ??

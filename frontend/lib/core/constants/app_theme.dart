@@ -13,9 +13,19 @@ class AppTheme {
 
   static ThemeData _build(Brightness brightness) {
     final bool dark = brightness == Brightness.dark;
+    // Darken (light) / lighten (dark) the muted text + borders that come out of
+    // the seed so secondary copy and card edges read clearly — the defaults are
+    // too low-contrast on the translucent glass surfaces.
     final ColorScheme scheme = ColorScheme.fromSeed(
       seedColor: AppColors.brand,
       brightness: brightness,
+    ).copyWith(
+      onSurfaceVariant: dark
+          ? const Color(0xFFB4BCCC)
+          : const Color(0xFF4B5563),
+      outlineVariant: dark
+          ? const Color(0xFF333B4F)
+          : const Color(0xFFC4CAD8),
     );
     final Color base =
         dark ? const Color(0xFF0B0F1C) : const Color(0xFFF1F3FC);

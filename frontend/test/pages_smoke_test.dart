@@ -50,6 +50,9 @@ Future<void> _pump(WidgetTester tester, Widget page) async {
       child: MaterialApp(home: Scaffold(body: page)),
     ),
   );
+  // First pump flushes the overridden provider futures (loading → data) so
+  // pages that show a skeleton while loading settle onto their real content.
+  await tester.pump();
   await tester.pump(const Duration(milliseconds: 50));
   expect(tester.takeException(), isNull);
 }
