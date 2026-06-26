@@ -632,6 +632,8 @@ func (h *PageHandler) maybeCreateTaskFromForm(ctx context.Context, page db.GetPa
 		Recurrence:  "none",
 		Priority:    priorityOrNone(def.CreateTask.Priority),
 		Tags:        []string{},
+		IssueType:   "task",
+		Severity:    "none",
 	})
 	if err != nil {
 		return

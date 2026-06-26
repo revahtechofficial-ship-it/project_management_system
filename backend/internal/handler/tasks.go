@@ -84,6 +84,9 @@ type taskResponse struct {
 	EstimateMinutes  int32      `json:"estimate_minutes"`
 	SprintID         *int64     `json:"sprint_id"`
 	Points           int32      `json:"points"`
+	IssueType        string     `json:"issue_type"`
+	Severity         string     `json:"severity"`
+	ReleaseID        *int64     `json:"release_id"`
 	AssigneeIDs      []int64    `json:"assignee_ids"`
 	AssigneeNames    []string   `json:"assignee_names"`
 }
@@ -110,6 +113,9 @@ func taskFromModel(t db.Task) taskResponse {
 		EstimateMinutes: t.EstimateMinutes,
 		SprintID:        t.SprintID,
 		Points:          t.Points,
+		IssueType:       t.IssueType,
+		Severity:        t.Severity,
+		ReleaseID:       t.ReleaseID,
 		AssigneeIDs:     []int64{},
 		AssigneeNames:   []string{},
 	}
@@ -141,6 +147,9 @@ func taskFromRow(r db.ListTasksRow) taskResponse {
 		EstimateMinutes:  r.EstimateMinutes,
 		SprintID:         r.SprintID,
 		Points:           r.Points,
+		IssueType:        r.IssueType,
+		Severity:         r.Severity,
+		ReleaseID:        r.ReleaseID,
 		AssigneeIDs:      r.AssigneeIds,
 		AssigneeNames:    r.AssigneeNames,
 	}
@@ -340,6 +349,9 @@ func (h *TaskHandler) spawnNext(ctx context.Context, t db.Task) {
 		EstimateMinutes: t.EstimateMinutes,
 		SprintID:        t.SprintID,
 		Points:          t.Points,
+		IssueType:       t.IssueType,
+		Severity:        t.Severity,
+		ReleaseID:       t.ReleaseID,
 	})
 	if err != nil {
 		return
@@ -385,6 +397,27 @@ type taskBody struct {
 	EstimateMinutes int32    `json:"estimate_minutes"`
 	SprintID        *int64   `json:"sprint_id"`
 	Points          int32    `json:"points"`
+	IssueType       string   `json:"issue_type"`
+	Severity        string   `json:"severity"`
+	ReleaseID       *int64   `json:"release_id"`
+}
+
+func issueTypeOrDefault(s string) string {
+	switch s {
+	case "task", "bug", "story", "epic":
+		return s
+	default:
+		return "task"
+	}
+}
+
+func severityOrNone(s string) string {
+	switch s {
+	case "none", "minor", "major", "critical":
+		return s
+	default:
+		return "none"
+	}
 }
 
 func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
@@ -433,6 +466,9 @@ func (h *TaskHandler) create(w http.ResponseWriter, r *http.Request) {
 		EstimateMinutes: clampEstimate(body.EstimateMinutes),
 		SprintID:        body.SprintID,
 		Points:          clampPoints(body.Points),
+		IssueType:       issueTypeOrDefault(body.IssueType),
+		Severity:        severityOrNone(body.Severity),
+		ReleaseID:       body.ReleaseID,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -507,6 +543,9 @@ func (h *TaskHandler) update(w http.ResponseWriter, r *http.Request) {
 		EstimateMinutes: clampEstimate(body.EstimateMinutes),
 		SprintID:        body.SprintID,
 		Points:          clampPoints(body.Points),
+		IssueType:       issueTypeOrDefault(body.IssueType),
+		Severity:        severityOrNone(body.Severity),
+		ReleaseID:       body.ReleaseID,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, errors.New("task not found"))

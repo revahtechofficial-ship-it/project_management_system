@@ -133,6 +133,7 @@ func main() {
 		api.Mount("/api/v1/task-templates", handler.NewTaskTemplateHandler(queries).Routes())
 		api.Mount("/api/v1/project-templates", handler.NewProjectTemplateHandler(queries).Routes())
 		api.Mount("/api/v1/sprints", handler.NewSprintHandler(queries).Routes())
+		api.Mount("/api/v1/releases", handler.NewReleaseHandler(queries).Routes())
 		api.Mount("/api/v1/spaces", handler.NewSpaceHandler(queries).Routes())
 		api.Mount("/api/v1/pages", handler.NewPageHandler(queries, chatHub).Routes())
 		api.Mount("/api/v1/dashboards", handler.NewDashboardHandler(queries).Routes())

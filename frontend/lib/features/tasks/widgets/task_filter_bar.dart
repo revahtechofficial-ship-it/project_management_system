@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/enums/issue_type.dart';
 import '../../../data/enums/task_priority.dart';
 import '../../../data/models/saved_filter.dart';
 import '../../../data/models/task.dart';
@@ -13,19 +14,27 @@ import '../providers/statuses_providers.dart';
 class TaskFilter {
   final Set<String> statusKeys;
   final Set<String> priorities;
+  final Set<String> issueTypes;
   final bool hideDone;
 
   const TaskFilter({
     this.statusKeys = const <String>{},
     this.priorities = const <String>{},
+    this.issueTypes = const <String>{},
     this.hideDone = false,
   });
 
   bool get isEmpty =>
-      statusKeys.isEmpty && priorities.isEmpty && !hideDone;
+      statusKeys.isEmpty &&
+      priorities.isEmpty &&
+      issueTypes.isEmpty &&
+      !hideDone;
 
   int get activeCount =>
-      statusKeys.length + priorities.length + (hideDone ? 1 : 0);
+      statusKeys.length +
+      priorities.length +
+      issueTypes.length +
+      (hideDone ? 1 : 0);
 
   bool matches(Task t) {
     if (hideDone && t.done) {
@@ -37,6 +46,9 @@ class TaskFilter {
     if (priorities.isNotEmpty && !priorities.contains(t.priority.toJson())) {
       return false;
     }
+    if (issueTypes.isNotEmpty && !issueTypes.contains(t.issueType.toJson())) {
+      return false;
+    }
     return true;
   }
 
@@ -46,16 +58,19 @@ class TaskFilter {
   TaskFilter copyWith({
     Set<String>? statusKeys,
     Set<String>? priorities,
+    Set<String>? issueTypes,
     bool? hideDone,
   }) => TaskFilter(
     statusKeys: statusKeys ?? this.statusKeys,
     priorities: priorities ?? this.priorities,
+    issueTypes: issueTypes ?? this.issueTypes,
     hideDone: hideDone ?? this.hideDone,
   );
 
   Map<String, dynamic> toConfig() => <String, dynamic>{
     'statuses': statusKeys.toList(),
     'priorities': priorities.toList(),
+    'issue_types': issueTypes.toList(),
     'hide_done': hideDone,
   };
 
@@ -66,6 +81,10 @@ class TaskFilter {
     },
     priorities: <String>{
       for (final dynamic e in c['priorities'] as List<dynamic>? ?? <dynamic>[])
+        '$e',
+    },
+    issueTypes: <String>{
+      for (final dynamic e in c['issue_types'] as List<dynamic>? ?? <dynamic>[])
         '$e',
     },
     hideDone: c['hide_done'] as bool? ?? false,
@@ -99,6 +118,18 @@ class TaskFilterButton extends ConsumerWidget {
               final Set<String> next = <String>{...filter.statusKeys};
               v ? next.add(s.key) : next.remove(s.key);
               onChanged(filter.copyWith(statusKeys: next));
+            },
+          ),
+        const Divider(height: 1),
+        _header('Type'),
+        for (final IssueType it in IssueType.values)
+          _check(
+            label: it.label,
+            value: filter.issueTypes.contains(it.toJson()),
+            onChanged: (bool v) {
+              final Set<String> next = <String>{...filter.issueTypes};
+              v ? next.add(it.toJson()) : next.remove(it.toJson());
+              onChanged(filter.copyWith(issueTypes: next));
             },
           ),
         const Divider(height: 1),

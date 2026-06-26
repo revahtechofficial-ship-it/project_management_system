@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import '../enums/issue_type.dart';
 import '../enums/recurrence_type.dart';
 import '../enums/task_priority.dart';
+import '../enums/task_severity.dart';
 import '../enums/task_status.dart';
 
 /// A task, mirroring the backend `tasks` table (plus the joined project and
@@ -35,6 +37,9 @@ class Task {
   final int estimateMinutes;
   final int? sprintId;
   final int points;
+  final IssueType issueType;
+  final TaskSeverity severity;
+  final int? releaseId;
   final List<int> assigneeIds;
   final List<String> assigneeNames;
 
@@ -64,6 +69,9 @@ class Task {
     this.estimateMinutes = 0,
     this.sprintId,
     this.points = 0,
+    this.issueType = IssueType.task,
+    this.severity = TaskSeverity.none,
+    this.releaseId,
     this.assigneeIds = const <int>[],
     this.assigneeNames = const <String>[],
   });
@@ -133,6 +141,9 @@ class Task {
     estimateMinutes: json['estimate_minutes'] as int? ?? 0,
     sprintId: json['sprint_id'] as int?,
     points: json['points'] as int? ?? 0,
+    issueType: IssueType.fromJson(json['issue_type'] as String? ?? 'task'),
+    severity: TaskSeverity.fromJson(json['severity'] as String? ?? 'none'),
+    releaseId: json['release_id'] as int?,
     assigneeIds:
         (json['assignee_ids'] as List<dynamic>?)
             ?.map((dynamic e) => (e as num).toInt())
@@ -171,6 +182,9 @@ class Task {
     'estimate_minutes': estimateMinutes,
     'sprint_id': sprintId,
     'points': points,
+    'issue_type': issueType.toJson(),
+    'severity': severity.toJson(),
+    'release_id': releaseId,
     'assignee_ids': assigneeIds,
     'assignee_names': assigneeNames,
   };
@@ -216,6 +230,9 @@ class Task {
           other.estimateMinutes == estimateMinutes &&
           other.sprintId == sprintId &&
           other.points == points &&
+          other.issueType == issueType &&
+          other.severity == severity &&
+          other.releaseId == releaseId &&
           listEquals(other.assigneeIds, assigneeIds) &&
           listEquals(other.assigneeNames, assigneeNames) &&
           listEquals(other.tags, tags);
@@ -246,6 +263,9 @@ class Task {
     estimateMinutes,
     sprintId,
     points,
+    issueType,
+    severity,
+    releaseId,
     Object.hashAll(assigneeIds),
     Object.hashAll(assigneeNames),
     Object.hashAll(tags),

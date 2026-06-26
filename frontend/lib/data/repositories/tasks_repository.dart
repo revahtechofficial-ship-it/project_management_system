@@ -2,8 +2,10 @@ import 'package:dio/dio.dart';
 
 import '../../core/utils/api_exception.dart';
 import '../../core/utils/date_format.dart';
+import '../enums/issue_type.dart';
 import '../enums/recurrence_type.dart';
 import '../enums/task_priority.dart';
+import '../enums/task_severity.dart';
 import '../enums/task_status.dart';
 import '../models/task.dart';
 
@@ -42,6 +44,9 @@ class TasksRepository {
     List<int>? assigneeIds,
     int? sprintId,
     int points = 0,
+    IssueType issueType = IssueType.task,
+    TaskSeverity severity = TaskSeverity.none,
+    int? releaseId,
   }) async {
     final Response<Map<String, dynamic>> res = await _dio
         .post<Map<String, dynamic>>(
@@ -62,6 +67,9 @@ class TasksRepository {
             'estimate_minutes': estimateMinutes,
             'sprint_id': sprintId,
             'points': points,
+            'issue_type': issueType.toJson(),
+            'severity': severity.toJson(),
+            'release_id': releaseId,
           },
         );
     return _taskFrom(res);
@@ -85,6 +93,9 @@ class TasksRepository {
     List<int>? assigneeIds,
     int? sprintId,
     int points = 0,
+    IssueType issueType = IssueType.task,
+    TaskSeverity severity = TaskSeverity.none,
+    int? releaseId,
   }) async {
     final Response<Map<String, dynamic>> res = await _dio
         .put<Map<String, dynamic>>(
@@ -104,6 +115,9 @@ class TasksRepository {
             'estimate_minutes': estimateMinutes,
             'sprint_id': sprintId,
             'points': points,
+            'issue_type': issueType.toJson(),
+            'severity': severity.toJson(),
+            'release_id': releaseId,
           },
         );
     return _taskFrom(res);

@@ -295,6 +295,18 @@ type ProjectTemplate struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type Release struct {
+	ID         int64       `json:"id"`
+	Name       string      `json:"name"`
+	Version    string      `json:"version"`
+	Status     string      `json:"status"`
+	TargetDate pgtype.Date `json:"target_date"`
+	Notes      string      `json:"notes"`
+	CreatedBy  *int64      `json:"created_by"`
+	CreatedAt  time.Time   `json:"created_at"`
+	UpdatedAt  time.Time   `json:"updated_at"`
+}
+
 type Reminder struct {
 	ID        int64     `json:"id"`
 	UserID    int64     `json:"user_id"`
@@ -355,6 +367,9 @@ type Task struct {
 	EstimateMinutes int32              `json:"estimate_minutes"`
 	SprintID        *int64             `json:"sprint_id"`
 	Points          int32              `json:"points"`
+	IssueType       string             `json:"issue_type"`
+	Severity        string             `json:"severity"`
+	ReleaseID       *int64             `json:"release_id"`
 }
 
 type TaskAssignee struct {

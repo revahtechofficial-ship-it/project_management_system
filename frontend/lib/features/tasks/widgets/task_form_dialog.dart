@@ -6,9 +6,13 @@ import '../../../core/utils/date_format.dart';
 import '../../../core/widgets/favorite_button.dart';
 import '../../../core/widgets/user_avatar.dart';
 import '../../reminders/widgets/reminder_dialog.dart';
+import '../../releases/providers/releases_providers.dart';
 import '../../../data/enums/dependency_type.dart';
+import '../../../data/enums/issue_type.dart';
 import '../../../data/enums/recurrence_type.dart';
 import '../../../data/enums/task_priority.dart';
+import '../../../data/enums/task_severity.dart';
+import '../../../data/models/release.dart';
 import '../../../data/models/checklist_item.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/sprint.dart';
@@ -59,6 +63,9 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
   late final TextEditingController _estimate;
   late final TextEditingController _points;
   int? _sprintId;
+  IssueType _issueType = IssueType.task;
+  TaskSeverity _severity = TaskSeverity.none;
+  int? _releaseId;
   bool _saving = false;
   String? _error;
 
@@ -93,6 +100,9 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
     _sprintId = t?.sprintId;
     final int pts = t?.points ?? 0;
     _points = TextEditingController(text: pts > 0 ? '$pts' : '');
+    _issueType = t?.issueType ?? IssueType.task;
+    _severity = t?.severity ?? TaskSeverity.none;
+    _releaseId = t?.releaseId;
   }
 
   /// Parses the story-points field (0 when blank/invalid).
@@ -177,6 +187,9 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           estimateMinutes: _estimateMinutes(),
           points: _pointsValue(),
           sprintId: _sprintId,
+          issueType: _issueType,
+          severity: _severity,
+          releaseId: _releaseId,
         );
       } else {
         await repo.create(
@@ -193,6 +206,9 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           estimateMinutes: _estimateMinutes(),
           points: _pointsValue(),
           sprintId: _sprintId,
+          issueType: _issueType,
+          severity: _severity,
+          releaseId: _releaseId,
         );
       }
       if (mounted) {
@@ -535,6 +551,57 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                 Row(
                   children: <Widget>[
                     Expanded(
+                      child: DropdownButtonFormField<IssueType>(
+                        initialValue: _issueType,
+                        decoration: InputDecoration(
+                          labelText: 'Type',
+                          prefixIcon: Icon(
+                            _issueType.icon,
+                            size: 20,
+                            color: _issueType.color,
+                          ),
+                        ),
+                        items: <DropdownMenuItem<IssueType>>[
+                          for (final IssueType t in IssueType.values)
+                            DropdownMenuItem<IssueType>(
+                              value: t,
+                              child: Text(t.label),
+                            ),
+                        ],
+                        onChanged: (IssueType? t) =>
+                            setState(() => _issueType = t ?? IssueType.task),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _ReleaseField(
+                        value: _releaseId,
+                        onChanged: (int? id) =>
+                            setState(() => _releaseId = id),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_issueType == IssueType.bug) ...<Widget>[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<TaskSeverity>(
+                    initialValue: _severity,
+                    decoration: const InputDecoration(labelText: 'Severity'),
+                    items: <DropdownMenuItem<TaskSeverity>>[
+                      for (final TaskSeverity s in TaskSeverity.values)
+                        DropdownMenuItem<TaskSeverity>(
+                          value: s,
+                          child: Text(s.label),
+                        ),
+                    ],
+                    onChanged: (TaskSeverity? s) =>
+                        setState(() => _severity = s ?? TaskSeverity.none),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  children: <Widget>[
+                    Expanded(
                       child: _DateField(
                         label: 'Start',
                         value: _start,
@@ -754,6 +821,42 @@ class _DateField extends StatelessWidget {
         ),
         child: Text(value == null ? 'None' : shortDate(value!)),
       ),
+    );
+  }
+}
+
+/// A dropdown that assigns the task to a release (or none).
+class _ReleaseField extends ConsumerWidget {
+  const _ReleaseField({required this.value, required this.onChanged});
+
+  final int? value;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final List<Release> releases =
+        ref.watch(releasesProvider).asData?.value ?? const <Release>[];
+    final bool exists = value == null ||
+        releases.any((Release r) => r.id == value);
+    return DropdownButtonFormField<int?>(
+      initialValue: exists ? value : null,
+      decoration: const InputDecoration(
+        labelText: 'Release',
+        prefixIcon: Icon(Icons.rocket_launch_outlined, size: 20),
+      ),
+      items: <DropdownMenuItem<int?>>[
+        const DropdownMenuItem<int?>(child: Text('None')),
+        for (final Release r in releases)
+          DropdownMenuItem<int?>(
+            value: r.id,
+            child: Text(
+              r.displayName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
+      onChanged: onChanged,
     );
   }
 }

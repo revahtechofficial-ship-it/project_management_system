@@ -6,6 +6,7 @@ import '../../core/utils/date_format.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/status_pill.dart';
 import '../../core/widgets/user_avatar.dart';
+import '../../data/enums/issue_type.dart';
 import '../../data/enums/task_priority.dart';
 import '../../data/enums/task_view.dart';
 import '../../data/models/task.dart';
@@ -318,6 +319,18 @@ class _TaskTile extends ConsumerWidget {
           runSpacing: 4,
           children: <Widget>[
             StatusPill(label: ws.label, color: ws.color),
+            if (task.issueType != IssueType.task)
+              _Chip(
+                icon: task.issueType.icon,
+                label: task.issueType.label,
+                color: task.issueType.color,
+              ),
+            if (task.issueType == IssueType.bug && task.severity.isSet)
+              _Chip(
+                icon: Icons.priority_high,
+                label: task.severity.label,
+                color: task.severity.color,
+              ),
             if (task.priority.isSet)
               _Chip(
                 icon: Icons.flag_rounded,
