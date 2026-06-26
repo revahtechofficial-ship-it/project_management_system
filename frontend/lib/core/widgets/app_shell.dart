@@ -12,6 +12,7 @@ import '../../features/notifications/providers/notifications_providers.dart';
 import '../../features/search/widgets/command_palette.dart';
 import '../../features/search/widgets/shortcuts_help.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../constants/app_colors.dart';
 import 'glass.dart';
 import 'revah_logo.dart';
@@ -145,6 +146,7 @@ class AppShell extends ConsumerWidget {
               title: const Text('Revah Management System'),
               actions: const <Widget>[
                 _SearchButton(iconOnly: true),
+                _ThemeToggleButton(),
                 _NotificationsButton(),
                 _AvatarMenu(),
               ],
@@ -442,6 +444,8 @@ class _TopBar extends StatelessWidget {
             children: const <Widget>[
               _SearchButton(),
               Spacer(),
+              _ThemeToggleButton(),
+              SizedBox(width: 4),
               _NotificationsButton(),
               SizedBox(width: 8),
               _AvatarMenu(),
@@ -517,6 +521,31 @@ class _KbdHint extends StatelessWidget {
           color: scheme.onSurfaceVariant,
         ),
       ),
+    );
+  }
+}
+
+/// A one-tap light/dark switch, always visible in the top bar. Resolves the
+/// effective brightness (following the OS when on System) and flips to the
+/// opposite explicit mode — the full System/Light/Dark control lives in
+/// Settings.
+class _ThemeToggleButton extends ConsumerWidget {
+  const _ThemeToggleButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ThemeMode mode = ref.watch(themeModeProvider);
+    final bool isDark = mode == ThemeMode.system
+        ? MediaQuery.platformBrightnessOf(context) == Brightness.dark
+        : mode == ThemeMode.dark;
+    return IconButton(
+      tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+      icon: Icon(
+        isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+      ),
+      onPressed: () => ref
+          .read(themeModeProvider.notifier)
+          .setMode(isDark ? ThemeMode.light : ThemeMode.dark),
     );
   }
 }

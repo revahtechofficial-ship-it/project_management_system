@@ -102,13 +102,12 @@ class _FavoritesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
     return DashboardCard(
       title: 'Favorites',
       child: favorites.isEmpty
-          ? Text(
-              'Star tasks, projects or pages to pin them here.',
-              style: TextStyle(color: scheme.onSurfaceVariant),
+          ? const _EmptyState(
+              icon: Icons.star_border_rounded,
+              message: 'Star tasks, projects or pages to pin them here.',
             )
           : Column(
               children: <Widget>[
@@ -147,7 +146,6 @@ class _RemindersCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
     return DashboardCard(
       title: 'Reminders',
       trailing: TextButton.icon(
@@ -156,9 +154,9 @@ class _RemindersCard extends ConsumerWidget {
         label: const Text('Add'),
       ),
       child: reminders.isEmpty
-          ? Text(
-              'No reminders set. Add one to get a nudge later.',
-              style: TextStyle(color: scheme.onSurfaceVariant),
+          ? const _EmptyState(
+              icon: Icons.notifications_none_rounded,
+              message: 'No reminders yet — add one to get a nudge later.',
             )
           : Column(
               children: <Widget>[
@@ -277,49 +275,66 @@ class _ChartsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool hasActivity =
+        metrics.created.any((double d) => d > 0) ||
+        metrics.done.any((double d) => d > 0);
+    final bool hasTasks = metrics.total > 0;
+
     final Widget weekly = DashboardCard(
       title: 'Weekly activity',
-      child: Column(
-        children: <Widget>[
-          SizedBox(
-            height: 220,
-            child: WeeklyActivityChart(
-              days: metrics.days,
-              created: metrics.created,
-              completed: metrics.done,
+      child: hasActivity
+          ? Column(
+              children: <Widget>[
+                SizedBox(
+                  height: 220,
+                  child: WeeklyActivityChart(
+                    days: metrics.days,
+                    created: metrics.created,
+                    completed: metrics.done,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const ChartLegend(
+                  items: <LegendItem>[
+                    LegendItem(AppColors.brand, 'Created'),
+                    LegendItem(AppColors.teal, 'Completed'),
+                  ],
+                ),
+              ],
+            )
+          : const _ChartPlaceholder(
+              icon: Icons.show_chart_rounded,
+              message: 'No activity in the last 7 days.\n'
+                  'Create or complete a task to see trends here.',
             ),
-          ),
-          const SizedBox(height: 8),
-          const ChartLegend(
-            items: <LegendItem>[
-              LegendItem(AppColors.brand, 'Created'),
-              LegendItem(AppColors.teal, 'Completed'),
-            ],
-          ),
-        ],
-      ),
     );
 
     final Widget status = DashboardCard(
       title: 'Task status',
-      child: Column(
-        children: <Widget>[
-          SizedBox(
-            height: 220,
-            child: TaskStatusChart(
-              completed: metrics.completed,
-              pending: metrics.pending,
+      child: hasTasks
+          ? Column(
+              children: <Widget>[
+                SizedBox(
+                  height: 220,
+                  child: TaskStatusChart(
+                    completed: metrics.completed,
+                    pending: metrics.pending,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const ChartLegend(
+                  items: <LegendItem>[
+                    LegendItem(AppColors.teal, 'Completed'),
+                    LegendItem(AppColors.brand, 'Pending'),
+                  ],
+                ),
+              ],
+            )
+          : const _ChartPlaceholder(
+              icon: Icons.donut_large_rounded,
+              message: 'No tasks yet.\n'
+                  'Add your first task to track completion.',
             ),
-          ),
-          const SizedBox(height: 8),
-          const ChartLegend(
-            items: <LegendItem>[
-              LegendItem(AppColors.teal, 'Completed'),
-              LegendItem(AppColors.brand, 'Pending'),
-            ],
-          ),
-        ],
-      ),
     );
 
     return LayoutBuilder(
@@ -507,6 +522,43 @@ class _ActivityTile extends StatelessWidget {
             style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A fixed-height empty state for a chart card, so the card keeps a chart-like
+/// footprint (and aligns with its neighbour) when there's no data to plot.
+class _ChartPlaceholder extends StatelessWidget {
+  const _ChartPlaceholder({required this.icon, required this.message});
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 240,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 30, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: scheme.onSurfaceVariant, height: 1.4),
+            ),
+          ],
+        ),
       ),
     );
   }
