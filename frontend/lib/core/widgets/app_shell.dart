@@ -269,27 +269,32 @@ class _SidebarState extends ConsumerState<_Sidebar> {
 
   Widget _header(BuildContext context, bool rail) {
     if (rail) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 14),
+      return const SizedBox(
+        height: 64,
         child: Center(child: _CollapseButton(collapsed: true)),
       );
     }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 8, 16),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () => context.go('/'),
-                child: const RevahLogo(height: 30),
+    // Fixed height aligns the wordmark with the top bar and gives it room to
+    // breathe instead of hugging the window edge.
+    return SizedBox(
+      height: 64,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 20, right: 8),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => context.go('/'),
+                  child: const RevahLogo(height: 28),
+                ),
               ),
             ),
-          ),
-          if (widget.collapsible) const _CollapseButton(collapsed: false),
-        ],
+            if (widget.collapsible) const _CollapseButton(collapsed: false),
+          ],
+        ),
       ),
     );
   }
@@ -542,6 +547,11 @@ class _NavTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
+            // Selected tiles already have a gradient fill; give inactive ones a
+            // subtle hover so the list feels responsive.
+            hoverColor: selected
+                ? Colors.transparent
+                : scheme.onSurface.withValues(alpha: 0.06),
             onTap: () => context.go(item.location),
             child: Padding(
               padding: collapsed
@@ -554,6 +564,52 @@ class _NavTile extends StatelessWidget {
       ),
     );
     return collapsed ? Tooltip(message: item.label, child: tile) : tile;
+  }
+}
+
+/// Resolves a human page title for the current route from the nav catalog,
+/// with a few fallbacks for routes that have no sidebar entry. Returns '' for
+/// the dashboard (its greeting already names the page).
+String _pageTitleFor(String location) {
+  if (location == '/') {
+    return '';
+  }
+  for (final _NavItem item in <_NavItem>[
+    _dashboardItem,
+    for (final _NavGroup g in _navGroups) ...g.items,
+  ]) {
+    if (item.location == location) {
+      return item.label;
+    }
+  }
+  switch (location) {
+    case '/profile':
+      return 'Profile';
+    case '/vikunja':
+      return 'Vikunja';
+    default:
+      return '';
+  }
+}
+
+/// The current page's title, shown at the left of the top bar on non-dashboard
+/// routes so users always know where they are.
+class _PageTitle extends StatelessWidget {
+  const _PageTitle();
+
+  @override
+  Widget build(BuildContext context) {
+    final String title = _pageTitleFor(GoRouterState.of(context).matchedLocation);
+    if (title.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(right: 16),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+      ),
+    );
   }
 }
 
@@ -571,6 +627,7 @@ class _TopBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: const <Widget>[
+              _PageTitle(),
               _SearchButton(),
               Spacer(),
               _ThemeToggleButton(),

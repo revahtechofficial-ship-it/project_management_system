@@ -55,6 +55,8 @@ class DashboardPage extends ConsumerWidget {
           _ChartsSection(metrics: metrics),
           const SizedBox(height: 20),
           _ListsSection(metrics: metrics),
+          const SizedBox(height: 20),
+          _SecondaryListsSection(metrics: metrics),
           const SizedBox(height: 8),
         ],
       ],
@@ -232,12 +234,99 @@ class _GreetingHeader extends StatelessWidget {
             ),
           ],
         ),
-        FilledButton.icon(
-          onPressed: () => GoRouter.of(context).go('/tasks'),
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('New task'),
+        const _QuickAddButton(),
+      ],
+    );
+  }
+}
+
+/// A primary "Quick add" control that opens a menu to create a task, project,
+/// page or reminder — replacing the lone "New task" button.
+class _QuickAddButton extends StatelessWidget {
+  const _QuickAddButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: 'Quick add',
+      position: PopupMenuPosition.under,
+      onSelected: (String v) {
+        switch (v) {
+          case 'task':
+            GoRouter.of(context).go('/tasks');
+          case 'project':
+            GoRouter.of(context).go('/projects');
+          case 'page':
+            GoRouter.of(context).go('/pages');
+          case 'reminder':
+            showReminderDialog(context);
+        }
+      },
+      itemBuilder: (BuildContext context) => const <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+          value: 'task',
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.check_circle_outline),
+            title: Text('New task'),
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'project',
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.folder_outlined),
+            title: Text('New project'),
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'page',
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.description_outlined),
+            title: Text('New page'),
+          ),
+        ),
+        PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: 'reminder',
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.notifications_active_outlined),
+            title: Text('Set reminder'),
+          ),
         ),
       ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: AppColors.brandGradient,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: AppColors.brand.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.add, size: 18, color: Colors.white),
+            SizedBox(width: 6),
+            Text(
+              'Quick add',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(width: 2),
+            Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.white),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -418,6 +507,145 @@ class _ListsSection extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// A second content row — upcoming deadlines and the busiest projects — so the
+/// dashboard fills the page instead of trailing off into empty space.
+class _SecondaryListsSection extends StatelessWidget {
+  const _SecondaryListsSection({required this.metrics});
+  final _Metrics metrics;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget deadlines = DashboardCard(
+      title: 'Upcoming deadlines',
+      trailing: TextButton(
+        onPressed: () => GoRouter.of(context).go('/tasks'),
+        child: const Text('View all'),
+      ),
+      child: metrics.upcoming.isEmpty
+          ? const _EmptyState(
+              icon: Icons.event_available_rounded,
+              message: 'No due dates set. Add one to see deadlines here.',
+            )
+          : Column(
+              children: <Widget>[
+                for (final Task t in metrics.upcoming.take(5))
+                  _DeadlineTile(task: t),
+              ],
+            ),
+    );
+
+    final Widget projects = DashboardCard(
+      title: 'Active projects',
+      trailing: TextButton(
+        onPressed: () => GoRouter.of(context).go('/projects'),
+        child: const Text('View all'),
+      ),
+      child: metrics.projectLoad.isEmpty
+          ? const _EmptyState(
+              icon: Icons.folder_open_rounded,
+              message: 'No open work grouped by project yet.',
+            )
+          : Column(
+              children: <Widget>[
+                for (final ({String name, int open}) p
+                    in metrics.projectLoad.take(5))
+                  _ProjectLoadTile(name: p.name, open: p.open),
+              ],
+            ),
+    );
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        if (constraints.maxWidth < 920) {
+          return Column(
+            children: <Widget>[deadlines, const SizedBox(height: 16), projects],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(child: deadlines),
+            const SizedBox(width: 16),
+            Expanded(child: projects),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DeadlineTile extends StatelessWidget {
+  const _DeadlineTile({required this.task});
+  final Task task;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final DateTime due = task.dueDate!.toLocal();
+    final DateTime now = DateTime.now();
+    final DateTime todayStart = DateTime(now.year, now.month, now.day);
+    final bool overdue = due.isBefore(todayStart);
+    final Color tone = overdue ? AppColors.rose : scheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: <Widget>[
+          Icon(
+            overdue ? Icons.warning_amber_rounded : Icons.schedule_rounded,
+            size: 18,
+            color: tone,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              task.title.isEmpty ? 'Untitled task' : task.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            shortDate(due),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: overdue ? FontWeight.w700 : FontWeight.w500,
+              color: tone,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProjectLoadTile extends StatelessWidget {
+  const _ProjectLoadTile({required this.name, required this.open});
+  final String name;
+  final int open;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.folder_outlined, size: 18, color: AppColors.brand),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '$open open',
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -729,6 +957,8 @@ class _Metrics {
     required this.completedThisWeek,
     required this.myTasks,
     required this.recent,
+    required this.upcoming,
+    required this.projectLoad,
   });
 
   final int total;
@@ -742,6 +972,8 @@ class _Metrics {
   final int completedThisWeek;
   final List<Task> myTasks;
   final List<Task> recent;
+  final List<Task> upcoming;
+  final List<({String name, int open})> projectLoad;
 
   factory _Metrics.from(List<Task> tasks) {
     final int completed = tasks.where((Task t) => t.done).length;
@@ -781,6 +1013,26 @@ class _Metrics {
     final List<Task> recent = <Task>[...tasks]
       ..sort((Task a, Task b) => b.updatedAt.compareTo(a.updatedAt));
 
+    final List<Task> upcoming =
+        tasks
+            .where((Task t) => !t.done && t.dueDate != null)
+            .toList()
+          ..sort((Task a, Task b) => a.dueDate!.compareTo(b.dueDate!));
+
+    final Map<String, int> load = <String, int>{};
+    for (final Task t in tasks.where((Task t) => !t.done)) {
+      final String name = (t.projectName ?? '').trim();
+      if (name.isEmpty) {
+        continue;
+      }
+      load[name] = (load[name] ?? 0) + 1;
+    }
+    final List<({String name, int open})> projectLoad = load.entries
+        .map((MapEntry<String, int> e) => (name: e.key, open: e.value))
+        .toList()
+      ..sort((({String name, int open}) a, ({String name, int open}) b) =>
+          b.open.compareTo(a.open));
+
     return _Metrics(
       total: total,
       completed: completed,
@@ -793,6 +1045,8 @@ class _Metrics {
       completedThisWeek: completedThisWeek,
       myTasks: myTasks,
       recent: recent,
+      upcoming: upcoming,
+      projectLoad: projectLoad,
     );
   }
 }
