@@ -10,6 +10,7 @@ import '../../features/chat/providers/chat_providers.dart';
 import '../../features/chat/widgets/status_picker.dart';
 import '../../features/notifications/providers/notifications_providers.dart';
 import '../../features/search/widgets/command_palette.dart';
+import '../../features/search/widgets/shortcuts_help.dart';
 import '../../providers/auth_provider.dart';
 import '../constants/app_colors.dart';
 import 'glass.dart';
@@ -123,13 +124,15 @@ class AppShell extends ConsumerWidget {
             body: AppBackground(child: child),
           );
 
-    // Ctrl/Cmd+K opens the global search command palette anywhere in the app.
+    // Ctrl/Cmd+K opens the command bar; "?" shows the shortcuts cheat sheet.
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
         const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
             showCommandPalette(context, ref),
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
             showCommandPalette(context, ref),
+        const SingleActivator(LogicalKeyboardKey.slash, shift: true): () =>
+            showShortcutsHelp(context),
       },
       child: Focus(autofocus: true, child: scaffold),
     );

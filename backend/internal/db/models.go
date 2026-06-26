@@ -128,6 +128,16 @@ type Dashboard struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+type Favorite struct {
+	ID        int64     `json:"id"`
+	UserID    int64     `json:"user_id"`
+	Kind      string    `json:"kind"`
+	ItemID    int64     `json:"item_id"`
+	Label     string    `json:"label"`
+	Route     string    `json:"route"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Folder struct {
 	ID        int64     `json:"id"`
 	SpaceID   int64     `json:"space_id"`
@@ -283,6 +293,24 @@ type ProjectTemplate struct {
 	Status      string    `json:"status"`
 	CreatedBy   *int64    `json:"created_by"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type Reminder struct {
+	ID        int64     `json:"id"`
+	UserID    int64     `json:"user_id"`
+	TaskID    *int64    `json:"task_id"`
+	Note      string    `json:"note"`
+	RemindAt  time.Time `json:"remind_at"`
+	Sent      bool      `json:"sent"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type SavedFilter struct {
+	ID        int64     `json:"id"`
+	UserID    int64     `json:"user_id"`
+	Name      string    `json:"name"`
+	Config    string    `json:"config"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type Space struct {

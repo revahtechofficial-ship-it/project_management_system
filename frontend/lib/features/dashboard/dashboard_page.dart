@@ -9,8 +9,13 @@ import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/stat_card.dart';
 import '../../core/widgets/task_status_chart.dart';
 import '../../core/widgets/weekly_activity_chart.dart';
+import '../../data/models/favorite.dart';
+import '../../data/models/reminder.dart';
 import '../../data/models/task.dart';
 import '../../providers/auth_provider.dart';
+import '../favorites/providers/favorites_providers.dart';
+import '../reminders/providers/reminders_providers.dart';
+import '../reminders/widgets/reminder_dialog.dart';
 import '../tasks/providers/tasks_providers.dart';
 
 /// The home dashboard: greeting, KPI cards, activity charts and live task
@@ -44,11 +49,145 @@ class DashboardPage extends ConsumerWidget {
         const SizedBox(height: 20),
         _KpiSection(metrics: metrics),
         const SizedBox(height: 20),
+        const _QuickAccessSection(),
+        const SizedBox(height: 20),
         _ChartsSection(metrics: metrics),
         const SizedBox(height: 20),
         _ListsSection(metrics: metrics),
         const SizedBox(height: 8),
       ],
+    );
+  }
+}
+
+/// A two-up row of Favorites and upcoming Reminders for quick access.
+class _QuickAccessSection extends ConsumerWidget {
+  const _QuickAccessSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final List<Favorite> favorites =
+        ref.watch(favoritesProvider).asData?.value ?? const <Favorite>[];
+    final List<Reminder> reminders =
+        (ref.watch(remindersProvider).asData?.value ?? const <Reminder>[])
+            .where((Reminder r) => !r.sent)
+            .toList(growable: false);
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints c) {
+        final bool wide = c.maxWidth >= 720;
+        final Widget favCard = _FavoritesCard(favorites: favorites);
+        final Widget remCard = _RemindersCard(reminders: reminders);
+        if (!wide) {
+          return Column(
+            children: <Widget>[favCard, const SizedBox(height: 16), remCard],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(child: favCard),
+            const SizedBox(width: 16),
+            Expanded(child: remCard),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _FavoritesCard extends StatelessWidget {
+  const _FavoritesCard({required this.favorites});
+
+  final List<Favorite> favorites;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return DashboardCard(
+      title: 'Favorites',
+      child: favorites.isEmpty
+          ? Text(
+              'Star tasks, projects or pages to pin them here.',
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            )
+          : Column(
+              children: <Widget>[
+                for (final Favorite f in favorites.take(6))
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.star,
+                      color: AppColors.amber,
+                      size: 20,
+                    ),
+                    title: Text(
+                      f.label.isEmpty ? f.kind : f.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () => context.go(f.route.isEmpty ? '/' : f.route),
+                  ),
+              ],
+            ),
+    );
+  }
+}
+
+class _RemindersCard extends ConsumerWidget {
+  const _RemindersCard({required this.reminders});
+
+  final List<Reminder> reminders;
+
+  static String _remindLabel(DateTime d) {
+    final String hh = d.hour.toString().padLeft(2, '0');
+    final String mm = d.minute.toString().padLeft(2, '0');
+    return '${shortDate(d)} · $hh:$mm';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return DashboardCard(
+      title: 'Reminders',
+      trailing: TextButton.icon(
+        onPressed: () => showReminderDialog(context),
+        icon: const Icon(Icons.add, size: 16),
+        label: const Text('Add'),
+      ),
+      child: reminders.isEmpty
+          ? Text(
+              'No reminders set. Add one to get a nudge later.',
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            )
+          : Column(
+              children: <Widget>[
+                for (final Reminder r in reminders.take(6))
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.notifications_active_outlined,
+                      size: 20,
+                    ),
+                    title: Text(
+                      r.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(_remindLabel(r.remindAt.toLocal())),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.close, size: 16),
+                      onPressed: () async {
+                        await ref
+                            .read(remindersRepositoryProvider)
+                            .delete(r.id);
+                        ref.invalidate(remindersProvider);
+                      },
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 }

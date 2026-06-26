@@ -17,6 +17,7 @@ import 'providers/tasks_providers.dart';
 import 'widgets/task_activity_view.dart';
 import 'widgets/task_board_view.dart';
 import 'widgets/task_calendar_view.dart';
+import 'widgets/task_filter_bar.dart';
 import 'widgets/task_form_dialog.dart';
 import 'widgets/task_gantt_view.dart';
 import 'widgets/task_mindmap_view.dart';
@@ -35,6 +36,7 @@ class TasksPage extends ConsumerStatefulWidget {
 
 class _TasksPageState extends ConsumerState<TasksPage> {
   TaskView _view = TaskView.list;
+  TaskFilter _filter = const TaskFilter();
   bool _selecting = false;
   final Set<int> _selected = <int>{};
 
@@ -186,6 +188,14 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         icon: const Icon(Icons.checklist_rtl),
                         onPressed: _toggleSelecting,
                       ),
+                    TaskFilterButton(
+                      filter: _filter,
+                      onChanged: (TaskFilter f) => setState(() => _filter = f),
+                    ),
+                    SavedFiltersButton(
+                      current: _filter,
+                      onApply: (TaskFilter f) => setState(() => _filter = f),
+                    ),
                     IconButton(
                       tooltip: 'Refresh',
                       icon: const Icon(Icons.refresh),
@@ -204,7 +214,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             const SizedBox(height: 16),
             Expanded(
               child: tasks.when(
-                data: (List<Task> items) => _body(items),
+                data: (List<Task> items) => _body(_filter.apply(items)),
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (Object err, _) => Center(
                   child: Text(

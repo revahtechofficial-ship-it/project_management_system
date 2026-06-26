@@ -37,6 +37,37 @@ func Run(ctx context.Context, q *db.Queries, now time.Time) {
 		})
 		_ = q.MarkReminded(ctx, t.ID)
 	}
+	runUserReminders(ctx, q)
+}
+
+// runUserReminders delivers any user-set reminders whose time has arrived.
+func runUserReminders(ctx context.Context, q *db.Queries) {
+	rows, err := q.DueUserReminders(ctx)
+	if err != nil {
+		log.Printf("user reminder sweep failed: %v", err)
+		return
+	}
+	for _, r := range rows {
+		uid := r.UserID
+		title := "Reminder"
+		if r.Note != "" {
+			title = r.Note
+		} else if r.TaskTitle != "" {
+			title = "Reminder: " + r.TaskTitle
+		}
+		link := "/"
+		if r.TaskID != nil {
+			link = "/tasks"
+		}
+		_, _ = q.CreateNotification(ctx, db.CreateNotificationParams{
+			UserID: &uid,
+			Type:   "reminder",
+			Title:  title,
+			Body:   r.TaskTitle,
+			Link:   link,
+		})
+		_ = q.MarkReminderSent(ctx, r.ID)
+	}
 }
 
 // Start launches the sweep in a goroutine: once immediately, then on every

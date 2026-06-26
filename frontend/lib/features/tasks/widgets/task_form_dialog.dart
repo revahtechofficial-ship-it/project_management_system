@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/favorite_button.dart';
 import '../../../core/widgets/user_avatar.dart';
+import '../../reminders/widgets/reminder_dialog.dart';
 import '../../../data/enums/dependency_type.dart';
 import '../../../data/enums/recurrence_type.dart';
 import '../../../data/enums/task_priority.dart';
@@ -294,7 +296,28 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
         ref.watch(sprintsProvider).asData?.value ?? const <Sprint>[];
 
     return AlertDialog(
-      title: Text(_isEdit ? 'Edit task' : 'New task'),
+      title: Row(
+        children: <Widget>[
+          Expanded(child: Text(_isEdit ? 'Edit task' : 'New task')),
+          if (_isEdit) ...<Widget>[
+            IconButton(
+              tooltip: 'Set a reminder',
+              icon: const Icon(Icons.notifications_active_outlined, size: 20),
+              onPressed: () => showReminderDialog(
+                context,
+                taskId: widget.task!.id,
+                taskTitle: widget.task!.title,
+              ),
+            ),
+            FavoriteButton(
+              kind: 'task',
+              itemId: widget.task!.id,
+              label: widget.task!.title,
+              route: '/tasks',
+            ),
+          ],
+        ],
+      ),
       content: SizedBox(
         width: 440,
         child: SingleChildScrollView(
