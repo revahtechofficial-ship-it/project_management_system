@@ -26,29 +26,59 @@ class _NavItem {
   final bool adminOnly;
 }
 
-const List<_NavItem> _navItems = <_NavItem>[
-  _NavItem(Icons.dashboard_outlined, 'Dashboard', '/'),
-  _NavItem(Icons.check_circle_outline, 'Tasks', '/tasks'),
-  _NavItem(Icons.directions_run, 'Sprints', '/sprints'),
-  _NavItem(Icons.rocket_launch_outlined, 'Releases', '/releases'),
-  _NavItem(Icons.chat_bubble_outline, 'Chat', '/chat'),
-  _NavItem(Icons.auto_awesome, 'AI Assistant', '/ai'),
-  _NavItem(Icons.inbox_outlined, 'Inbox', '/notifications'),
-  _NavItem(Icons.folder_outlined, 'Projects', '/projects'),
-  _NavItem(Icons.description_outlined, 'Pages', '/pages'),
-  _NavItem(Icons.space_dashboard_outlined, 'Dashboards', '/dashboards'),
-  _NavItem(Icons.insights_outlined, 'Planning', '/planning'),
-  _NavItem(Icons.event_available_outlined, 'Resources', '/resources'),
-  _NavItem(Icons.flag_outlined, 'Goals', '/goals'),
-  _NavItem(Icons.timer_outlined, 'Time', '/time'),
-  _NavItem(Icons.groups_outlined, 'Team', '/team'),
-  _NavItem(Icons.bar_chart_outlined, 'Reports', '/reports'),
-  _NavItem(Icons.history, 'Activity', '/activity'),
-  _NavItem(Icons.bolt_outlined, 'Automation', '/automation'),
-  _NavItem(Icons.extension_outlined, 'Integrations', '/integrations'),
-  _NavItem(Icons.admin_panel_settings_outlined, 'Admin', '/admin',
-      adminOnly: true),
-  _NavItem(Icons.settings_outlined, 'Settings', '/settings'),
+/// A labelled, collapsible group of [_NavItem]s in the sidebar.
+class _NavGroup {
+  const _NavGroup(this.title, this.items);
+  final String title;
+  final List<_NavItem> items;
+}
+
+/// Home item, pinned above the grouped sections.
+const _NavItem _dashboardItem = _NavItem(
+  Icons.dashboard_outlined,
+  'Dashboard',
+  '/',
+);
+
+/// The sidebar grouped by purpose so 20+ destinations stay scannable.
+const List<_NavGroup> _navGroups = <_NavGroup>[
+  _NavGroup('Work', <_NavItem>[
+    _NavItem(Icons.check_circle_outline, 'Tasks', '/tasks'),
+    _NavItem(Icons.directions_run, 'Sprints', '/sprints'),
+    _NavItem(Icons.rocket_launch_outlined, 'Releases', '/releases'),
+    _NavItem(Icons.folder_outlined, 'Projects', '/projects'),
+  ]),
+  _NavGroup('Plan', <_NavItem>[
+    _NavItem(Icons.insights_outlined, 'Planning', '/planning'),
+    _NavItem(Icons.flag_outlined, 'Goals', '/goals'),
+    _NavItem(Icons.event_available_outlined, 'Resources', '/resources'),
+    _NavItem(Icons.timer_outlined, 'Time', '/time'),
+  ]),
+  _NavGroup('Collaborate', <_NavItem>[
+    _NavItem(Icons.chat_bubble_outline, 'Chat', '/chat'),
+    _NavItem(Icons.inbox_outlined, 'Inbox', '/notifications'),
+    _NavItem(Icons.description_outlined, 'Pages', '/pages'),
+    _NavItem(Icons.groups_outlined, 'Team', '/team'),
+  ]),
+  _NavGroup('Insights', <_NavItem>[
+    _NavItem(Icons.space_dashboard_outlined, 'Dashboards', '/dashboards'),
+    _NavItem(Icons.bar_chart_outlined, 'Reports', '/reports'),
+    _NavItem(Icons.history, 'Activity', '/activity'),
+  ]),
+  _NavGroup('Automate', <_NavItem>[
+    _NavItem(Icons.auto_awesome, 'AI Assistant', '/ai'),
+    _NavItem(Icons.bolt_outlined, 'Automation', '/automation'),
+    _NavItem(Icons.extension_outlined, 'Integrations', '/integrations'),
+  ]),
+  _NavGroup('Admin', <_NavItem>[
+    _NavItem(
+      Icons.admin_panel_settings_outlined,
+      'Admin',
+      '/admin',
+      adminOnly: true,
+    ),
+    _NavItem(Icons.settings_outlined, 'Settings', '/settings'),
+  ]),
 ];
 
 /// Responsive glassmorphism shell: an aurora backdrop with a frosted sidebar +
@@ -166,14 +196,33 @@ class _Chrome extends StatelessWidget {
   }
 }
 
-class _Sidebar extends ConsumerWidget {
+class _Sidebar extends ConsumerStatefulWidget {
   const _Sidebar({required this.location});
   final String location;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_Sidebar> createState() => _SidebarState();
+}
+
+class _SidebarState extends ConsumerState<_Sidebar> {
+  /// Titles of groups the user has collapsed. Persists while the shell is
+  /// mounted (i.e. across page navigations).
+  final Set<String> _collapsed = <String>{};
+
+  void _toggle(String title) {
+    setState(() {
+      if (!_collapsed.remove(title)) {
+        _collapsed.add(title);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final user = ref.watch(authControllerProvider).asData?.value.user;
+    final String location = widget.location;
+    final bool isAdmin = user?.isAdmin ?? false;
 
     return _Chrome(
       border: Border(right: BorderSide(color: scheme.outlineVariant)),
@@ -198,12 +247,13 @@ class _Sidebar extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   children: <Widget>[
-                    for (final _NavItem item in _navItems)
-                      if (!item.adminOnly || (user?.isAdmin ?? false))
-                        _NavTile(
-                          item: item,
-                          selected: location == item.location,
-                        ),
+                    _NavTile(
+                      item: _dashboardItem,
+                      selected: location == _dashboardItem.location,
+                    ),
+                    const SizedBox(height: 4),
+                    for (final _NavGroup group in _navGroups)
+                      ..._buildGroup(group, location, isAdmin),
                   ],
                 ),
               ),
@@ -236,6 +286,81 @@ class _Sidebar extends ConsumerWidget {
                 onTap: () => ref.read(authControllerProvider.notifier).logout(),
               ),
               const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds a section header plus its tiles (hidden when collapsed). Admin-only
+  /// items are filtered, and an empty group is dropped entirely.
+  List<Widget> _buildGroup(_NavGroup group, String location, bool isAdmin) {
+    final List<_NavItem> items = <_NavItem>[
+      for (final _NavItem item in group.items)
+        if (!item.adminOnly || isAdmin) item,
+    ];
+    if (items.isEmpty) {
+      return const <Widget>[];
+    }
+    final bool collapsed = _collapsed.contains(group.title);
+    return <Widget>[
+      _SectionHeader(
+        title: group.title,
+        collapsed: collapsed,
+        onTap: () => _toggle(group.title),
+      ),
+      if (!collapsed)
+        for (final _NavItem item in items)
+          _NavTile(item: item, selected: location == item.location),
+      const SizedBox(height: 6),
+    ];
+  }
+}
+
+/// A tappable, collapsible group label between sidebar sections.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.collapsed,
+    required this.onTap,
+  });
+  final String title;
+  final bool collapsed;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 12, 6, 4),
+          child: Row(
+            children: <Widget>[
+              Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const Spacer(),
+              AnimatedRotation(
+                turns: collapsed ? -0.25 : 0,
+                duration: const Duration(milliseconds: 150),
+                child: Icon(
+                  Icons.keyboard_arrow_down,
+                  size: 16,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
             ],
           ),
         ),
