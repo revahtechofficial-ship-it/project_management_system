@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -79,9 +80,19 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
     }
   }
 
-  String _friendly(Object e) =>
-      'The AI service is unavailable right now. Make sure ANTHROPIC_API_KEY '
-      'is set on the backend.';
+  String _friendly(Object e) {
+    if (e is DioException) {
+      final Object? data = e.response?.data;
+      if (data is Map && data['error'] is String) {
+        final String msg = data['error'] as String;
+        if (msg.isNotEmpty) {
+          return msg;
+        }
+      }
+    }
+    return 'The AI service is unavailable. Make sure ANTHROPIC_API_KEY is set '
+        'on the backend and the account has API credits.';
+  }
 
   Future<void> _quickTasks() async {
     final List<Project> projects =

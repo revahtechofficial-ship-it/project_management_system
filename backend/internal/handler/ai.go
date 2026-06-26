@@ -348,8 +348,9 @@ func (h *AIHandler) aiError(w http.ResponseWriter, err error) {
 		h.notConfigured(w)
 		return
 	}
-	writeError(w, http.StatusBadGateway,
-		errors.New("the AI service is unavailable right now"))
+	writeJSON(w, http.StatusBadGateway, map[string]any{
+		"error": ai.FriendlyError(err),
+	})
 }
 
 // stripFences removes a leading/trailing Markdown code fence if present.

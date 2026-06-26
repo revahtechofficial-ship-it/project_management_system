@@ -5,6 +5,7 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/anthropics/anthropic-sdk-go"
@@ -13,6 +14,25 @@ import (
 
 // ErrNotConfigured is returned by all calls when no ANTHROPIC_API_KEY is set.
 var ErrNotConfigured = errors.New("AI is not configured")
+
+// FriendlyError turns an error from Complete/Ask into a message safe to show a
+// user. For API errors it surfaces Anthropic's own message (e.g. "Your credit
+// balance is too low…"); otherwise it returns a generic fallback.
+func FriendlyError(err error) string {
+	var apiErr *anthropic.Error
+	if errors.As(err, &apiErr) {
+		var env struct {
+			Error struct {
+				Message string `json:"message"`
+			} `json:"error"`
+		}
+		if json.Unmarshal([]byte(apiErr.RawJSON()), &env) == nil &&
+			env.Error.Message != "" {
+			return env.Error.Message
+		}
+	}
+	return "The AI service is unavailable right now. Please try again."
+}
 
 // Message is one turn of a conversation.
 type Message struct {
