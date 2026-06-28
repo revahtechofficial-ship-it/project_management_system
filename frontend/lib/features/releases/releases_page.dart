@@ -45,9 +45,11 @@ class ReleasesPage extends ConsumerWidget {
           const SizedBox(height: 20),
           Expanded(
             child: async.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (Object e, _) =>
-                  Center(child: Text('Failed to load releases:\n$e')),
+              loading: () => const LoadingView(),
+              error: (Object e, _) => ErrorView(
+                error: e,
+                onRetry: () => ref.invalidate(releasesProvider),
+              ),
               data: (List<Release> releases) {
                 if (releases.isEmpty) {
                   return const EmptyState(

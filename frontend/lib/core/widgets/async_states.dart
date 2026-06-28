@@ -14,6 +14,17 @@ class LoadingBar extends StatelessWidget {
   }
 }
 
+/// A centered spinner for a full-page first load. The single shared loading
+/// view so every page loads the same way.
+class LoadingView extends StatelessWidget {
+  const LoadingView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: CircularProgressIndicator());
+  }
+}
+
 /// A centered icon + message for an empty list/section.
 class EmptyState extends StatelessWidget {
   const EmptyState({super.key, required this.icon, required this.message});
@@ -41,11 +52,15 @@ class EmptyState extends StatelessWidget {
   }
 }
 
-/// An inline error banner for a failed load.
+/// An inline error banner for a failed load. Leads with a friendly message and
+/// only shows the raw error as a muted secondary line; an optional [onRetry]
+/// adds a Retry action.
 class ErrorNotice extends StatelessWidget {
-  const ErrorNotice({super.key, required this.error});
+  const ErrorNotice({super.key, this.error, this.message, this.onRetry});
 
-  final Object error;
+  final Object? error;
+  final String? message;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -61,10 +76,65 @@ class ErrorNotice extends StatelessWidget {
           Icon(Icons.error_outline, color: scheme.onErrorContainer),
           const SizedBox(width: 10),
           Expanded(
-            child: Text('Something went wrong: $error',
-                style: TextStyle(color: scheme.onErrorContainer)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  message ?? "Couldn't load this. Please try again.",
+                  style: TextStyle(
+                    color: scheme.onErrorContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (error != null) ...<Widget>[
+                  const SizedBox(height: 2),
+                  Text(
+                    '$error',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onErrorContainer.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
+          if (onRetry != null) ...<Widget>[
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(
+                foregroundColor: scheme.onErrorContainer,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// A centered, width-constrained [ErrorNotice] for a full-page failed load.
+class ErrorView extends StatelessWidget {
+  const ErrorView({super.key, this.error, this.message, this.onRetry});
+
+  final Object? error;
+  final String? message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: ErrorNotice(error: error, message: message, onRetry: onRetry),
+        ),
       ),
     );
   }

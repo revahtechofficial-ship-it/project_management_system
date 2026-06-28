@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/async_states.dart';
 import '../../../core/widgets/dashboard_card.dart';
 import '../../../core/widgets/stat_card.dart';
 import '../../../data/models/time_entry.dart';
@@ -68,11 +69,12 @@ class _TimeReportsViewState extends ConsumerState<TimeReportsView> {
             builder:
                 (BuildContext context, AsyncSnapshot<List<TimeEntry>> snap) {
                   if (snap.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const LoadingView();
                   }
                   if (snap.hasError) {
-                    return Center(
-                      child: Text('Failed to load:\n${snap.error}'),
+                    return ErrorView(
+                      error: snap.error,
+                      onRetry: () => setState(() {}),
                     );
                   }
                   return _Report(entries: snap.data ?? const <TimeEntry>[]);

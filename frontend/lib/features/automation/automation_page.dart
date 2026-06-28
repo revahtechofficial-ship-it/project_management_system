@@ -49,9 +49,11 @@ class AutomationPage extends ConsumerWidget {
           const SizedBox(height: 20),
           Expanded(
             child: async.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (Object e, _) =>
-                  Center(child: Text('Failed to load rules:\n$e')),
+              loading: () => const LoadingView(),
+              error: (Object e, _) => ErrorView(
+                error: e,
+                onRetry: () => ref.invalidate(automationsProvider),
+              ),
               data: (List<AutomationRule> rules) {
                 if (rules.isEmpty) {
                   return const EmptyState(

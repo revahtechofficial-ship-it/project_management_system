@@ -112,9 +112,11 @@ class _TimesheetBody extends ConsumerWidget {
         const SizedBox(height: 16),
         Expanded(
           child: entries.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (Object e, _) =>
-                Center(child: Text('Failed to load entries:\n$e')),
+            loading: () => const LoadingView(),
+            error: (Object e, _) => ErrorView(
+              error: e,
+              onRetry: () => ref.invalidate(myTimeEntriesProvider),
+            ),
             data: (List<TimeEntry> items) {
               final List<TimeEntry> done = items
                   .where((TimeEntry e) => !e.running)

@@ -269,9 +269,11 @@ class _DocsTreeState extends ConsumerState<_DocsTree> {
         const SizedBox(height: 12),
         Expanded(
           child: docs.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (Object e, _) =>
-                Center(child: Text('Failed to load docs:\n$e')),
+            loading: () => const LoadingView(),
+            error: (Object e, _) => ErrorView(
+              error: e,
+              onRetry: () => ref.invalidate(pagesByTypeProvider(PageType.doc)),
+            ),
             data: (List<WorkspacePage> items) => _content(items),
           ),
         ),
@@ -532,8 +534,11 @@ class _SopList extends ConsumerWidget {
       pagesByTypeProvider(PageType.sop),
     );
     return sops.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (Object e, _) => Center(child: Text('Failed to load SOPs:\n$e')),
+      loading: () => const LoadingView(),
+      error: (Object e, _) => ErrorView(
+        error: e,
+        onRetry: () => ref.invalidate(pagesByTypeProvider(PageType.sop)),
+      ),
       data: (List<WorkspacePage> items) {
         if (items.isEmpty) {
           return const EmptyState(
@@ -645,8 +650,11 @@ class _FlatPageList extends ConsumerWidget {
       pagesByTypeProvider(type),
     );
     return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (Object e, _) => Center(child: Text('Failed to load:\n$e')),
+      loading: () => const LoadingView(),
+      error: (Object e, _) => ErrorView(
+        error: e,
+        onRetry: () => ref.invalidate(pagesByTypeProvider(type)),
+      ),
       data: (List<WorkspacePage> items) {
         if (items.isEmpty) {
           return EmptyState(icon: icon, message: emptyMessage);

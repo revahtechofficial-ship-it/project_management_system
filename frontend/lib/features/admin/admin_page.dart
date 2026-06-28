@@ -97,8 +97,11 @@ class _MembersView extends ConsumerWidget {
     final AsyncValue<List<AdminMember>> async = ref.watch(adminMembersProvider);
     final int? meId = ref.watch(authControllerProvider).asData?.value.user?.id;
     return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (Object e, _) => Center(child: Text('Failed to load members:\n$e')),
+      loading: () => const LoadingView(),
+      error: (Object e, _) => ErrorView(
+        error: e,
+        onRetry: () => ref.invalidate(adminMembersProvider),
+      ),
       data: (List<AdminMember> members) => ListView.separated(
         itemCount: members.length,
         separatorBuilder: (_, _) => const SizedBox(height: 8),
@@ -249,8 +252,11 @@ class _AuditView extends ConsumerWidget {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final AsyncValue<List<AuditEvent>> async = ref.watch(auditLogProvider);
     return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (Object e, _) => Center(child: Text('Failed to load audit log:\n$e')),
+      loading: () => const LoadingView(),
+      error: (Object e, _) => ErrorView(
+        error: e,
+        onRetry: () => ref.invalidate(auditLogProvider),
+      ),
       data: (List<AuditEvent> events) {
         if (events.isEmpty) {
           return const EmptyState(
@@ -369,8 +375,11 @@ class _SecurityViewState extends ConsumerState<_SecurityView> {
       workspaceSettingsProvider,
     );
     return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (Object e, _) => Center(child: Text('Failed to load settings:\n$e')),
+      loading: () => const LoadingView(),
+      error: (Object e, _) => ErrorView(
+        error: e,
+        onRetry: () => ref.invalidate(workspaceSettingsProvider),
+      ),
       data: (WorkspaceSettings s) {
         _seed(s);
         return ListView(

@@ -51,9 +51,11 @@ class GoalsPage extends ConsumerWidget {
           const SizedBox(height: 20),
           Expanded(
             child: async.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (Object e, _) =>
-                  Center(child: Text('Failed to load goals:\n$e')),
+              loading: () => const LoadingView(),
+              error: (Object e, _) => ErrorView(
+                error: e,
+                onRetry: () => ref.invalidate(objectivesProvider),
+              ),
               data: (List<Objective> items) {
                 if (items.isEmpty) {
                   return const EmptyState(

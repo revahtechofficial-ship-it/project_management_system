@@ -216,12 +216,10 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             Expanded(
               child: tasks.when(
                 data: (List<Task> items) => _body(_filter.apply(items)),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (Object err, _) => Center(
-                  child: Text(
-                    'Failed to load tasks:\n$err',
-                    textAlign: TextAlign.center,
-                  ),
+                loading: () => const LoadingView(),
+                error: (Object err, _) => ErrorView(
+                  error: err,
+                  onRetry: () => ref.invalidate(tasksProvider),
                 ),
               ),
             ),

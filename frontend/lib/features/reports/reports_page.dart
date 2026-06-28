@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/widgets/async_states.dart';
 import '../../core/widgets/chart_legend.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
@@ -46,11 +47,7 @@ class ReportsPage extends ConsumerWidget {
             ),
           ],
         ),
-        if (tasksAsync.isLoading)
-          const Padding(
-            padding: EdgeInsets.only(top: 16),
-            child: LinearProgressIndicator(minHeight: 2),
-          ),
+        if (tasksAsync.isLoading) const LoadingBar(),
         const SizedBox(height: 20),
         StatCardGrid(
           cards: <Widget>[
