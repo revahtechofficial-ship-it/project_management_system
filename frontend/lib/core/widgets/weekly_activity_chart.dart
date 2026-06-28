@@ -34,8 +34,11 @@ class WeeklyActivityChart extends StatelessWidget {
           show: true,
           drawVerticalLine: false,
           horizontalInterval: interval,
-          getDrawingHorizontalLine: (_) =>
-              FlLine(color: scheme.outlineVariant, strokeWidth: 1),
+          getDrawingHorizontalLine: (_) => FlLine(
+            color: scheme.outlineVariant.withValues(alpha: 0.45),
+            strokeWidth: 1,
+            dashArray: <int>[4, 4],
+          ),
         ),
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(

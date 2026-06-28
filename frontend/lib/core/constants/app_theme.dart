@@ -40,6 +40,9 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: base,
+      // A slightly stronger hover so list rows and ink wells visibly respond
+      // to the mouse across the app (the M3 default is barely perceptible).
+      hoverColor: scheme.onSurface.withValues(alpha: dark ? 0.06 : 0.05),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,

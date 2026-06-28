@@ -97,6 +97,18 @@ class AppShell extends ConsumerWidget {
     final String location = GoRouterState.of(context).matchedLocation;
     final bool wide = MediaQuery.sizeOf(context).width >= 900;
 
+    // Keep the browser tab/title in sync with the current page so history and
+    // multiple tabs are legible.
+    final String pageTitle = _pageTitleFor(location);
+    SystemChrome.setApplicationSwitcherDescription(
+      ApplicationSwitcherDescription(
+        label: pageTitle.isEmpty
+            ? 'Revah Management System'
+            : '$pageTitle · Revah',
+        primaryColor: AppColors.brand.toARGB32(),
+      ),
+    );
+
     // Ring an incoming-call prompt anywhere in the app when another member
     // starts a call.
     ref.listen<AsyncValue<Map<String, dynamic>>>(chatEventsProvider, (
@@ -231,8 +243,12 @@ class _SidebarState extends ConsumerState<_Sidebar> {
     final AuthUser? user = ref.watch(authControllerProvider).asData?.value.user;
     final String location = widget.location;
     final bool isAdmin = user?.isAdmin ?? false;
+    // Auto-collapse to the icon rail on tighter widths; above the breakpoint the
+    // user's manual toggle decides.
+    final bool autoRail =
+        widget.collapsible && MediaQuery.sizeOf(context).width < 1180;
     final bool rail =
-        widget.collapsible && ref.watch(sidebarCollapsedProvider);
+        autoRail || (widget.collapsible && ref.watch(sidebarCollapsedProvider));
 
     return _Chrome(
       border: Border(right: BorderSide(color: scheme.outlineVariant)),
@@ -246,7 +262,7 @@ class _SidebarState extends ConsumerState<_Sidebar> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                _header(context, rail),
+                _header(context, rail, showToggle: !autoRail),
                 Expanded(
                   child: ListView(
                     padding: EdgeInsets.symmetric(
@@ -267,11 +283,15 @@ class _SidebarState extends ConsumerState<_Sidebar> {
     );
   }
 
-  Widget _header(BuildContext context, bool rail) {
+  Widget _header(BuildContext context, bool rail, {required bool showToggle}) {
     if (rail) {
-      return const SizedBox(
+      return SizedBox(
         height: 64,
-        child: Center(child: _CollapseButton(collapsed: true)),
+        child: Center(
+          child: showToggle
+              ? const _CollapseButton(collapsed: true)
+              : const SizedBox.shrink(),
+        ),
       );
     }
     // Fixed height aligns the wordmark with the top bar and gives it room to
@@ -292,7 +312,8 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                 ),
               ),
             ),
-            if (widget.collapsible) const _CollapseButton(collapsed: false),
+            if (widget.collapsible && showToggle)
+              const _CollapseButton(collapsed: false),
           ],
         ),
       ),
