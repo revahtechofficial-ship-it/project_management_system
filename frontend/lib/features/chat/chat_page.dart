@@ -17,6 +17,8 @@ import '../../core/utils/date_format.dart';
 import '../../core/utils/mentions.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/avatar_crop_dialog.dart';
+import '../../core/widgets/glass.dart';
+import '../../core/widgets/page_header.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../data/models/chat_member.dart';
 import '../../data/enums/user_status.dart';
@@ -1110,19 +1112,35 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (wide) {
       return Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            SizedBox(
-              width: 320,
-              child: _ListPane(state: this, convos: convos, presence: presence),
+            const PageHeader(
+              title: 'Chat',
+              subtitle: 'Team messaging, channels and calls',
             ),
-            const SizedBox(width: 12),
+            const SizedBox(height: 16),
             Expanded(
-              child: _ThreadPane(
-                state: this,
-                conversation: selected,
-                presence: presence,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  SizedBox(
+                    width: 320,
+                    child: _ListPane(
+                      state: this,
+                      convos: convos,
+                      presence: presence,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ThreadPane(
+                      state: this,
+                      conversation: selected,
+                      presence: presence,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -2944,15 +2962,6 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: child,
-    );
+    return GlassSurface(borderRadius: 16, child: child);
   }
 }

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
 import '../../core/widgets/async_states.dart';
+import '../../core/widgets/dashboard_card.dart';
+import '../../core/widgets/page_header.dart';
 import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/status_pill.dart';
 import '../../core/widgets/user_avatar.dart';
@@ -150,66 +152,54 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              runSpacing: 12,
-              spacing: 12,
-              children: <Widget>[
-                const Text(
-                  'Tasks',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-                ),
-                Wrap(
-                  spacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: <Widget>[
-                    SegmentedButton<TaskView>(
-                      segments: <ButtonSegment<TaskView>>[
-                        for (final TaskView v in TaskView.values)
-                          ButtonSegment<TaskView>(
-                            value: v,
-                            icon: Icon(v.icon, size: 18),
-                            tooltip: v.label,
-                          ),
-                      ],
-                      selected: <TaskView>{_view},
-                      showSelectedIcon: false,
-                      onSelectionChanged: (Set<TaskView> s) => setState(() {
-                        _view = s.first;
-                        if (!_view.supportsSelection) {
-                          _selecting = false;
-                          _selected.clear();
-                        }
-                      }),
-                    ),
-                    if (_view.supportsSelection)
-                      IconButton(
-                        tooltip: _selecting ? 'Cancel selection' : 'Select',
-                        isSelected: _selecting,
-                        icon: const Icon(Icons.checklist_rtl),
-                        onPressed: _toggleSelecting,
+            PageHeader(
+              title: 'Tasks',
+              subtitle: 'Plan, track and organize your work',
+              actions: <Widget>[
+                SegmentedButton<TaskView>(
+                  segments: <ButtonSegment<TaskView>>[
+                    for (final TaskView v in TaskView.values)
+                      ButtonSegment<TaskView>(
+                        value: v,
+                        icon: Icon(v.icon, size: 18),
+                        tooltip: v.label,
                       ),
-                    TaskFilterButton(
-                      filter: _filter,
-                      onChanged: (TaskFilter f) => setState(() => _filter = f),
-                    ),
-                    SavedFiltersButton(
-                      current: _filter,
-                      onApply: (TaskFilter f) => setState(() => _filter = f),
-                    ),
-                    IconButton(
-                      tooltip: 'Refresh',
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () => ref.invalidate(tasksProvider),
-                    ),
-                    _TemplatesButton(onSelected: _newFromTemplate),
-                    FilledButton.icon(
-                      onPressed: _newTask,
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('New task'),
-                    ),
                   ],
+                  selected: <TaskView>{_view},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (Set<TaskView> s) => setState(() {
+                    _view = s.first;
+                    if (!_view.supportsSelection) {
+                      _selecting = false;
+                      _selected.clear();
+                    }
+                  }),
+                ),
+                if (_view.supportsSelection)
+                  IconButton(
+                    tooltip: _selecting ? 'Cancel selection' : 'Select',
+                    isSelected: _selecting,
+                    icon: const Icon(Icons.checklist_rtl),
+                    onPressed: _toggleSelecting,
+                  ),
+                TaskFilterButton(
+                  filter: _filter,
+                  onChanged: (TaskFilter f) => setState(() => _filter = f),
+                ),
+                SavedFiltersButton(
+                  current: _filter,
+                  onApply: (TaskFilter f) => setState(() => _filter = f),
+                ),
+                IconButton(
+                  tooltip: 'Refresh',
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () => ref.invalidate(tasksProvider),
+                ),
+                _TemplatesButton(onSelected: _newFromTemplate),
+                FilledButton.icon(
+                  onPressed: _newTask,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('New task'),
                 ),
               ],
             ),
@@ -251,17 +241,21 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       );
     }
     return switch (_view) {
-      TaskView.list => ListView.separated(
-        itemCount: items.length,
-        separatorBuilder: (BuildContext context, int i) =>
-            const Divider(height: 1),
-        itemBuilder: (BuildContext context, int i) => _selecting
-            ? _SelectableTaskTile(
-                task: items[i],
-                selected: _selected.contains(items[i].id),
-                onChanged: () => _toggleSelected(items[i].id),
-              )
-            : _TaskTile(task: items[i], onEdit: () => _editTask(items[i])),
+      TaskView.list => DashboardCard(
+        child: Expanded(
+          child: ListView.separated(
+            itemCount: items.length,
+            separatorBuilder: (BuildContext context, int i) =>
+                const Divider(height: 1),
+            itemBuilder: (BuildContext context, int i) => _selecting
+                ? _SelectableTaskTile(
+                    task: items[i],
+                    selected: _selected.contains(items[i].id),
+                    onChanged: () => _toggleSelected(items[i].id),
+                  )
+                : _TaskTile(task: items[i], onEdit: () => _editTask(items[i])),
+          ),
+        ),
       ),
       TaskView.board => TaskBoardView(tasks: items, onTapTask: _editTask),
       TaskView.table => TaskTableView(tasks: items, onTapTask: _editTask),

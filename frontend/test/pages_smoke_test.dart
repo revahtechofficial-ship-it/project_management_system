@@ -65,6 +65,37 @@ void main() {
     expect(find.text('Total tasks'), findsOneWidget);
   });
 
+  testWidgets('Tasks list renders inside a card', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1440, 1024);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_SignedOutController.new),
+          tasksProvider.overrideWith(
+            (ref) async => <Task>[
+              Task(
+                id: 1,
+                done: false,
+                createdAt: DateTime(2024),
+                updatedAt: DateTime(2024),
+                title: 'Test task',
+              ),
+            ],
+          ),
+        ],
+        child: const MaterialApp(home: TasksPage()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(tester.takeException(), isNull);
+    expect(find.text('Tasks'), findsOneWidget);
+    expect(find.text('Test task'), findsOneWidget);
+  });
+
   testWidgets('Team renders', (WidgetTester tester) async {
     await _pump(tester, const TeamPage());
     expect(find.text('Team'), findsOneWidget);
