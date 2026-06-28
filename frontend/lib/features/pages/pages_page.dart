@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/page_header.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../data/enums/page_type.dart';
 import '../../data/models/workspace_page.dart';
 import 'form_templates.dart';
@@ -269,7 +270,7 @@ class _DocsTreeState extends ConsumerState<_DocsTree> {
         const SizedBox(height: 12),
         Expanded(
           child: docs.when(
-            loading: () => const LoadingView(),
+            loading: () => const SkeletonList(),
             error: (Object e, _) => ErrorView(
               error: e,
               onRetry: () => ref.invalidate(pagesByTypeProvider(PageType.doc)),
@@ -534,7 +535,7 @@ class _SopList extends ConsumerWidget {
       pagesByTypeProvider(PageType.sop),
     );
     return sops.when(
-      loading: () => const LoadingView(),
+      loading: () => const SkeletonList(),
       error: (Object e, _) => ErrorView(
         error: e,
         onRetry: () => ref.invalidate(pagesByTypeProvider(PageType.sop)),
@@ -650,7 +651,7 @@ class _FlatPageList extends ConsumerWidget {
       pagesByTypeProvider(type),
     );
     return async.when(
-      loading: () => const LoadingView(),
+      loading: () => const SkeletonList(),
       error: (Object e, _) => ErrorView(
         error: e,
         onRetry: () => ref.invalidate(pagesByTypeProvider(type)),

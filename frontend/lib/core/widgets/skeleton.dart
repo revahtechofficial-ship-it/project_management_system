@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'glass.dart';
+
 /// A shimmering placeholder block shown while real content loads. Compose
 /// several to mirror a card's layout so the UI never flashes blank (or a
 /// transient error) before data arrives (AGENTS.md §1 `core/widgets`).
@@ -73,6 +75,119 @@ class SkeletonLines extends StatelessWidget {
           const Skeleton(width: double.infinity, height: 14),
         ],
       ],
+    );
+  }
+}
+
+/// A column of shimmering row placeholders for list-style pages (Tasks, Pages).
+/// Uses [MainAxisSize.min] so it's safe inside both `Expanded` and scroll views.
+class SkeletonList extends StatelessWidget {
+  const SkeletonList({super.key, this.rows = 6});
+
+  final int rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        for (int i = 0; i < rows; i++) ...<Widget>[
+          if (i > 0) const SizedBox(height: 10),
+          const _SkeletonRow(),
+        ],
+      ],
+    );
+  }
+}
+
+class _SkeletonRow extends StatelessWidget {
+  const _SkeletonRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        children: <Widget>[
+          Skeleton(width: 38, height: 38, radius: 10),
+          SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Skeleton(width: double.infinity, height: 13),
+                SizedBox(height: 8),
+                Skeleton(width: 180, height: 11),
+              ],
+            ),
+          ),
+          SizedBox(width: 12),
+          Skeleton(width: 54, height: 22, radius: 11),
+        ],
+      ),
+    );
+  }
+}
+
+/// A responsive grid of shimmering card placeholders for tile/grid pages
+/// (Projects, Team).
+class SkeletonTiles extends StatelessWidget {
+  const SkeletonTiles({super.key, this.count = 6, this.minTileWidth = 280});
+
+  final int count;
+  final double minTileWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints c) {
+        final int cols = (c.maxWidth / minTileWidth).floor().clamp(1, 4);
+        const double gap = 16;
+        final double tileW = (c.maxWidth - gap * (cols - 1)) / cols;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: <Widget>[
+            for (int i = 0; i < count; i++)
+              SizedBox(width: tileW, child: const _SkeletonCard()),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const GlassSurface(
+      borderRadius: 18,
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Skeleton(width: 40, height: 40, radius: 10),
+                SizedBox(width: 12),
+                Expanded(child: Skeleton(height: 14)),
+              ],
+            ),
+            SizedBox(height: 18),
+            Skeleton(width: double.infinity, height: 11),
+            SizedBox(height: 10),
+            Skeleton(width: 140, height: 11),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -6,6 +6,7 @@ import '../../core/utils/date_format.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/stat_card.dart';
 import '../../core/widgets/status_pill.dart';
 import '../../core/widgets/user_avatar.dart';
@@ -136,7 +137,9 @@ class ProjectsPage extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 20),
-        if (projects.isEmpty && spaces.isEmpty && !projectsAsync.isLoading)
+        if (projectsAsync.isLoading && projects.isEmpty && spaces.isEmpty)
+          const SkeletonTiles()
+        else if (projects.isEmpty && spaces.isEmpty)
           const EmptyState(
             icon: Icons.folder_off_rounded,
             message: 'No projects yet. Create your first one.',

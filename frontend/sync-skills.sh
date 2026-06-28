@@ -49,3 +49,4 @@ cp -R "$SRC/." "$DEST/"
 count=$(find "$DEST" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d '[:space:]')
 echo "Done. $count skill folder(s) now in .claude/skills/:"
 find "$DEST" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sed 's/^/  - /'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                

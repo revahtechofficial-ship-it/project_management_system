@@ -60,6 +60,9 @@ class _PlanningPageState extends ConsumerState<PlanningPage> {
             ),
           ],
         ),
+        if (ref.watch(tasksProvider).isLoading ||
+            ref.watch(teamMembersProvider).isLoading)
+          const LoadingBar(),
         const SizedBox(height: 20),
         if (_view == _View.workload)
           _WorkloadView(

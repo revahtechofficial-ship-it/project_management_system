@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
 import '../../core/widgets/user_avatar.dart';
@@ -248,7 +249,6 @@ class _WorkloadView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
     final List<Task> tasks =
         ref.watch(tasksProvider).asData?.value ?? const <Task>[];
     final List<MemberCapacity> caps =
@@ -258,12 +258,12 @@ class _WorkloadView extends ConsumerWidget {
         const <AvailabilityEntry>[];
 
     if (caps.isEmpty) {
-      return Center(
-        child: Text(
-          'No team members yet.',
-          style: TextStyle(color: scheme.onSurfaceVariant),
-        ),
-      );
+      return ref.watch(capacityProvider).isLoading
+          ? const LoadingView()
+          : const EmptyState(
+              icon: Icons.group_off_rounded,
+              message: 'No team members with capacity set yet.',
+            );
     }
 
     final DateTime today = _today();
@@ -482,12 +482,12 @@ class _PlanningView extends ConsumerWidget {
         const <AvailabilityEntry>[];
 
     if (caps.isEmpty) {
-      return Center(
-        child: Text(
-          'No team members yet.',
-          style: TextStyle(color: scheme.onSurfaceVariant),
-        ),
-      );
+      return ref.watch(capacityProvider).isLoading
+          ? const LoadingView()
+          : const EmptyState(
+              icon: Icons.group_off_rounded,
+              message: 'No team members with capacity set yet.',
+            );
     }
 
     final DateTime today = _today();
@@ -713,9 +713,9 @@ class _AvailabilityView extends ConsumerWidget {
         DashboardCard(
           title: 'Weekly capacity',
           child: caps.isEmpty
-              ? Text(
-                  'No team members yet.',
-                  style: TextStyle(color: scheme.onSurfaceVariant),
+              ? const EmptyState(
+                  icon: Icons.group_off_rounded,
+                  message: 'No team members with capacity set yet.',
                 )
               : Column(
                   children: <Widget>[

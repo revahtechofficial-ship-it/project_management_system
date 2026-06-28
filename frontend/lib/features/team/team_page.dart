@@ -7,6 +7,7 @@ import '../../core/utils/date_format.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/stat_card.dart';
 import '../../core/widgets/status_pill.dart';
 import '../../core/widgets/user_avatar.dart';
@@ -92,7 +93,9 @@ class TeamPage extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 20),
-        if (members.isEmpty && !teamAsync.isLoading)
+        if (teamAsync.isLoading && members.isEmpty)
+          const SkeletonTiles(count: 6)
+        else if (members.isEmpty)
           const EmptyState(
             icon: Icons.group_off_rounded,
             message: 'No members yet.',

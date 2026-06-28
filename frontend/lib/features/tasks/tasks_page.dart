@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
 import '../../core/widgets/async_states.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/status_pill.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../data/enums/issue_type.dart';
@@ -216,7 +217,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
             Expanded(
               child: tasks.when(
                 data: (List<Task> items) => _body(_filter.apply(items)),
-                loading: () => const LoadingView(),
+                loading: () => const SkeletonList(rows: 7),
                 error: (Object err, _) => ErrorView(
                   error: err,
                   onRetry: () => ref.invalidate(tasksProvider),

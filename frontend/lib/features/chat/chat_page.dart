@@ -15,6 +15,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
 import '../../core/utils/mentions.dart';
+import '../../core/widgets/async_states.dart';
 import '../../core/widgets/avatar_crop_dialog.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../data/models/chat_member.dart';
@@ -1164,7 +1165,6 @@ class _ListPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1217,15 +1217,9 @@ class _ListPane extends StatelessWidget {
           const Divider(height: 1),
           Expanded(
             child: convos.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        'No conversations yet.\nStart a new chat.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: scheme.onSurfaceVariant),
-                      ),
-                    ),
+                ? const EmptyState(
+                    icon: Icons.forum_outlined,
+                    message: 'No conversations yet. Start a new chat.',
                   )
                 : ListView.builder(
                     itemCount: convos.length,
@@ -1329,25 +1323,11 @@ class _ThreadPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
     if (conversation == null) {
       return _Panel(
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                Icons.forum_outlined,
-                size: 48,
-                color: scheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Select a conversation',
-                style: TextStyle(color: scheme.onSurfaceVariant),
-              ),
-            ],
-          ),
+        child: const EmptyState(
+          icon: Icons.forum_outlined,
+          message: 'Select a conversation to start chatting.',
         ),
       );
     }
@@ -1372,13 +1352,11 @@ class _ThreadPane extends StatelessWidget {
             ),
           Expanded(
             child: state._loadingMessages
-                ? const Center(child: CircularProgressIndicator())
+                ? const LoadingView()
                 : state._messages.isEmpty
-                ? Center(
-                    child: Text(
-                      'No messages yet. Say hello!',
-                      style: TextStyle(color: scheme.onSurfaceVariant),
-                    ),
+                ? const EmptyState(
+                    icon: Icons.chat_bubble_outline,
+                    message: 'No messages yet. Say hello!',
                   )
                 : ListView.builder(
                     controller: state._scroll,
