@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/feedback.dart';
 import '../../../data/enums/custom_field_type.dart';
 import '../../../data/models/custom_field.dart';
 import '../providers/custom_fields_providers.dart';
@@ -68,9 +69,7 @@ class _TaskCustomFieldsSectionState
           .setTaskValue(widget.taskId, id, value);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not save field: $e')));
+        context.showError('Could not save field: $e');
       }
     }
   }

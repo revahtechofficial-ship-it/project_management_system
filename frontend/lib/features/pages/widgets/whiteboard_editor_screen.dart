@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/feedback.dart';
 import '../../../data/enums/page_type.dart';
 import '../../../data/models/workspace_page.dart';
 import '../../../providers/auth_provider.dart';
@@ -172,18 +173,14 @@ class _WhiteboardEditorScreenState
           _dirty = false;
         });
         if (!silent) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Saved')));
+          context.showSuccess('Saved');
         }
       }
       return true;
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not save: $e')));
+        context.showError('Could not save: $e');
       }
       return false;
     }
@@ -202,15 +199,11 @@ class _WhiteboardEditorScreenState
           );
       ref.invalidate(pageTemplatesProvider(PageType.whiteboard));
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Saved as template')));
+        context.showSuccess('Saved as template');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not save template: $e')));
+        context.showError('Could not save template: $e');
       }
     }
   }
@@ -235,9 +228,7 @@ class _WhiteboardEditorScreenState
         _dirty = false;
       });
       if (toastFrom != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Updated by $toastFrom')));
+        context.showSuccess('Updated by $toastFrom');
       }
     } catch (_) {}
   }
@@ -254,11 +245,7 @@ class _WhiteboardEditorScreenState
     }
     final String name = e['updated_by_name'] as String? ?? 'Someone';
     if (_dirty || _saving) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$name updated this board — your edits are kept'),
-        ),
-      );
+      context.showSuccess('$name updated this board — your edits are kept');
     } else {
       _reload(toastFrom: name);
     }
@@ -317,24 +304,18 @@ class _WhiteboardEditorScreenState
   Future<void> _createTask(_Element e) async {
     final String title = e.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add text first to make a task.')),
-      );
+      context.showSuccess('Add text first to make a task.');
       return;
     }
     try {
       await ref.read(tasksRepositoryProvider).create(title: title);
       ref.invalidate(tasksProvider);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Task created: $title')));
+        context.showSuccess('Task created: $title');
       }
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not create task: $err')));
+        context.showError('Could not create task: $err');
       }
     }
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/feedback.dart';
 import '../../../core/widgets/user_avatar.dart';
 import '../../../data/models/public_channel.dart';
 import '../../../data/models/team_member.dart';
@@ -119,9 +120,7 @@ class _GroupDialogState extends ConsumerState<_GroupDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not create group: $e')));
+        context.showError('Could not create group: $e');
       }
     }
   }

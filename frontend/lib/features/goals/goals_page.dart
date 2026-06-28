@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
@@ -175,28 +176,11 @@ class _ObjectiveCard extends ConsumerWidget {
       showObjectiveDialog(context, existing: objective, objectives: objectives);
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final bool ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) => AlertDialog(
-            title: Text('Delete "${objective.title}"?'),
-            content: const Text(
-              'The objective and its key results are removed.',
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: AppColors.rose),
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    final bool ok = await confirmDelete(
+      context,
+      what: '"${objective.title}"',
+      message: 'The objective and its key results are removed.',
+    );
     if (!ok) {
       return;
     }

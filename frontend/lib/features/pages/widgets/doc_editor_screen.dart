@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../core/utils/feedback.dart';
 import '../../../core/widgets/markdown_view.dart';
 import '../../../data/enums/page_type.dart';
 import '../../../data/models/team_member.dart';
@@ -110,18 +111,14 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
           _dirty = false;
         });
         if (!silent) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Saved')));
+          context.showSuccess('Saved');
         }
       }
       return true;
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not save: $e')));
+        context.showError('Could not save: $e');
       }
       return false;
     }
@@ -161,15 +158,11 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
           );
       ref.invalidate(docTemplatesProvider);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Saved as template')));
+        context.showSuccess('Saved as template');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not save template: $e')));
+        context.showError('Could not save template: $e');
       }
     }
   }
@@ -195,9 +188,7 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
         _incomingFrom = null;
       });
       if (toastFrom != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Updated by $toastFrom')));
+        context.showSuccess('Updated by $toastFrom');
       }
     } catch (_) {}
   }
@@ -252,9 +243,7 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not add subpage: $e')));
+        context.showError('Could not add subpage: $e');
       }
     }
   }
@@ -449,9 +438,7 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not delete: $e')));
+        context.showError('Could not delete: $e');
       }
     }
   }

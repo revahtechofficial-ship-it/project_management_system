@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
@@ -351,15 +352,11 @@ class _SecurityViewState extends ConsumerState<_SecurityView> {
       ref.invalidate(workspaceSettingsProvider);
       ref.invalidate(auditLogProvider);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Settings saved')));
+        context.showSuccess('Settings saved');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not save: $e')));
+        context.showError('Could not save: $e');
       }
     } finally {
       if (mounted) {

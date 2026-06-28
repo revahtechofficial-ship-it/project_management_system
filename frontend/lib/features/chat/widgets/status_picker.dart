@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/feedback.dart';
 import '../../../data/enums/user_status.dart';
 import '../../../data/models/user_presence.dart';
 import '../../../providers/auth_provider.dart';
@@ -57,9 +58,7 @@ class _StatusPickerState extends ConsumerState<_StatusPicker> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not update status: $e')));
+        context.showError('Could not update status: $e');
       }
     }
   }

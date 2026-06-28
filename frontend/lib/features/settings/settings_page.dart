@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/feedback.dart';
 import '../../core/widgets/avatar_crop_dialog.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
@@ -172,15 +173,11 @@ class _ProfileCard extends ConsumerWidget {
           .read(authControllerProvider.notifier)
           .updateAvatar(cropped, 'avatar.png');
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Photo updated')));
+        context.showSuccess('Photo updated');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        context.showError('Upload failed: $e');
       }
     }
   }
@@ -349,27 +346,11 @@ class _CustomFieldsCard extends ConsumerWidget {
     WidgetRef ref,
     CustomField f,
   ) async {
-    final bool ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) => AlertDialog(
-            title: Text('Delete "${f.name}"?'),
-            content: const Text(
-              'This removes the field and its values from every task.',
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    final bool ok = await confirmDelete(
+      context,
+      what: '"${f.name}"',
+      message: 'This removes the field and its values from every task.',
+    );
     if (!ok) {
       return;
     }
@@ -423,21 +404,15 @@ class _SecurityCard extends ConsumerWidget {
     try {
       await ref.read(authControllerProvider.notifier).setTwoFactor(enabled);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              enabled
-                  ? 'Two-factor authentication enabled'
-                  : 'Two-factor authentication disabled',
-            ),
-          ),
+        context.showSuccess(
+          enabled
+              ? 'Two-factor authentication enabled'
+              : 'Two-factor authentication disabled',
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not update 2FA: $e')));
+        context.showError('Could not update 2FA: $e');
       }
     }
   }
@@ -448,9 +423,7 @@ class _SecurityCard extends ConsumerWidget {
       builder: (BuildContext context) => const ChangePasswordDialog(),
     );
     if ((ok ?? false) && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password updated successfully')),
-      );
+      context.showSuccess('Password updated successfully');
     }
   }
 }
@@ -578,27 +551,11 @@ class _TaskTemplatesCard extends ConsumerWidget {
     WidgetRef ref,
     TaskTemplate t,
   ) async {
-    final bool ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) => AlertDialog(
-            title: Text('Delete "${t.name}"?'),
-            content: const Text(
-              'This removes the template. Existing tasks are unaffected.',
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    final bool ok = await confirmDelete(
+      context,
+      what: '"${t.name}"',
+      message: 'This removes the template. Existing tasks are unaffected.',
+    );
     if (!ok) {
       return;
     }
@@ -668,27 +625,11 @@ class _ProjectTemplatesCard extends ConsumerWidget {
     WidgetRef ref,
     ProjectTemplate t,
   ) async {
-    final bool ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) => AlertDialog(
-            title: Text('Delete "${t.name}"?'),
-            content: const Text(
-              'This removes the template. Existing projects are unaffected.',
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    final bool ok = await confirmDelete(
+      context,
+      what: '"${t.name}"',
+      message: 'This removes the template. Existing projects are unaffected.',
+    );
     if (!ok) {
       return;
     }
@@ -804,15 +745,11 @@ class _StatusesCard extends ConsumerWidget {
       await ref.read(statusesRepositoryProvider).applyTemplate(template);
       ref.invalidate(statusesProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Template applied')));
+        context.showSuccess('Template applied');
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not apply template')),
-        );
+        context.showError('Could not apply template');
       }
     }
   }
@@ -823,34 +760,14 @@ class _StatusesCard extends ConsumerWidget {
     WorkflowStatus s,
   ) async {
     if (s.protected) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('"${s.label}" is built in and can\'t be removed'),
-        ),
-      );
+      context.showError('"${s.label}" is built in and can\'t be removed');
       return;
     }
-    final bool ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) => AlertDialog(
-            title: Text('Delete "${s.label}"?'),
-            content: const Text(
-              'You can only delete a status that no task is using.',
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    final bool ok = await confirmDelete(
+      context,
+      what: '"${s.label}"',
+      message: 'You can only delete a status that no task is using.',
+    );
     if (!ok) {
       return;
     }
@@ -859,11 +776,7 @@ class _StatusesCard extends ConsumerWidget {
       ref.invalidate(statusesProvider);
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not delete — move its tasks elsewhere first'),
-          ),
-        );
+        context.showError('Could not delete — move its tasks elsewhere first');
       }
     }
   }

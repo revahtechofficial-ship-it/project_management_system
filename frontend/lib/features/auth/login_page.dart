@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/services/auth_service.dart';
+import '../../core/utils/feedback.dart';
 import '../../providers/auth_provider.dart';
 import 'widgets/auth_bits.dart';
 import 'widgets/auth_scaffold.dart';
@@ -91,9 +92,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             purpose: 'login',
           );
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('A new code is on its way.')));
+        context.showSuccess('A new code is on its way.');
       }
     } catch (e) {
       setState(() => _error = '$e');

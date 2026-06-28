@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/date_format.dart';
+import '../../../core/utils/feedback.dart';
 import '../../../core/widgets/favorite_button.dart';
 import '../../../core/widgets/user_avatar.dart';
 import '../../reminders/widgets/reminder_dialog.dart';
@@ -269,15 +270,11 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
           );
       ref.invalidate(taskTemplatesProvider);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Saved template "$name"')));
+        context.showSuccess('Saved template "$name"');
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save template')),
-        );
+        context.showError('Could not save template');
       }
     }
   }

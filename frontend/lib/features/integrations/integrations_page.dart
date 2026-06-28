@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
@@ -354,9 +355,7 @@ class _WebhooksView extends ConsumerWidget {
   Future<void> _test(BuildContext context, WidgetRef ref, int id) async {
     await ref.read(integrationsRepositoryProvider).testWebhook(id);
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Test delivery sent')));
+      context.showSuccess('Test delivery sent');
     }
   }
 

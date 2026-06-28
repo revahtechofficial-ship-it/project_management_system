@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
@@ -88,27 +88,11 @@ class _ReleaseCard extends ConsumerWidget {
   final bool canManage;
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final bool ok = await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) => AlertDialog(
-            title: Text('Delete "${release.displayName}"?'),
-            content: const Text(
-              'The release is removed; its tasks are kept (just unassigned).',
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: AppColors.rose),
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    final bool ok = await confirmDelete(
+      context,
+      what: '"${release.displayName}"',
+      message: 'The release is removed; its tasks are kept (just unassigned).',
+    );
     if (!ok) {
       return;
     }

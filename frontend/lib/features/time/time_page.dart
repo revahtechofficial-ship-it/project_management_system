@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
@@ -170,9 +171,7 @@ class _StartBarState extends ConsumerState<_StartBar> {
       ref.invalidate(myTimeEntriesProvider);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not start: $e')));
+        context.showError('Could not start: $e');
       }
     } finally {
       if (mounted) {
@@ -264,9 +263,7 @@ class _RunningBarState extends ConsumerState<_RunningBar> {
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not stop: $e')));
+        context.showError('Could not stop: $e');
       }
     }
   }

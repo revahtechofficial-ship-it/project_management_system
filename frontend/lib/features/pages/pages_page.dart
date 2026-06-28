@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/page_header.dart';
 import '../../core/widgets/skeleton.dart';
@@ -61,9 +62,7 @@ class _PagesPageState extends ConsumerState<PagesPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not create: $e')));
+        context.showError('Could not create: $e');
       }
     }
   }
@@ -85,9 +84,7 @@ class _PagesPageState extends ConsumerState<PagesPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not create: $e')));
+        context.showError('Could not create: $e');
       }
     }
   }
@@ -221,9 +218,7 @@ class _DocsTreeState extends ConsumerState<_DocsTree> {
       await widget.onOpen(page.id);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not add subpage: $e')));
+        context.showError('Could not add subpage: $e');
       }
     }
   }

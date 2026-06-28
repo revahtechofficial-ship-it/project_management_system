@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/date_format.dart';
+import '../../../core/utils/feedback.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/time_entry.dart';
 import '../../tasks/providers/tasks_providers.dart';
@@ -79,9 +80,7 @@ class _TimeEntryDialogState extends ConsumerState<_TimeEntryDialog> {
         (int.tryParse(_hours.text.trim()) ?? 0) * 60 +
         (int.tryParse(_mins.text.trim()) ?? 0);
     if (minutes <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a duration above zero')),
-      );
+      context.showSuccess('Enter a duration above zero');
       return;
     }
     setState(() => _saving = true);
@@ -111,9 +110,7 @@ class _TimeEntryDialogState extends ConsumerState<_TimeEntryDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not save: $e')));
+        context.showError('Could not save: $e');
       }
     }
   }

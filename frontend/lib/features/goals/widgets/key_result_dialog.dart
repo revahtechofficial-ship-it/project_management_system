@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/feedback.dart';
 import '../../../data/models/key_result.dart';
 import '../providers/goals_providers.dart';
 
@@ -96,9 +97,7 @@ class _KeyResultDialogState extends ConsumerState<_KeyResultDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not save: $e')));
+        context.showError('Could not save: $e');
       }
     }
   }

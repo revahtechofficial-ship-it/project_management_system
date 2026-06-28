@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../core/utils/feedback.dart';
 import '../../../data/enums/form_field_type.dart';
 import '../../../data/enums/task_priority.dart';
 import '../../../data/models/form_field.dart' as model;
@@ -140,17 +141,13 @@ class _FormEditorScreenState extends ConsumerState<FormEditorScreen> {
       if (mounted) {
         setState(() => _saving = false);
         if (!silent) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Saved')));
+          context.showSuccess('Saved');
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not save: $e')));
+        context.showError('Could not save: $e');
       }
     }
   }
@@ -212,9 +209,7 @@ class _FormEditorScreenState extends ConsumerState<FormEditorScreen> {
           _ => (value as String).isEmpty,
         };
         if (missing) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('"${f.label}" is required')));
+          context.showSuccess('"${f.label}" is required');
           return;
         }
       }
@@ -234,16 +229,12 @@ class _FormEditorScreenState extends ConsumerState<FormEditorScreen> {
           _selects.clear();
           _checks.clear();
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Response submitted. Thank you!')),
-        );
+        context.showSuccess('Response submitted. Thank you!');
       }
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not submit: $e')));
+        context.showError('Could not submit: $e');
       }
     }
   }

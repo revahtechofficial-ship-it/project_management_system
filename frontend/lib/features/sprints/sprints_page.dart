@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
@@ -110,28 +111,11 @@ class _SprintsPageState extends ConsumerState<SprintsPage> {
   }
 
   Future<void> _delete(Sprint sprint) async {
-    final bool ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) => AlertDialog(
-            title: Text('Delete "${sprint.name}"?'),
-            content: const Text(
-              'The sprint is removed; its tasks return to the backlog.',
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: AppColors.rose),
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    final bool ok = await confirmDelete(
+      context,
+      what: '"${sprint.name}"',
+      message: 'The sprint is removed; its tasks return to the backlog.',
+    );
     if (!ok) {
       return;
     }

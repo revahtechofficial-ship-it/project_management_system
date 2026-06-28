@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/feedback.dart';
 import '../../../data/enums/custom_field_type.dart';
 import '../../tasks/providers/custom_fields_providers.dart';
 
@@ -50,9 +51,7 @@ class _CustomFieldDialogState extends ConsumerState<_CustomFieldDialog> {
       return;
     }
     if (_type == CustomFieldType.select && _options.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add at least one dropdown option')),
-      );
+      context.showSuccess('Add at least one dropdown option');
       return;
     }
     setState(() => _saving = true);
@@ -69,9 +68,7 @@ class _CustomFieldDialogState extends ConsumerState<_CustomFieldDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not create field: $e')),
-        );
+        context.showError('Could not create field: $e');
       }
     }
   }

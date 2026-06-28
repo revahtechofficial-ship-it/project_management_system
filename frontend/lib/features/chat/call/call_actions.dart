@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/feedback.dart';
 import '../../../data/models/call_credentials.dart';
 import '../providers/chat_providers.dart';
 import 'call_screen.dart';
@@ -24,9 +25,7 @@ Future<void> startCall(
     await _openCall(context, creds, title);
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Call failed: $e')));
+      context.showError('Call failed: $e');
     }
   }
 }
@@ -76,9 +75,7 @@ Future<void> showIncomingCall(
     await _openCall(context, creds, fromName);
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not join: $e')));
+      context.showError('Could not join: $e');
     }
   }
 }

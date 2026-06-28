@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/feedback.dart';
 import '../../../core/widgets/dashboard_card.dart';
 import '../../../core/widgets/stat_card.dart';
 import '../../../core/widgets/task_status_chart.dart';
@@ -44,26 +45,11 @@ class _SavedDashboardScreenState extends ConsumerState<SavedDashboardScreen> {
   }
 
   Future<void> _delete() async {
-    final bool ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) => AlertDialog(
-            title: Text('Delete "${_dashboard.name}"?'),
-            content: const Text('This cannot be undone.'),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: AppColors.rose),
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    final bool ok = await confirmDelete(
+      context,
+      what: '"${_dashboard.name}"',
+      message: 'This cannot be undone.',
+    );
     if (!ok) {
       return;
     }

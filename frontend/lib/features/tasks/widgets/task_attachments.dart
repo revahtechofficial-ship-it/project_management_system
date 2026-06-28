@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_config.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../core/utils/feedback.dart';
 import '../../../data/models/attachment.dart';
 import '../../../providers/auth_provider.dart';
 import '../providers/attachments_providers.dart';
@@ -43,9 +44,7 @@ class _TaskAttachmentsSectionState
       ref.invalidate(activityProvider(widget.taskId));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        context.showError('Upload failed: $e');
       }
     } finally {
       if (mounted) {

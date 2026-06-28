@@ -14,6 +14,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/utils/feedback.dart';
 import '../../core/utils/mentions.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/avatar_crop_dialog.dart';
@@ -785,9 +786,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (targetId == _selectedId) {
         // The forwarded copy arrives over the socket for the open chat.
       } else if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Message forwarded')));
+        context.showSuccess('Message forwarded');
       }
     } catch (e) {
       _err('Forward failed: $e');

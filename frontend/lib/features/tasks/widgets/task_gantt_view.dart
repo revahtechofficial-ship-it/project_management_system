@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../core/utils/feedback.dart';
 import '../../../core/widgets/async_states.dart';
 import '../../../data/enums/dependency_type.dart';
 import '../../../data/models/milestone.dart';
@@ -236,11 +237,7 @@ class _TaskGanttViewState extends ConsumerState<TaskGanttView> {
     await ref.read(tasksRepositoryProvider).setBaseline();
     ref.invalidate(tasksProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Baseline saved — planned dates snapshotted'),
-        ),
-      );
+      context.showSuccess('Baseline saved — planned dates snapshotted');
     }
   }
 
@@ -319,9 +316,7 @@ class _TaskGanttViewState extends ConsumerState<TaskGanttView> {
       ref.invalidate(tasksProvider);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Reschedule failed: $e')));
+        context.showError('Reschedule failed: $e');
       }
     }
   }

@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import '../utils/feedback.dart';
+
 /// Lets the user pan/zoom an image inside a circular frame and returns the
 /// framed result as PNG bytes (or null if cancelled). Works on web by capturing
 /// a [RepaintBoundary] — no native cropper needed.
@@ -44,9 +46,7 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not crop image: $e')),
-        );
+        context.showError('Could not crop image: $e');
       }
     }
   }

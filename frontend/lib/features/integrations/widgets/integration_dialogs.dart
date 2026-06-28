@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/feedback.dart';
 import '../../../data/models/integration.dart';
 import '../../../data/models/webhook.dart';
 import '../../../data/repositories/integrations_repository.dart';
@@ -207,9 +208,7 @@ class _ApiKeyDialogState extends ConsumerState<_ApiKeyDialog> {
     } catch (e) {
       setState(() => _saving = false);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not create key: $e')));
+        context.showError('Could not create key: $e');
       }
     }
   }
@@ -253,9 +252,7 @@ class _ApiKeyDialogState extends ConsumerState<_ApiKeyDialog> {
                       icon: const Icon(Icons.copy, size: 18),
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: _token!));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Copied to clipboard')),
-                        );
+                        context.showSuccess('Copied to clipboard');
                       },
                     ),
                   ],

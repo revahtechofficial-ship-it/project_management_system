@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
@@ -128,9 +129,7 @@ class TeamPage extends ConsumerWidget {
     if (!context.mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Invite link copied: $link')),
-    );
+    context.showSuccess('Invite link copied: $link');
   }
 }
 
@@ -145,9 +144,7 @@ class _MemberCard extends ConsumerWidget {
       ref.invalidate(teamMembersProvider);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not change role: $e')),
-        );
+        context.showError('Could not change role: $e');
       }
     }
   }

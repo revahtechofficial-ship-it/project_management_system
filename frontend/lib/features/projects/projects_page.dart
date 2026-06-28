@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
@@ -401,29 +402,13 @@ Future<void> _deleteSpace(
   WidgetRef ref,
   Space space,
 ) async {
-  final bool ok =
-      await showDialog<bool>(
-        context: context,
-        builder: (BuildContext context) => AlertDialog(
-          title: Text('Delete "${space.name}"?'),
-          content: const Text(
-            'Its folders are removed and its projects become '
-            'uncategorized. No projects are deleted.',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: AppColors.rose),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-      ) ??
-      false;
+  final bool ok = await confirmDelete(
+    context,
+    what: '"${space.name}"',
+    message:
+        'Its folders are removed and its projects become '
+        'uncategorized. No projects are deleted.',
+  );
   if (!ok) {
     return;
   }
@@ -438,27 +423,11 @@ Future<void> _deleteFolder(
   WidgetRef ref,
   Folder folder,
 ) async {
-  final bool ok =
-      await showDialog<bool>(
-        context: context,
-        builder: (BuildContext context) => AlertDialog(
-          title: Text('Delete "${folder.name}"?'),
-          content: const Text(
-            'Its projects move directly into the space. None are deleted.',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-      ) ??
-      false;
+  final bool ok = await confirmDelete(
+    context,
+    what: '"${folder.name}"',
+    message: 'Its projects move directly into the space. None are deleted.',
+  );
   if (!ok) {
     return;
   }
@@ -839,25 +808,12 @@ class _ProjectCard extends ConsumerWidget {
       await _openForm(context, ref, project: project);
       return;
     }
-    final bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: const Text('Delete project?'),
-        content: Text('"${project.name}" will be permanently removed.'),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.rose),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final bool confirm = await confirmDelete(
+      context,
+      what: 'project',
+      message: '"${project.name}" will be permanently removed.',
     );
-    if (!(confirm ?? false)) {
+    if (!confirm) {
       return;
     }
     try {
@@ -865,9 +821,7 @@ class _ProjectCard extends ConsumerWidget {
       ref.invalidate(projectsProvider);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+        context.showError('Delete failed: $e');
       }
     }
   }

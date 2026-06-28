@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/utils/feedback.dart';
 import '../../core/widgets/avatar_crop_dialog.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/user_avatar.dart';
@@ -72,9 +73,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             bio: _bio.text.trim(),
           );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile saved')),
-        );
+        context.showSuccess('Profile saved');
       }
     } catch (e) {
       setState(() => _error = '$e');
@@ -101,15 +100,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           .read(authControllerProvider.notifier)
           .updateAvatar(cropped, 'avatar.png');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Photo updated')),
-        );
+        context.showSuccess('Photo updated');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
-        );
+        context.showError('Upload failed: $e');
       }
     }
   }
@@ -120,9 +115,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       builder: (BuildContext context) => const ChangePasswordDialog(),
     );
     if ((ok ?? false) && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password updated successfully')),
-      );
+      context.showSuccess('Password updated successfully');
     }
   }
 

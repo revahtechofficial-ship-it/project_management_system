@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/date_format.dart';
+import '../../../core/utils/feedback.dart';
 import '../../../data/enums/project_status.dart';
 import '../../../data/models/folder.dart';
 import '../../../data/models/project.dart';
@@ -147,15 +148,11 @@ class _ProjectFormDialogState extends ConsumerState<ProjectFormDialog> {
           );
       ref.invalidate(projectTemplatesProvider);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Saved template "$name"')));
+        context.showSuccess('Saved template "$name"');
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save template')),
-        );
+        context.showError('Could not save template');
       }
     }
   }
