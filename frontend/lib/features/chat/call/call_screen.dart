@@ -25,17 +25,26 @@ class CallScreen extends StatefulWidget {
 
 class _CallScreenState extends State<CallScreen> {
   final Room _room = Room();
-  bool _connecting = true;
+  bool _inLobby = true;
+  bool _connecting = false;
   String? _error;
   bool _micOn = true;
   bool _camOn = false;
   bool _screenOn = false;
 
+  // Pre-join ("green room") device selection.
+  List<MediaDevice> _cameras = <MediaDevice>[];
+  List<MediaDevice> _mics = <MediaDevice>[];
+  String? _cameraId;
+  String? _micId;
+  LocalVideoTrack? _preview;
+
   @override
   void initState() {
     super.initState();
     _room.addListener(_onChange);
-    _connect();
+    _camOn = widget.mode == 'video';
+    _initLobby();
   }
 
   void _onChange() {
@@ -44,13 +53,112 @@ class _CallScreenState extends State<CallScreen> {
     }
   }
 
-  Future<void> _connect() async {
+  Future<void> _initLobby() async {
+    if (_camOn) {
+      await _startPreview();
+    }
+    await _refreshDevices();
+  }
+
+  Future<void> _refreshDevices() async {
+    try {
+      _cameras = await Hardware.instance.videoInputs();
+      _mics = await Hardware.instance.audioInputs();
+      _cameraId ??= _cameras.isNotEmpty ? _cameras.first.deviceId : null;
+      _micId ??= _mics.isNotEmpty ? _mics.first.deviceId : null;
+    } catch (_) {
+      // Enumeration can fail before camera/mic permission is granted.
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _startPreview() async {
+    await _stopPreview();
+    try {
+      _preview = await LocalVideoTrack.createCameraTrack(
+        CameraCaptureOptions(deviceId: _cameraId),
+      );
+      // Device labels become available once permission is granted.
+      await _refreshDevices();
+    } catch (_) {
+      _camOn = false;
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _stopPreview() async {
+    final LocalVideoTrack? t = _preview;
+    _preview = null;
+    await t?.stop();
+    await t?.dispose();
+  }
+
+  Future<void> _lobbyToggleCam() async {
+    _camOn = !_camOn;
+    if (_camOn) {
+      await _startPreview();
+    } else {
+      await _stopPreview();
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _selectCamera(String id) async {
+    _cameraId = id;
+    if (_inLobby) {
+      if (_camOn) {
+        await _startPreview();
+      }
+    } else if (_camOn) {
+      await _room.localParticipant?.setCameraEnabled(
+        true,
+        cameraCaptureOptions: CameraCaptureOptions(deviceId: id),
+      );
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _selectMic(String id) async {
+    _micId = id;
+    if (!_inLobby && _micOn) {
+      await _room.localParticipant?.setMicrophoneEnabled(
+        true,
+        audioCaptureOptions: AudioCaptureOptions(deviceId: id),
+      );
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _join() async {
+    await _stopPreview();
+    setState(() {
+      _inLobby = false;
+      _connecting = true;
+    });
     try {
       await _room.connect(widget.url, widget.token);
-      await _room.localParticipant?.setMicrophoneEnabled(true);
-      if (widget.mode == 'video') {
-        await _room.localParticipant?.setCameraEnabled(true);
-        _camOn = true;
+      await _room.localParticipant?.setMicrophoneEnabled(
+        _micOn,
+        audioCaptureOptions:
+            _micId != null ? AudioCaptureOptions(deviceId: _micId) : null,
+      );
+      if (_camOn) {
+        await _room.localParticipant?.setCameraEnabled(
+          true,
+          cameraCaptureOptions: _cameraId != null
+              ? CameraCaptureOptions(deviceId: _cameraId)
+              : null,
+        );
       }
       if (mounted) {
         setState(() => _connecting = false);
@@ -67,7 +175,12 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _toggleMic() async {
     _micOn = !_micOn;
-    await _room.localParticipant?.setMicrophoneEnabled(_micOn);
+    await _room.localParticipant?.setMicrophoneEnabled(
+      _micOn,
+      audioCaptureOptions: _micOn && _micId != null
+          ? AudioCaptureOptions(deviceId: _micId)
+          : null,
+    );
     if (mounted) {
       setState(() {});
     }
@@ -75,7 +188,12 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _toggleCam() async {
     _camOn = !_camOn;
-    await _room.localParticipant?.setCameraEnabled(_camOn);
+    await _room.localParticipant?.setCameraEnabled(
+      _camOn,
+      cameraCaptureOptions: _camOn && _cameraId != null
+          ? CameraCaptureOptions(deviceId: _cameraId)
+          : null,
+    );
     if (mounted) {
       setState(() {});
     }
@@ -102,6 +220,7 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
+    _stopPreview();
     _room.removeListener(_onChange);
     _room.dispose();
     super.dispose();
@@ -141,6 +260,9 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_inLobby) {
+      return _lobby();
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF0B1020),
       body: SafeArea(
@@ -152,6 +274,222 @@ class _CallScreenState extends State<CallScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _lobby() {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0B1020),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  const Text(
+                    'Ready to join?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (widget.title.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white54),
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Container(
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A2238),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: _camOn && _preview != null
+                          ? VideoTrackRenderer(_preview!, fit: VideoViewFit.cover)
+                          : const Center(
+                              child: Icon(
+                                Icons.videocam_off,
+                                color: Colors.white38,
+                                size: 40,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      _RoundButton(
+                        icon: _micOn ? Icons.mic : Icons.mic_off,
+                        active: _micOn,
+                        onTap: () => setState(() => _micOn = !_micOn),
+                      ),
+                      const SizedBox(width: 16),
+                      _RoundButton(
+                        icon: _camOn ? Icons.videocam : Icons.videocam_off,
+                        active: _camOn,
+                        onTap: _lobbyToggleCam,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  _deviceDropdown(
+                    Icons.videocam_outlined,
+                    _cameras,
+                    _cameraId,
+                    _selectCamera,
+                  ),
+                  _deviceDropdown(Icons.mic_none, _mics, _micId, _selectMic),
+                  const SizedBox(height: 22),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white70,
+                            side: const BorderSide(color: Colors.white24),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: FilledButton.icon(
+                          onPressed: _join,
+                          icon: const Icon(Icons.videocam, size: 18),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          label: const Text('Join call'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _deviceDropdown(
+    IconData icon,
+    List<MediaDevice> devices,
+    String? selected,
+    ValueChanged<String> onChanged,
+  ) {
+    if (devices.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final bool hasSelected =
+        devices.any((MediaDevice d) => d.deviceId == selected);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: <Widget>[
+          Icon(icon, color: Colors.white54, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                dropdownColor: const Color(0xFF1A2238),
+                value: hasSelected ? selected : null,
+                hint: const Text(
+                  'Default',
+                  style: TextStyle(color: Colors.white54),
+                ),
+                style: const TextStyle(color: Colors.white),
+                items: <DropdownMenuItem<String>>[
+                  for (final MediaDevice d in devices)
+                    DropdownMenuItem<String>(
+                      value: d.deviceId,
+                      child: Text(
+                        d.label.isEmpty ? 'Device' : d.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                ],
+                onChanged: (String? v) {
+                  if (v != null) {
+                    onChanged(v);
+                  }
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeviceSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF11182B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setSheet) {
+            Future<void> pickCam(String id) async {
+              await _selectCamera(id);
+              setSheet(() {});
+            }
+
+            Future<void> pickMic(String id) async {
+              await _selectMic(id);
+              setSheet(() {});
+            }
+
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text(
+                    'Devices',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _deviceDropdown(
+                    Icons.videocam_outlined,
+                    _cameras,
+                    _cameraId,
+                    pickCam,
+                  ),
+                  _deviceDropdown(Icons.mic_none, _mics, _micId, pickMic),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -295,6 +633,12 @@ class _CallScreenState extends State<CallScreen> {
             icon: Icons.screen_share,
             active: _screenOn,
             onTap: _toggleScreen,
+          ),
+          const SizedBox(width: 16),
+          _RoundButton(
+            icon: Icons.tune,
+            active: false,
+            onTap: _showDeviceSheet,
           ),
           const SizedBox(width: 16),
           _RoundButton(
