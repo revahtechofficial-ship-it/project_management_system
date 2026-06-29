@@ -112,6 +112,33 @@ class _CallScreenState extends State<CallScreen> {
     ..._room.remoteParticipants.values,
   ];
 
+  /// One tile per video track: a camera (or avatar) tile for each participant,
+  /// plus a separate tile for anyone sharing their screen — otherwise the
+  /// screen-share track is published but never shown (the camera wins).
+  List<_VideoSource> _videoSources() {
+    final List<_VideoSource> out = <_VideoSource>[];
+    for (final Participant p in _participants) {
+      VideoTrack? camera;
+      VideoTrack? screen;
+      for (final TrackPublication<Track> pub in p.videoTrackPublications) {
+        final Track? t = pub.track;
+        if (t is! VideoTrack) {
+          continue;
+        }
+        if (pub.source == TrackSource.screenShareVideo) {
+          screen = t;
+        } else {
+          camera ??= t;
+        }
+      }
+      out.add(_VideoSource(participant: p, video: camera, isScreen: false));
+      if (screen != null) {
+        out.add(_VideoSource(participant: p, video: screen, isScreen: true));
+      }
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -168,10 +195,10 @@ class _CallScreenState extends State<CallScreen> {
         ),
       );
     }
-    final List<Participant> people = _participants;
-    final int cols = people.length <= 1
+    final List<_VideoSource> sources = _videoSources();
+    final int cols = sources.length <= 1
         ? 1
-        : people.length <= 4
+        : sources.length <= 4
         ? 2
         : 3;
     return Padding(
@@ -182,7 +209,12 @@ class _CallScreenState extends State<CallScreen> {
         crossAxisSpacing: 12,
         childAspectRatio: 4 / 3,
         children: <Widget>[
-          for (final Participant p in people) _ParticipantTile(participant: p),
+          for (final _VideoSource s in sources)
+            _ParticipantTile(
+              participant: s.participant,
+              video: s.video,
+              isScreen: s.isScreen,
+            ),
         ],
       ),
     );
@@ -224,27 +256,36 @@ class _CallScreenState extends State<CallScreen> {
   }
 }
 
-class _ParticipantTile extends StatelessWidget {
-  const _ParticipantTile({required this.participant});
-  final Participant participant;
+/// A single video source to render: a participant's camera (or avatar when the
+/// camera is off) or their shared screen.
+class _VideoSource {
+  const _VideoSource({
+    required this.participant,
+    required this.video,
+    required this.isScreen,
+  });
 
-  VideoTrack? get _videoTrack {
-    for (final TrackPublication<Track> pub
-        in participant.videoTrackPublications) {
-      final Track? t = pub.track;
-      if (t is VideoTrack) {
-        return t;
-      }
-    }
-    return null;
-  }
+  final Participant participant;
+  final VideoTrack? video;
+  final bool isScreen;
+}
+
+class _ParticipantTile extends StatelessWidget {
+  const _ParticipantTile({
+    required this.participant,
+    required this.video,
+    required this.isScreen,
+  });
+  final Participant participant;
+  final VideoTrack? video;
+  final bool isScreen;
 
   @override
   Widget build(BuildContext context) {
-    final VideoTrack? video = _videoTrack;
-    final String name = participant.name.isNotEmpty
+    final String baseName = participant.name.isNotEmpty
         ? participant.name
         : participant.identity;
+    final String name = isScreen ? '$baseName · Screen' : baseName;
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -258,9 +299,12 @@ class _ParticipantTile extends StatelessWidget {
         fit: StackFit.expand,
         children: <Widget>[
           if (video != null)
-            VideoTrackRenderer(video, fit: VideoViewFit.cover)
+            VideoTrackRenderer(
+              video!,
+              fit: isScreen ? VideoViewFit.contain : VideoViewFit.cover,
+            )
           else
-            Center(child: UserAvatar(name: name, radius: 34)),
+            Center(child: UserAvatar(name: baseName, radius: 34)),
           Positioned(
             left: 8,
             bottom: 8,
