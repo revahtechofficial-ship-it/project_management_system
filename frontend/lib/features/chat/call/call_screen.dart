@@ -147,7 +147,7 @@ class _CallScreenState extends State<CallScreen> {
         child: Column(
           children: <Widget>[
             _header(),
-            Expanded(child: _grid()),
+            Expanded(child: _stage()),
             _controls(),
           ],
         ),
@@ -179,7 +179,7 @@ class _CallScreenState extends State<CallScreen> {
     ),
   );
 
-  Widget _grid() {
+  Widget _stage() {
     if (_connecting) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -196,6 +196,59 @@ class _CallScreenState extends State<CallScreen> {
       );
     }
     final List<_VideoSource> sources = _videoSources();
+
+    // When someone is sharing their screen, feature it as the main stage and
+    // drop everyone else into a thumbnail strip below — far clearer than an
+    // equal grid where the screen is just another small tile.
+    _VideoSource? screen;
+    for (final _VideoSource s in sources) {
+      if (s.isScreen) {
+        screen = s;
+        break;
+      }
+    }
+    if (screen != null) {
+      final _VideoSource featured = screen;
+      final List<_VideoSource> thumbs = <_VideoSource>[
+        for (final _VideoSource s in sources)
+          if (!identical(s, featured)) s,
+      ];
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: <Widget>[
+            Expanded(
+              child: _ParticipantTile(
+                participant: featured.participant,
+                video: featured.video,
+                isScreen: true,
+              ),
+            ),
+            if (thumbs.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 112,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: thumbs.length,
+                  separatorBuilder: (BuildContext context, int i) =>
+                      const SizedBox(width: 12),
+                  itemBuilder: (BuildContext context, int i) => AspectRatio(
+                    aspectRatio: 4 / 3,
+                    child: _ParticipantTile(
+                      participant: thumbs[i].participant,
+                      video: thumbs[i].video,
+                      isScreen: thumbs[i].isScreen,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
     final int cols = sources.length <= 1
         ? 1
         : sources.length <= 4
@@ -207,7 +260,7 @@ class _CallScreenState extends State<CallScreen> {
         crossAxisCount: cols,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 4 / 3,
+        childAspectRatio: 16 / 10,
         children: <Widget>[
           for (final _VideoSource s in sources)
             _ParticipantTile(

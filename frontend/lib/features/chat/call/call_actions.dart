@@ -85,7 +85,7 @@ Future<void> _openCall(
   CallCredentials creds,
   String title,
 ) {
-  return Navigator.of(context).push(
+  return Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute<void>(
       fullscreenDialog: true,
       builder: (BuildContext _) => CallScreen(
