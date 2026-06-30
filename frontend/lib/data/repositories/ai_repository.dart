@@ -13,6 +13,26 @@ class AiStatus {
   );
 }
 
+/// Result of the meeting-notes pipeline: a Markdown summary plus the saved
+/// page id and the number of tasks created.
+class AiMeetingResult {
+  const AiMeetingResult({
+    required this.summary,
+    required this.pageId,
+    required this.taskCount,
+  });
+
+  final String summary;
+  final int pageId;
+  final int taskCount;
+
+  factory AiMeetingResult.fromJson(Map<String, dynamic> json) => AiMeetingResult(
+    summary: json['summary'] as String? ?? '',
+    pageId: json['page_id'] as int? ?? 0,
+    taskCount: json['count'] as int? ?? 0,
+  );
+}
+
 /// Talks to /api/v1/ai — the Claude-powered assistant (AGENTS.md §1).
 class AiRepository {
   const AiRepository(this._dio);
@@ -81,5 +101,23 @@ class AiRepository {
           data: <String, dynamic>{'notes': notes},
         );
     return (res.data ?? const <String, dynamic>{})['result'] as String? ?? '';
+  }
+
+  /// Turns a transcript/notes into a saved notes page plus real tasks.
+  Future<AiMeetingResult> meetingSummary(
+    String transcript, {
+    String? title,
+    int? projectId,
+  }) async {
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/ai/meeting-summary',
+          data: <String, dynamic>{
+            'transcript': transcript,
+            'title': title,
+            'project_id': projectId,
+          },
+        );
+    return AiMeetingResult.fromJson(res.data ?? const <String, dynamic>{});
   }
 }

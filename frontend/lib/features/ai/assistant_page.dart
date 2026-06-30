@@ -121,6 +121,37 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
     }
   }
 
+  Future<void> _meetingSummary() async {
+    final String? input = await showAiInputDialog(
+      context,
+      title: 'Meeting notes → tasks + page',
+      hint: 'Paste the meeting transcript or raw notes…',
+    );
+    if (input == null || input.trim().isEmpty) {
+      return;
+    }
+    _add('user', 'Summarize the meeting and create tasks');
+    setState(() => _busy = true);
+    try {
+      final AiMeetingResult res = await ref
+          .read(aiRepositoryProvider)
+          .meetingSummary(input);
+      ref.invalidate(tasksProvider);
+      final String suffix = res.taskCount > 0
+          ? '\n\n✅ Created **${res.taskCount}** '
+                'task${res.taskCount == 1 ? '' : 's'} and saved these notes as '
+                'a page — find it in **Pages**.'
+          : '\n\n📝 Saved these notes as a page — find it in **Pages**.';
+      _add('assistant', '${res.summary}$suffix');
+    } catch (e) {
+      _add('assistant', '⚠️ ${_friendly(e)}');
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
   Future<void> _quickAction({
     required String label,
     required Future<String> Function(String input) run,
@@ -211,6 +242,11 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
                         hint: 'Paste your raw meeting notes…',
                         run: repo.meetingNotes,
                       ),
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.summarize_outlined, size: 18),
+                label: const Text('Notes → tasks + page'),
+                onPressed: _busy ? null : _meetingSummary,
               ),
               ActionChip(
                 avatar: const Icon(Icons.auto_fix_high_outlined, size: 18),

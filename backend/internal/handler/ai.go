@@ -36,6 +36,7 @@ func (h *AIHandler) Routes() http.Handler {
 	r.Post("/tasks", h.createTasks)
 	r.Post("/search", h.search)
 	r.Post("/meeting-notes", h.meetingNotes)
+	r.Post("/meeting-summary", h.meetingSummary)
 	return r
 }
 
@@ -339,6 +340,103 @@ func (h *AIHandler) meetingNotes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"result": out})
+}
+
+// meetingSummary turns a meeting transcript/notes into a saved doc Page plus
+// real tasks: Claude returns a Markdown summary and structured action items,
+// the action items become tasks, and the summary + transcript are stored as a
+// page. Ties the AI assistant, tasks and pages together.
+func (h *AIHandler) meetingSummary(w http.ResponseWriter, r *http.Request) {
+	if !h.ai.Configured() {
+		h.notConfigured(w)
+		return
+	}
+	var b struct {
+		Transcript string `json:"transcript"`
+		Title      string `json:"title"`
+		ProjectID  *int64 `json:"project_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if strings.TrimSpace(b.Transcript) == "" {
+		writeError(w, http.StatusBadRequest, errors.New("a transcript is required"))
+		return
+	}
+	system := "You are a meeting assistant. From the transcript or notes, produce " +
+		"a concise summary and a list of action items. Respond with ONLY JSON (no " +
+		"prose, no code fences): {\"summary\": string (Markdown with ## Summary, " +
+		"## Decisions and ## Action items sections), \"tasks\": [{\"title\": string, " +
+		"\"description\": string, \"priority\": one of none, low, normal, high, " +
+		"urgent}]}. Each action item should become one task with a short, concrete title."
+	out, err := h.ai.Ask(r.Context(), system, b.Transcript, 4096)
+	if err != nil {
+		h.aiError(w, err)
+		return
+	}
+	var parsed struct {
+		Summary string   `json:"summary"`
+		Tasks   []aiTask `json:"tasks"`
+	}
+	if err := json.Unmarshal([]byte(stripFences(out)), &parsed); err != nil {
+		writeError(w, http.StatusBadGateway,
+			errors.New("the AI response could not be parsed"))
+		return
+	}
+
+	created := make([]map[string]any, 0, len(parsed.Tasks))
+	for _, t := range parsed.Tasks {
+		if strings.TrimSpace(t.Title) == "" {
+			continue
+		}
+		task, err := h.q.CreateTask(r.Context(), db.CreateTaskParams{
+			Title:       t.Title,
+			Description: t.Description,
+			ProjectID:   b.ProjectID,
+			Status:      statusOrTodo(""),
+			Recurrence:  "none",
+			Priority:    priorityOrNone(t.Priority),
+			Tags:        []string{},
+			IssueType:   "task",
+			Severity:    "none",
+		})
+		if err != nil {
+			continue
+		}
+		logActivity(r.Context(), h.q, task.ID, "created", "from meeting notes")
+		created = append(created, map[string]any{"id": task.ID, "title": task.Title})
+	}
+
+	title := strings.TrimSpace(b.Title)
+	if title == "" {
+		title = "Meeting notes"
+	}
+	body := parsed.Summary + "\n\n---\n\n## Transcript\n\n" + b.Transcript
+	actor := actorOf(r.Context())
+	review, _ := parseDue(nil)
+	page, err := h.q.CreatePage(r.Context(), db.CreatePageParams{
+		Type:       normPageType("doc"),
+		Title:      title,
+		Icon:       "📝",
+		Body:       body,
+		IsTemplate: false,
+		OwnerID:    actor,
+		ReviewAt:   review,
+		CreatedBy:  actor,
+		UpdatedBy:  actor,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"summary": parsed.Summary,
+		"page_id": page.ID,
+		"created": created,
+		"count":   len(created),
+	})
 }
 
 // --- helpers ---------------------------------------------------------------
