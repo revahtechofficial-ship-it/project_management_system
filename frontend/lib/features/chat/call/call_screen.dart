@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/widgets/user_avatar.dart';
 
@@ -71,6 +73,8 @@ class _CallScreenState extends State<CallScreen> {
   int _unreadChat = 0;
   int _seq = 0;
   _SidePanel _panel = _SidePanel.none;
+  _Poll? _poll;
+  bool _pollMine = false;
 
   @override
   void initState() {
@@ -369,6 +373,32 @@ class _CallScreenState extends State<CallScreen> {
             }
           });
         }
+      case 'poll':
+        final List<String> opts = <String>[
+          for (final Object? o in (msg['options'] as List<dynamic>? ?? <Object?>[]))
+            '$o',
+        ];
+        if (opts.isNotEmpty) {
+          setState(() {
+            _pollMine = false;
+            _poll = _Poll(
+              id: '${msg['id']}',
+              question: msg['q'] as String? ?? 'Poll',
+              options: opts,
+            );
+          });
+        }
+      case 'vote':
+        if (sid != null && _poll != null && '${msg['id']}' == _poll!.id) {
+          final int? opt = msg['opt'] as int?;
+          if (opt != null) {
+            setState(() => _poll!.votes[sid] = opt);
+          }
+        }
+      case 'pollend':
+        if (_poll != null && '${msg['id']}' == _poll!.id) {
+          setState(() => _poll!.ended = true);
+        }
     }
   }
 
@@ -409,6 +439,39 @@ class _CallScreenState extends State<CallScreen> {
     setState(() => _chat.add(_ChatMsg(me, text, true)));
     _send(<String, dynamic>{'t': 'chat', 'text': text});
   }
+
+  void _startPoll(String question, List<String> options) {
+    final String id = '${_seq++}-${_room.localParticipant?.sid ?? ''}';
+    setState(() {
+      _pollMine = true;
+      _poll = _Poll(id: id, question: question, options: options);
+    });
+    _send(<String, dynamic>{
+      't': 'poll',
+      'id': id,
+      'q': question,
+      'options': options,
+    });
+  }
+
+  void _vote(int opt) {
+    final String? me = _room.localParticipant?.sid;
+    if (me == null || _poll == null || _poll!.ended) {
+      return;
+    }
+    setState(() => _poll!.votes[me] = opt);
+    _send(<String, dynamic>{'t': 'vote', 'id': _poll!.id, 'opt': opt});
+  }
+
+  void _endPoll() {
+    if (_poll == null) {
+      return;
+    }
+    _send(<String, dynamic>{'t': 'pollend', 'id': _poll!.id});
+    setState(() => _poll!.ended = true);
+  }
+
+  void _dismissPoll() => setState(() => _poll = null);
 
   bool get _handUp => _handQueue.contains(_room.localParticipant?.sid);
 
@@ -586,6 +649,7 @@ class _CallScreenState extends State<CallScreen> {
                 if (_panel != _SidePanel.none) _sidePanel(),
               ],
             ),
+            if (_poll != null) _pollCard(),
             IgnorePointer(
               child: Stack(
                 children: <Widget>[
@@ -756,10 +820,7 @@ class _CallScreenState extends State<CallScreen> {
                                   : Colors.white12,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Text(
-                              m.text,
-                              style: const TextStyle(color: Colors.white),
-                            ),
+                            child: _LinkText(m.text),
                           ),
                         ],
                       ),
@@ -1193,6 +1254,196 @@ class _CallScreenState extends State<CallScreen> {
     );
   }
 
+  Widget _pollCard() {
+    final _Poll p = _poll!;
+    final String? me = _room.localParticipant?.sid;
+    final int? myVote = me != null ? p.votes[me] : null;
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Container(
+        margin: const EdgeInsets.only(top: 12),
+        constraints: const BoxConstraints(maxWidth: 420),
+        padding: const EdgeInsets.fromLTRB(14, 12, 8, 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF11182B),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                const Icon(Icons.poll_outlined, color: Colors.white70, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    p.question,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white54, size: 18),
+                  onPressed: _dismissPoll,
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            for (int i = 0; i < p.options.length; i++)
+              _pollOption(p, i, myVote),
+            const SizedBox(height: 6),
+            Row(
+              children: <Widget>[
+                Text(
+                  '${p.total} vote${p.total == 1 ? '' : 's'}',
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                const Spacer(),
+                if (p.ended)
+                  const Text(
+                    'Ended',
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  )
+                else if (_pollMine)
+                  TextButton(
+                    onPressed: _endPoll,
+                    child: const Text('End poll'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pollOption(_Poll p, int i, int? myVote) {
+    final int count = p.countFor(i);
+    final double frac = p.total == 0 ? 0 : count / p.total;
+    final bool selected = myVote == i;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: p.ended ? null : () => _vote(i),
+        child: Stack(
+          children: <Widget>[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: frac,
+                minHeight: 34,
+                backgroundColor: Colors.white10,
+                color: selected
+                    ? const Color(0xFF6366F1).withValues(alpha: 0.55)
+                    : Colors.white24,
+              ),
+            ),
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  children: <Widget>[
+                    if (selected)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 6),
+                        child: Icon(Icons.check, color: Colors.white, size: 16),
+                      ),
+                    Expanded(
+                      child: Text(
+                        p.options[i],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    Text(
+                      '$count',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCreatePoll() {
+    final TextEditingController q = TextEditingController();
+    final List<TextEditingController> opts = <TextEditingController>[
+      TextEditingController(),
+      TextEditingController(),
+    ];
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext context) => StatefulBuilder(
+        builder: (BuildContext context, StateSetter setD) => AlertDialog(
+          title: const Text('New poll'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                TextField(
+                  controller: q,
+                  autofocus: true,
+                  decoration: const InputDecoration(labelText: 'Question'),
+                ),
+                const SizedBox(height: 8),
+                for (int i = 0; i < opts.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: TextField(
+                      controller: opts[i],
+                      decoration: InputDecoration(labelText: 'Option ${i + 1}'),
+                    ),
+                  ),
+                if (opts.length < 5)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () =>
+                          setD(() => opts.add(TextEditingController())),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add option'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final String question = q.text.trim();
+                final List<String> options = <String>[
+                  for (final TextEditingController c in opts)
+                    if (c.text.trim().isNotEmpty) c.text.trim(),
+                ];
+                if (question.isEmpty || options.length < 2) {
+                  return;
+                }
+                Navigator.pop(context);
+                _startPoll(question, options);
+              },
+              child: const Text('Start'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _header() => Padding(
     padding: const EdgeInsets.all(16),
     child: Row(
@@ -1344,6 +1595,11 @@ class _CallScreenState extends State<CallScreen> {
             active: _panel == _SidePanel.chat,
             badge: _unreadChat > 0 ? '$_unreadChat' : null,
             onTap: () => _openPanel(_SidePanel.chat),
+          ),
+          _RoundButton(
+            icon: Icons.poll_outlined,
+            active: _poll != null,
+            onTap: _showCreatePoll,
           ),
           _RoundButton(
             icon: _gridView ? Icons.view_sidebar_outlined : Icons.grid_view,
@@ -1623,6 +1879,80 @@ class _ChatMsg {
   final String sender;
   final String text;
   final bool isMe;
+}
+
+/// A live in-call poll. Votes are keyed by participant sid so re-votes replace.
+class _Poll {
+  _Poll({required this.id, required this.question, required this.options});
+  final String id;
+  final String question;
+  final List<String> options;
+  final Map<String, int> votes = <String, int>{};
+  bool ended = false;
+
+  int countFor(int opt) => votes.values.where((int v) => v == opt).length;
+  int get total => votes.length;
+}
+
+/// Renders chat text with tappable http(s) links (opens in a new tab).
+class _LinkText extends StatefulWidget {
+  const _LinkText(this.text);
+  final String text;
+
+  @override
+  State<_LinkText> createState() => _LinkTextState();
+}
+
+class _LinkTextState extends State<_LinkText> {
+  final List<TapGestureRecognizer> _recognizers = <TapGestureRecognizer>[];
+
+  void _clear() {
+    for (final TapGestureRecognizer r in _recognizers) {
+      r.dispose();
+    }
+    _recognizers.clear();
+  }
+
+  @override
+  void dispose() {
+    _clear();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _clear();
+    final RegExp re = RegExp(r'(https?:\/\/[^\s]+)');
+    final List<InlineSpan> spans = <InlineSpan>[];
+    int last = 0;
+    for (final RegExpMatch m in re.allMatches(widget.text)) {
+      if (m.start > last) {
+        spans.add(TextSpan(text: widget.text.substring(last, m.start)));
+      }
+      final String url = m.group(0)!;
+      final TapGestureRecognizer rec = TapGestureRecognizer()
+        ..onTap = () =>
+            launchUrl(Uri.parse(url), webOnlyWindowName: '_blank');
+      _recognizers.add(rec);
+      spans.add(
+        TextSpan(
+          text: url,
+          recognizer: rec,
+          style: const TextStyle(
+            color: Color(0xFF93C5FD),
+            decoration: TextDecoration.underline,
+          ),
+        ),
+      );
+      last = m.end;
+    }
+    if (last < widget.text.length) {
+      spans.add(TextSpan(text: widget.text.substring(last)));
+    }
+    return Text.rich(
+      TextSpan(style: const TextStyle(color: Colors.white), children: spans),
+    );
+  }
 }
 
 /// An emoji that floats up and fades out, then removes itself via [onDone].
