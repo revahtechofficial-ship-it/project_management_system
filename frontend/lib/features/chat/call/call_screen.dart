@@ -2,14 +2,17 @@ import 'dart:convert';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/widgets/user_avatar.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/dio_provider.dart';
 
 /// A full-screen LiveKit call: a participant grid plus mic/camera/screen-share
 /// and hang-up controls. Works for 1:1 and group, audio or video.
-class CallScreen extends StatefulWidget {
+class CallScreen extends ConsumerStatefulWidget {
   const CallScreen({
     super.key,
     required this.url,
@@ -26,10 +29,10 @@ class CallScreen extends StatefulWidget {
   final String selfName;
 
   @override
-  State<CallScreen> createState() => _CallScreenState();
+  ConsumerState<CallScreen> createState() => _CallScreenState();
 }
 
-class _CallScreenState extends State<CallScreen> {
+class _CallScreenState extends ConsumerState<CallScreen> {
   final Room _room = Room();
   bool _inLobby = true;
   bool _connecting = false;
@@ -473,6 +476,53 @@ class _CallScreenState extends State<CallScreen> {
 
   void _dismissPoll() => setState(() => _poll = null);
 
+  // --- Host (admin) moderation, run server-side via the backend -------------
+
+  bool get _isAdmin =>
+      ref.read(authControllerProvider).asData?.value.user?.isAdmin ?? false;
+
+  Future<void> _mod(String path, Map<String, dynamic> body) async {
+    try {
+      await ref.read(dioProvider).post<dynamic>(
+        '/api/v1/calls/$path',
+        data: body,
+      );
+    } catch (_) {
+      // Surfaced server-side; ignore client-side to keep the call smooth.
+    }
+  }
+
+  void _muteParticipant(Participant p) {
+    if (p.audioTrackPublications.isEmpty) {
+      return;
+    }
+    _mod('mute', <String, dynamic>{
+      'room': _room.name,
+      'identity': p.identity,
+      'track_sid': p.audioTrackPublications.first.sid,
+      'muted': true,
+    });
+  }
+
+  void _muteAll() {
+    for (final RemoteParticipant p in _room.remoteParticipants.values) {
+      _muteParticipant(p);
+    }
+  }
+
+  void _removeParticipant(Participant p) =>
+      _mod('remove', <String, dynamic>{
+        'room': _room.name,
+        'identity': p.identity,
+      });
+
+  void _setPublish(Participant p, bool canPublish) =>
+      _mod('permissions', <String, dynamic>{
+        'room': _room.name,
+        'identity': p.identity,
+        'can_publish': canPublish,
+      });
+
   bool get _handUp => _handQueue.contains(_room.localParticipant?.sid);
 
   void _openPanel(_SidePanel p) {
@@ -700,6 +750,12 @@ class _CallScreenState extends State<CallScreen> {
                   ),
                 ),
                 const Spacer(),
+                if (people && _isAdmin && _room.remoteParticipants.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: _muteAll,
+                    icon: const Icon(Icons.mic_off, size: 16),
+                    label: const Text('Mute all'),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.close, color: Colors.white54),
                   onPressed: () => setState(() => _panel = _SidePanel.none),
@@ -770,10 +826,58 @@ class _CallScreenState extends State<CallScreen> {
                   ),
                   onPressed: _renameSelf,
                 ),
+              if (!isLocal && _isAdmin) _hostMenu(p),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _hostMenu(Participant p) {
+    return PopupMenuButton<String>(
+      tooltip: 'Host actions',
+      color: const Color(0xFF1A2238),
+      icon: const Icon(Icons.more_vert, size: 18, color: Colors.white54),
+      onSelected: (String v) {
+        switch (v) {
+          case 'mute':
+            _muteParticipant(p);
+          case 'nopublish':
+            _setPublish(p, false);
+          case 'publish':
+            _setPublish(p, true);
+          case 'remove':
+            _removeParticipant(p);
+        }
+      },
+      itemBuilder: (BuildContext context) => const <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+          value: 'mute',
+          child: Text('Mute', style: TextStyle(color: Colors.white)),
+        ),
+        PopupMenuItem<String>(
+          value: 'nopublish',
+          child: Text(
+            'Disable camera & share',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'publish',
+          child: Text(
+            'Allow camera & share',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'remove',
+          child: Text(
+            'Remove from call',
+            style: TextStyle(color: Colors.redAccent),
+          ),
+        ),
+      ],
     );
   }
 

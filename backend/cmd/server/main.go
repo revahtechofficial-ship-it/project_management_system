@@ -147,6 +147,11 @@ func main() {
 		api.Mount("/api/v1/integrations", handler.NewIntegrationHandler(queries).Routes())
 		api.Mount("/api/v1/admin", handler.NewAdminHandler(queries).Routes())
 		api.Mount("/api/v1/ai", handler.NewAIHandler(queries, aiClient).Routes())
+		api.Mount("/api/v1/calls", handler.NewCallModHandler(handler.LiveKitConfig{
+			URL:       cfg.LiveKitURL,
+			APIKey:    cfg.LiveKitAPIKey,
+			APISecret: cfg.LiveKitAPISecret,
+		}).Routes())
 		productivity := handler.NewProductivityHandler(queries)
 		api.Mount("/api/v1/favorites", productivity.FavoriteRoutes())
 		api.Mount("/api/v1/saved-filters", productivity.FilterRoutes())
