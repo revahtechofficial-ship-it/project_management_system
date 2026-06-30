@@ -1144,13 +1144,14 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                     children: <Widget>[
                       _RoundButton(
                         icon: _micOn ? Icons.mic : Icons.mic_off,
-                        active: _micOn,
+                        off: !_micOn,
+                        tooltip: _micOn ? 'Mute' : 'Unmute',
                         onTap: () => setState(() => _micOn = !_micOn),
                       ),
                       const SizedBox(width: 16),
                       _RoundButton(
                         icon: _camOn ? Icons.videocam : Icons.videocam_off,
-                        active: _camOn,
+                        tooltip: _camOn ? 'Camera off' : 'Camera on',
                         onTap: _lobbyToggleCam,
                       ),
                     ],
@@ -1768,73 +1769,116 @@ class _CallScreenState extends ConsumerState<CallScreen> {
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       child: Wrap(
         alignment: WrapAlignment.center,
-        spacing: 12,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 14,
         runSpacing: 12,
         children: <Widget>[
-          _RoundButton(
-            icon: _micOn ? Icons.mic : Icons.mic_off,
-            active: _micOn,
-            onTap: _toggleMic,
+          // Primary controls in a grouped pill.
+          _ControlPill(
+            children: <Widget>[
+              _RoundButton(
+                icon: _micOn ? Icons.mic : Icons.mic_off,
+                off: !_micOn,
+                tooltip: _micOn ? 'Mute' : 'Unmute',
+                onTap: _toggleMic,
+              ),
+              _RoundButton(
+                icon: _camOn ? Icons.videocam : Icons.videocam_off,
+                tooltip: _camOn ? 'Stop video' : 'Start video',
+                onTap: _toggleCam,
+              ),
+              _RoundButton(
+                icon: Icons.screen_share,
+                active: _screenOn,
+                tooltip: _screenOn ? 'Stop sharing' : 'Share screen',
+                onTap: _toggleScreen,
+              ),
+              _RoundButton(
+                icon: Icons.people_alt_outlined,
+                active: _panel == _SidePanel.people,
+                tooltip: 'Participants',
+                onTap: () => _openPanel(_SidePanel.people),
+              ),
+              _RoundButton(
+                icon: Icons.chat_bubble_outline,
+                active: _panel == _SidePanel.chat,
+                badge: _unreadChat > 0 ? '$_unreadChat' : null,
+                tooltip: 'Chat',
+                onTap: () => _openPanel(_SidePanel.chat),
+              ),
+              _RoundButton(
+                icon: Icons.more_horiz,
+                active: _handUp || _poll != null || _lowData,
+                tooltip: 'More',
+                onTap: _showMore,
+              ),
+            ],
           ),
-          _RoundButton(
-            icon: _camOn ? Icons.videocam : Icons.videocam_off,
-            active: _camOn,
-            onTap: _toggleCam,
-          ),
-          _RoundButton(
-            icon: Icons.screen_share,
-            active: _screenOn,
-            onTap: _toggleScreen,
-          ),
-          _RoundButton(
-            icon: Icons.add_reaction_outlined,
-            active: false,
-            onTap: _showReactions,
-          ),
-          _RoundButton(
-            icon: Icons.front_hand,
-            active: _handUp,
-            onTap: _toggleHand,
-          ),
-          _RoundButton(
-            icon: Icons.people_alt_outlined,
-            active: _panel == _SidePanel.people,
-            onTap: () => _openPanel(_SidePanel.people),
-          ),
-          _RoundButton(
-            icon: Icons.chat_bubble_outline,
-            active: _panel == _SidePanel.chat,
-            badge: _unreadChat > 0 ? '$_unreadChat' : null,
-            onTap: () => _openPanel(_SidePanel.chat),
-          ),
-          _RoundButton(
-            icon: Icons.poll_outlined,
-            active: _poll != null,
-            onTap: _showCreatePoll,
-          ),
-          _RoundButton(
-            icon: _gridView ? Icons.view_sidebar_outlined : Icons.grid_view,
-            active: false,
-            onTap: () => setState(() => _gridView = !_gridView),
-          ),
-          _RoundButton(
-            icon: _lowData ? Icons.data_saver_on : Icons.data_saver_off,
-            active: _lowData,
-            onTap: _toggleLowData,
-          ),
-          _RoundButton(
-            icon: Icons.tune,
-            active: false,
-            onTap: _showDeviceSheet,
-          ),
-          _RoundButton(
-            icon: Icons.call_end,
-            active: true,
-            danger: true,
-            onTap: _hangUp,
-          ),
+          _LeaveButton(onTap: _hangUp),
         ],
       ),
+    );
+  }
+
+  void _showMore() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF11182B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _moreTile(sheet, Icons.add_reaction_outlined, 'Send a reaction',
+                _showReactions),
+            _moreTile(
+              sheet,
+              Icons.front_hand,
+              _handUp ? 'Lower hand' : 'Raise hand',
+              _toggleHand,
+              active: _handUp,
+            ),
+            _moreTile(sheet, Icons.poll_outlined, 'Create a poll',
+                _showCreatePoll, active: _poll != null),
+            _moreTile(
+              sheet,
+              _gridView ? Icons.grid_view : Icons.view_sidebar_outlined,
+              _gridView ? 'Speaker view' : 'Grid view',
+              () => setState(() => _gridView = !_gridView),
+            ),
+            _moreTile(sheet, Icons.data_saver_on, 'Low-data mode',
+                _toggleLowData, active: _lowData),
+            _moreTile(sheet, Icons.tune, 'Devices & settings',
+                _showDeviceSheet),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _moreTile(
+    BuildContext sheet,
+    IconData icon,
+    String label,
+    VoidCallback onTap, {
+    bool active = false,
+  }) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: active ? const Color(0xFF6366F1) : Colors.white70,
+      ),
+      title: Text(label, style: const TextStyle(color: Colors.white)),
+      trailing: active
+          ? const Icon(Icons.check, color: Color(0xFF6366F1), size: 18)
+          : null,
+      onTap: () {
+        Navigator.pop(sheet);
+        onTap();
+      },
     );
   }
 }
@@ -2034,47 +2078,117 @@ class _MeterBar extends StatelessWidget {
   }
 }
 
+/// A round call control. [active] highlights a toggled-on action (white fill);
+/// [off] flags a disabled state like a muted mic (red). Adds a [tooltip] for
+/// discoverability and an optional [badge].
 class _RoundButton extends StatelessWidget {
   const _RoundButton({
     required this.icon,
-    required this.active,
     required this.onTap,
-    this.danger = false,
+    this.active = false,
+    this.off = false,
+    this.tooltip,
     this.badge,
   });
   final IconData icon;
   final bool active;
-  final bool danger;
+  final bool off;
+  final String? tooltip;
   final String? badge;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final Color bg = danger
-        ? Colors.red
+    final Color bg = off
+        ? const Color(0xFFB91C1C)
         : active
         ? Colors.white
         : Colors.white24;
-    final Color fg = danger || !active ? Colors.white : Colors.black87;
-    final Widget button = Material(
+    final Color fg = active && !off ? Colors.black87 : Colors.white;
+    Widget button = Material(
       color: bg,
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           child: Icon(icon, color: fg),
         ),
       ),
     );
-    if (badge == null) {
-      return button;
+    if (badge != null) {
+      button = Badge(
+        label: Text(badge!),
+        backgroundColor: const Color(0xFF6366F1),
+        child: button,
+      );
     }
-    return Badge(
-      label: Text(badge!),
-      backgroundColor: const Color(0xFF6366F1),
-      child: button,
+    if (tooltip != null) {
+      button = Tooltip(message: tooltip!, child: button);
+    }
+    return button;
+  }
+}
+
+/// Groups the primary call controls into a translucent rounded pill.
+class _ControlPill extends StatelessWidget {
+  const _ControlPill({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(40),
+      ),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: children,
+      ),
+    );
+  }
+}
+
+/// A distinct, labelled "Leave" pill set apart from the toggle controls.
+class _LeaveButton extends StatelessWidget {
+  const _LeaveButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Leave call',
+      child: Material(
+        color: const Color(0xFFDC2626),
+        shape: const StadiumBorder(),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(Icons.call_end, color: Colors.white, size: 22),
+                SizedBox(width: 8),
+                Text(
+                  'Leave',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
