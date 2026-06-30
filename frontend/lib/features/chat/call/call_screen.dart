@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
 
@@ -59,6 +61,16 @@ class _CallScreenState extends State<CallScreen> {
   String? _pinnedKey;
   bool _mirrorSelf = true;
   bool _hideSelf = false;
+
+  // Participant interactions (over LiveKit data channels).
+  EventsListener<RoomEvent>? _events;
+  final List<_Reaction> _reactions = <_Reaction>[];
+  final List<String> _handQueue = <String>[]; // participant sids, in raise order
+  final List<_ChatMsg> _chat = <_ChatMsg>[];
+  final TextEditingController _chatController = TextEditingController();
+  int _unreadChat = 0;
+  int _seq = 0;
+  _SidePanel _panel = _SidePanel.none;
 
   @override
   void initState() {
@@ -240,6 +252,8 @@ class _CallScreenState extends State<CallScreen> {
     });
     try {
       await _room.connect(widget.url, widget.token);
+      _events = _room.createListener();
+      _events!.on<DataReceivedEvent>(_onData);
       await _room.localParticipant?.setMicrophoneEnabled(
         _micOn,
         audioCaptureOptions:
@@ -312,6 +326,135 @@ class _CallScreenState extends State<CallScreen> {
     }
   }
 
+  // --- Participant interactions (data channel) -----------------------------
+
+  void _send(Map<String, dynamic> msg, {bool reliable = true}) {
+    _room.localParticipant?.publishData(
+      utf8.encode(jsonEncode(msg)),
+      reliable: reliable,
+    );
+  }
+
+  void _onData(DataReceivedEvent e) {
+    Map<String, dynamic> msg;
+    try {
+      msg = jsonDecode(utf8.decode(e.data)) as Map<String, dynamic>;
+    } catch (_) {
+      return;
+    }
+    final String? sid = e.participant?.sid;
+    final String from = (e.participant?.name.isNotEmpty ?? false)
+        ? e.participant!.name
+        : (e.participant?.identity ?? 'Someone');
+    switch (msg['t']) {
+      case 'reaction':
+        _addReaction(msg['emoji'] as String? ?? '👍');
+      case 'hand':
+        if (sid != null) {
+          final bool up = msg['up'] as bool? ?? false;
+          setState(() {
+            _handQueue.remove(sid);
+            if (up) {
+              _handQueue.add(sid);
+            }
+          });
+        }
+      case 'chat':
+        final String text = msg['text'] as String? ?? '';
+        if (text.isNotEmpty) {
+          setState(() {
+            _chat.add(_ChatMsg(from, text, false));
+            if (_panel != _SidePanel.chat) {
+              _unreadChat++;
+            }
+          });
+        }
+    }
+  }
+
+  void _addReaction(String emoji) {
+    final _Reaction r = _Reaction('${_seq++}', emoji);
+    setState(() => _reactions.add(r));
+  }
+
+  void _react(String emoji) {
+    _addReaction(emoji);
+    _send(<String, dynamic>{'t': 'reaction', 'emoji': emoji}, reliable: false);
+  }
+
+  void _toggleHand() {
+    final String? me = _room.localParticipant?.sid;
+    if (me == null) {
+      return;
+    }
+    final bool up = !_handQueue.contains(me);
+    setState(() {
+      _handQueue.remove(me);
+      if (up) {
+        _handQueue.add(me);
+      }
+    });
+    _send(<String, dynamic>{'t': 'hand', 'up': up});
+  }
+
+  void _sendChat() {
+    final String text = _chatController.text.trim();
+    if (text.isEmpty) {
+      return;
+    }
+    _chatController.clear();
+    final String me = (_room.localParticipant?.name.isNotEmpty ?? false)
+        ? _room.localParticipant!.name
+        : 'You';
+    setState(() => _chat.add(_ChatMsg(me, text, true)));
+    _send(<String, dynamic>{'t': 'chat', 'text': text});
+  }
+
+  bool get _handUp => _handQueue.contains(_room.localParticipant?.sid);
+
+  void _openPanel(_SidePanel p) {
+    setState(() {
+      _panel = _panel == p ? _SidePanel.none : p;
+      if (_panel == _SidePanel.chat) {
+        _unreadChat = 0;
+      }
+    });
+  }
+
+  Future<void> _renameSelf() async {
+    final TextEditingController c = TextEditingController(
+      text: _room.localParticipant?.name ?? '',
+    );
+    final String? name = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Your name'),
+        content: TextField(
+          controller: c,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Display name'),
+          onSubmitted: (String v) => Navigator.pop(context, v),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, c.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (name != null && name.trim().isNotEmpty) {
+      await _room.localParticipant?.setName(name.trim());
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
   Future<void> _hangUp() async {
     await _room.disconnect();
     if (mounted) {
@@ -324,6 +467,8 @@ class _CallScreenState extends State<CallScreen> {
     _stopPreview();
     _stopMicMeter();
     _nameController.dispose();
+    _chatController.dispose();
+    _events?.dispose();
     _room.removeListener(_onChange);
     _room.dispose();
     super.dispose();
@@ -410,6 +555,7 @@ class _CallScreenState extends State<CallScreen> {
       isScreen: s.isScreen,
       mirror: isLocal && !s.isScreen && _mirrorSelf,
       pinned: _pinnedKey == key,
+      handUp: !s.isScreen && _handQueue.contains(s.participant.sid),
       onTap: () => setState(
         () => _pinnedKey = _pinnedKey == key ? null : key,
       ),
@@ -424,11 +570,273 @@ class _CallScreenState extends State<CallScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0B1020),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: <Widget>[
-            _header(),
-            Expanded(child: _stage()),
-            _controls(),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    children: <Widget>[
+                      _header(),
+                      Expanded(child: _stage()),
+                      _controls(),
+                    ],
+                  ),
+                ),
+                if (_panel != _SidePanel.none) _sidePanel(),
+              ],
+            ),
+            IgnorePointer(
+              child: Stack(
+                children: <Widget>[
+                  for (final _Reaction r in _reactions)
+                    _FloatingReaction(
+                      key: ValueKey<String>(r.id),
+                      emoji: r.emoji,
+                      seed: int.tryParse(r.id) ?? 0,
+                      onDone: () {
+                        if (mounted) {
+                          setState(
+                            () => _reactions.removeWhere(
+                              (_Reaction x) => x.id == r.id,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sidePanel() {
+    final bool people = _panel == _SidePanel.people;
+    return Container(
+      width: 320,
+      decoration: const BoxDecoration(
+        color: Color(0xFF11182B),
+        border: Border(left: BorderSide(color: Colors.white12)),
+      ),
+      child: Column(
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+            child: Row(
+              children: <Widget>[
+                Text(
+                  people ? 'Participants (${_participants.length})' : 'Chat',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white54),
+                  onPressed: () => setState(() => _panel = _SidePanel.none),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Colors.white12),
+          Expanded(child: people ? _peoplePanel() : _chatPanel()),
+        ],
+      ),
+    );
+  }
+
+  Widget _peoplePanel() {
+    final List<Participant> people = _participants;
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: people.length,
+      itemBuilder: (BuildContext context, int i) {
+        final Participant p = people[i];
+        final bool isLocal = p == _room.localParticipant;
+        final String name = p.name.isNotEmpty ? p.name : p.identity;
+        final bool sharing = p.videoTrackPublications.any(
+          (TrackPublication<Track> pub) =>
+              pub.source == TrackSource.screenShareVideo && pub.track != null,
+        );
+        final bool handUp = _handQueue.contains(p.sid);
+        return ListTile(
+          dense: true,
+          leading: UserAvatar(name: name, radius: 16),
+          title: Text(
+            isLocal ? '$name (You)' : name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (handUp)
+                const Padding(
+                  padding: EdgeInsets.only(right: 6),
+                  child: Text('✋', style: TextStyle(fontSize: 14)),
+                ),
+              if (sharing)
+                const Padding(
+                  padding: EdgeInsets.only(right: 6),
+                  child: Icon(
+                    Icons.screen_share,
+                    size: 16,
+                    color: Color(0xFF0EA5E9),
+                  ),
+                ),
+              Icon(
+                p.isMuted ? Icons.mic_off : Icons.mic,
+                size: 16,
+                color: p.isMuted ? Colors.redAccent : Colors.white54,
+              ),
+              if (isLocal)
+                IconButton(
+                  tooltip: 'Rename',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: Colors.white54,
+                  ),
+                  onPressed: _renameSelf,
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _chatPanel() {
+    return Column(
+      children: <Widget>[
+        Expanded(
+          child: _chat.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No messages yet.',
+                    style: TextStyle(color: Colors.white38),
+                  ),
+                )
+              : ListView.builder(
+                  reverse: true,
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _chat.length,
+                  itemBuilder: (BuildContext context, int i) {
+                    final _ChatMsg m = _chat[_chat.length - 1 - i];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Column(
+                        crossAxisAlignment: m.isMe
+                            ? CrossAxisAlignment.end
+                            : CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            m.isMe ? 'You' : m.sender,
+                            style: const TextStyle(
+                              color: Colors.white38,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: m.isMe
+                                  ? const Color(0xFF6366F1)
+                                  : Colors.white12,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              m.text,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  controller: _chatController,
+                  style: const TextStyle(color: Colors.white),
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _sendChat(),
+                  decoration: const InputDecoration(
+                    hintText: 'Message…',
+                    hintStyle: TextStyle(color: Colors.white38),
+                    isDense: true,
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white24),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white54),
+                    ),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send_rounded, color: Color(0xFF6366F1)),
+                onPressed: _sendChat,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showReactions() {
+    const List<String> emojis = <String>[
+      '👍',
+      '❤️',
+      '😂',
+      '🎉',
+      '👏',
+      '😮',
+      '🙏',
+      '🔥',
+    ];
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF11182B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: <Widget>[
+            for (final String e in emojis)
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  _react(e);
+                  Navigator.pop(context);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(e, style: const TextStyle(fontSize: 30)),
+                ),
+              ),
           ],
         ),
       ),
@@ -895,40 +1303,58 @@ class _CallScreenState extends State<CallScreen> {
 
   Widget _controls() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 18),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 12,
+        runSpacing: 12,
         children: <Widget>[
           _RoundButton(
             icon: _micOn ? Icons.mic : Icons.mic_off,
             active: _micOn,
             onTap: _toggleMic,
           ),
-          const SizedBox(width: 16),
           _RoundButton(
             icon: _camOn ? Icons.videocam : Icons.videocam_off,
             active: _camOn,
             onTap: _toggleCam,
           ),
-          const SizedBox(width: 16),
           _RoundButton(
             icon: Icons.screen_share,
             active: _screenOn,
             onTap: _toggleScreen,
           ),
-          const SizedBox(width: 16),
+          _RoundButton(
+            icon: Icons.add_reaction_outlined,
+            active: false,
+            onTap: _showReactions,
+          ),
+          _RoundButton(
+            icon: Icons.front_hand,
+            active: _handUp,
+            onTap: _toggleHand,
+          ),
+          _RoundButton(
+            icon: Icons.people_alt_outlined,
+            active: _panel == _SidePanel.people,
+            onTap: () => _openPanel(_SidePanel.people),
+          ),
+          _RoundButton(
+            icon: Icons.chat_bubble_outline,
+            active: _panel == _SidePanel.chat,
+            badge: _unreadChat > 0 ? '$_unreadChat' : null,
+            onTap: () => _openPanel(_SidePanel.chat),
+          ),
           _RoundButton(
             icon: _gridView ? Icons.view_sidebar_outlined : Icons.grid_view,
             active: false,
             onTap: () => setState(() => _gridView = !_gridView),
           ),
-          const SizedBox(width: 16),
           _RoundButton(
             icon: Icons.tune,
             active: false,
             onTap: _showDeviceSheet,
           ),
-          const SizedBox(width: 16),
           _RoundButton(
             icon: Icons.call_end,
             active: true,
@@ -962,6 +1388,7 @@ class _ParticipantTile extends StatelessWidget {
     required this.isScreen,
     this.mirror = false,
     this.pinned = false,
+    this.handUp = false,
     this.onTap,
   });
   final Participant participant;
@@ -969,6 +1396,7 @@ class _ParticipantTile extends StatelessWidget {
   final bool isScreen;
   final bool mirror;
   final bool pinned;
+  final bool handUp;
   final VoidCallback? onTap;
 
   @override
@@ -1026,6 +1454,11 @@ class _ParticipantTile extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
+                  if (handUp)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 4),
+                      child: Text('✋', style: TextStyle(fontSize: 12)),
+                    ),
                   if (participant.isMuted)
                     const Padding(
                       padding: EdgeInsets.only(right: 4),
@@ -1135,10 +1568,12 @@ class _RoundButton extends StatelessWidget {
     required this.active,
     required this.onTap,
     this.danger = false,
+    this.badge,
   });
   final IconData icon;
   final bool active;
   final bool danger;
+  final String? badge;
   final VoidCallback onTap;
 
   @override
@@ -1149,7 +1584,7 @@ class _RoundButton extends StatelessWidget {
         ? Colors.white
         : Colors.white24;
     final Color fg = danger || !active ? Colors.white : Colors.black87;
-    return Material(
+    final Widget button = Material(
       color: bg,
       shape: const CircleBorder(),
       child: InkWell(
@@ -1159,6 +1594,91 @@ class _RoundButton extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Icon(icon, color: fg),
         ),
+      ),
+    );
+    if (badge == null) {
+      return button;
+    }
+    return Badge(
+      label: Text(badge!),
+      backgroundColor: const Color(0xFF6366F1),
+      child: button,
+    );
+  }
+}
+
+/// Which side panel is open during a call.
+enum _SidePanel { none, people, chat }
+
+/// A transient floating reaction.
+class _Reaction {
+  const _Reaction(this.id, this.emoji);
+  final String id;
+  final String emoji;
+}
+
+/// A single in-call chat message.
+class _ChatMsg {
+  const _ChatMsg(this.sender, this.text, this.isMe);
+  final String sender;
+  final String text;
+  final bool isMe;
+}
+
+/// An emoji that floats up and fades out, then removes itself via [onDone].
+class _FloatingReaction extends StatefulWidget {
+  const _FloatingReaction({
+    super.key,
+    required this.emoji,
+    required this.seed,
+    required this.onDone,
+  });
+  final String emoji;
+  final int seed;
+  final VoidCallback onDone;
+
+  @override
+  State<_FloatingReaction> createState() => _FloatingReactionState();
+}
+
+class _FloatingReactionState extends State<_FloatingReaction>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 2200))
+        ..addStatusListener((AnimationStatus s) {
+          if (s == AnimationStatus.completed) {
+            widget.onDone();
+          }
+        })
+        ..forward();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double dx = ((widget.seed % 5) - 2) * 26.0;
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (BuildContext context, Widget? child) {
+          final double t = _c.value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 96),
+            child: Transform.translate(
+              offset: Offset(dx, -190 * t),
+              child: Opacity(
+                opacity: (1 - t).clamp(0.0, 1.0),
+                child: child,
+              ),
+            ),
+          );
+        },
+        child: Text(widget.emoji, style: const TextStyle(fontSize: 42)),
       ),
     );
   }
