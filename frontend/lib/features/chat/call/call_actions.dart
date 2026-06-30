@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/feedback.dart';
 import '../../../data/models/call_credentials.dart';
+import '../../../providers/auth_provider.dart';
 import '../providers/chat_providers.dart';
 import 'call_screen.dart';
 
@@ -22,7 +23,7 @@ Future<void> startCall(
     if (!context.mounted) {
       return;
     }
-    await _openCall(context, creds, title);
+    await _openCall(context, ref, creds, title);
   } catch (e) {
     if (context.mounted) {
       context.showError('Call failed: $e');
@@ -72,7 +73,7 @@ Future<void> showIncomingCall(
     if (!context.mounted) {
       return;
     }
-    await _openCall(context, creds, fromName);
+    await _openCall(context, ref, creds, fromName);
   } catch (e) {
     if (context.mounted) {
       context.showError('Could not join: $e');
@@ -82,9 +83,12 @@ Future<void> showIncomingCall(
 
 Future<void> _openCall(
   BuildContext context,
+  WidgetRef ref,
   CallCredentials creds,
   String title,
 ) {
+  final String selfName =
+      ref.read(authControllerProvider).asData?.value.user?.name ?? '';
   return Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute<void>(
       fullscreenDialog: true,
@@ -93,6 +97,7 @@ Future<void> _openCall(
         token: creds.token,
         mode: creds.mode,
         title: title,
+        selfName: selfName,
       ),
     ),
   );

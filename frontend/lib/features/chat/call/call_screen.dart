@@ -12,12 +12,14 @@ class CallScreen extends StatefulWidget {
     required this.token,
     required this.mode,
     this.title = '',
+    this.selfName = '',
   });
 
   final String url;
   final String token;
   final String mode;
   final String title;
+  final String selfName;
 
   @override
   State<CallScreen> createState() => _CallScreenState();
@@ -35,9 +37,22 @@ class _CallScreenState extends State<CallScreen> {
   // Pre-join ("green room") device selection.
   List<MediaDevice> _cameras = <MediaDevice>[];
   List<MediaDevice> _mics = <MediaDevice>[];
+  List<MediaDevice> _speakers = <MediaDevice>[];
   String? _cameraId;
   String? _micId;
+  String? _speakerId;
   LocalVideoTrack? _preview;
+
+  // Lobby mic level meter, editable display name and permission state.
+  late final TextEditingController _nameController = TextEditingController(
+    text: widget.selfName,
+  );
+  LocalAudioTrack? _micPreview;
+  AudioVisualizer? _visualizer;
+  void Function()? _vizCancel;
+  List<double> _levels = const <double>[];
+  bool _cameraBlocked = false;
+  bool _micBlocked = false;
 
   @override
   void initState() {
@@ -54,6 +69,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _initLobby() async {
+    await _startMicMeter();
     if (_camOn) {
       await _startPreview();
     }
@@ -64,8 +80,10 @@ class _CallScreenState extends State<CallScreen> {
     try {
       _cameras = await Hardware.instance.videoInputs();
       _mics = await Hardware.instance.audioInputs();
+      _speakers = await Hardware.instance.audioOutputs();
       _cameraId ??= _cameras.isNotEmpty ? _cameras.first.deviceId : null;
       _micId ??= _mics.isNotEmpty ? _mics.first.deviceId : null;
+      _speakerId ??= _speakers.isNotEmpty ? _speakers.first.deviceId : null;
     } catch (_) {
       // Enumeration can fail before camera/mic permission is granted.
     }
@@ -80,10 +98,12 @@ class _CallScreenState extends State<CallScreen> {
       _preview = await LocalVideoTrack.createCameraTrack(
         CameraCaptureOptions(deviceId: _cameraId),
       );
+      _cameraBlocked = false;
       // Device labels become available once permission is granted.
       await _refreshDevices();
     } catch (_) {
       _camOn = false;
+      _cameraBlocked = true;
     }
     if (mounted) {
       setState(() {});
@@ -95,6 +115,70 @@ class _CallScreenState extends State<CallScreen> {
     _preview = null;
     await t?.stop();
     await t?.dispose();
+  }
+
+  Future<void> _startMicMeter() async {
+    await _stopMicMeter();
+    try {
+      _micPreview = await LocalAudioTrack.create(
+        AudioCaptureOptions(deviceId: _micId),
+      );
+      final AudioVisualizer viz = createVisualizer(
+        _micPreview!,
+        options: const AudioVisualizerOptions(
+          barCount: 14,
+          centeredBands: false,
+        ),
+      );
+      _visualizer = viz;
+      _vizCancel = viz.events.listen((AudioVisualizerEvent e) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _levels = <double>[
+            for (final Object? v in e.event) (v as num?)?.toDouble() ?? 0.0,
+          ];
+        });
+      });
+      await viz.start();
+      _micBlocked = false;
+    } catch (_) {
+      _micBlocked = true;
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _stopMicMeter() async {
+    _vizCancel?.call();
+    _vizCancel = null;
+    await _visualizer?.stop();
+    await _visualizer?.dispose();
+    _visualizer = null;
+    final LocalAudioTrack? t = _micPreview;
+    _micPreview = null;
+    await t?.stop();
+    await t?.dispose();
+    _levels = const <double>[];
+  }
+
+  Future<void> _selectSpeaker(String id) async {
+    _speakerId = id;
+    for (final MediaDevice d in _speakers) {
+      if (d.deviceId == id) {
+        try {
+          await Hardware.instance.selectAudioOutput(d);
+        } catch (_) {
+          // Output selection is desktop-only; a harmless no-op on web.
+        }
+        break;
+      }
+    }
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _lobbyToggleCam() async {
@@ -128,7 +212,9 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _selectMic(String id) async {
     _micId = id;
-    if (!_inLobby && _micOn) {
+    if (_inLobby) {
+      await _startMicMeter();
+    } else if (_micOn) {
       await _room.localParticipant?.setMicrophoneEnabled(
         true,
         audioCaptureOptions: AudioCaptureOptions(deviceId: id),
@@ -141,6 +227,7 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _join() async {
     await _stopPreview();
+    await _stopMicMeter();
     setState(() {
       _inLobby = false;
       _connecting = true;
@@ -159,6 +246,10 @@ class _CallScreenState extends State<CallScreen> {
               ? CameraCaptureOptions(deviceId: _cameraId)
               : null,
         );
+      }
+      final String name = _nameController.text.trim();
+      if (name.isNotEmpty && name != widget.selfName) {
+        await _room.localParticipant?.setName(name);
       }
       if (mounted) {
         setState(() => _connecting = false);
@@ -221,6 +312,8 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void dispose() {
     _stopPreview();
+    _stopMicMeter();
+    _nameController.dispose();
     _room.removeListener(_onChange);
     _room.dispose();
     super.dispose();
@@ -318,12 +411,37 @@ class _CallScreenState extends State<CallScreen> {
                       ),
                       child: _camOn && _preview != null
                           ? VideoTrackRenderer(_preview!, fit: VideoViewFit.cover)
-                          : const Center(
-                              child: Icon(
-                                Icons.videocam_off,
-                                color: Colors.white38,
-                                size: 40,
-                              ),
+                          : Center(
+                              child: _cameraBlocked
+                                  ? Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: const <Widget>[
+                                          Icon(
+                                            Icons.videocam_off,
+                                            color: Colors.white38,
+                                            size: 36,
+                                          ),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            'Camera is blocked.\nAllow camera '
+                                            'access in your browser, then tap '
+                                            'the camera button to retry.',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: Colors.white54,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.videocam_off,
+                                      color: Colors.white38,
+                                      size: 40,
+                                    ),
                             ),
                     ),
                   ),
@@ -344,7 +462,28 @@ class _CallScreenState extends State<CallScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
+                  _micMeterBar(),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _nameController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Your name',
+                      labelStyle: TextStyle(color: Colors.white54),
+                      prefixIcon: Icon(
+                        Icons.badge_outlined,
+                        color: Colors.white54,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white24),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white54),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   _deviceDropdown(
                     Icons.videocam_outlined,
                     _cameras,
@@ -352,6 +491,12 @@ class _CallScreenState extends State<CallScreen> {
                     _selectCamera,
                   ),
                   _deviceDropdown(Icons.mic_none, _mics, _micId, _selectMic),
+                  _deviceDropdown(
+                    Icons.volume_up_outlined,
+                    _speakers,
+                    _speakerId,
+                    _selectSpeaker,
+                  ),
                   const SizedBox(height: 22),
                   Row(
                     children: <Widget>[
@@ -386,6 +531,49 @@ class _CallScreenState extends State<CallScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _micMeterBar() {
+    if (_micBlocked) {
+      return const Row(
+        children: <Widget>[
+          Icon(Icons.mic_off, color: Colors.redAccent, size: 18),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Microphone is blocked — allow access in your browser.',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+          ),
+        ],
+      );
+    }
+    final List<double> levels = _levels.isEmpty
+        ? List<double>.filled(14, 0)
+        : _levels;
+    return Row(
+      children: <Widget>[
+        Icon(
+          _micOn ? Icons.mic : Icons.mic_off,
+          color: Colors.white54,
+          size: 18,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: SizedBox(
+            height: 16,
+            child: Row(
+              children: <Widget>[
+                for (int i = 0; i < levels.length; i++) ...<Widget>[
+                  if (i > 0) const SizedBox(width: 3),
+                  Expanded(child: _MeterBar(level: _micOn ? levels[i] : 0)),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -462,6 +650,11 @@ class _CallScreenState extends State<CallScreen> {
               setSheet(() {});
             }
 
+            Future<void> pickSpeaker(String id) async {
+              await _selectSpeaker(id);
+              setSheet(() {});
+            }
+
             return Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
               child: Column(
@@ -484,6 +677,12 @@ class _CallScreenState extends State<CallScreen> {
                     pickCam,
                   ),
                   _deviceDropdown(Icons.mic_none, _mics, _micId, pickMic),
+                  _deviceDropdown(
+                    Icons.volume_up_outlined,
+                    _speakers,
+                    _speakerId,
+                    pickSpeaker,
+                  ),
                 ],
               ),
             );
@@ -732,6 +931,32 @@ class _ParticipantTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A single animated bar in the lobby mic level meter.
+class _MeterBar extends StatelessWidget {
+  const _MeterBar({required this.level});
+  final double level;
+
+  @override
+  Widget build(BuildContext context) {
+    final double v = (level.abs() * 4).clamp(0.0, 1.0);
+    return Align(
+      alignment: Alignment.center,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 90),
+        height: 3 + v * 13,
+        decoration: BoxDecoration(
+          color: Color.lerp(
+            const Color(0xFF3B4663),
+            const Color(0xFF22C55E),
+            v,
+          ),
+          borderRadius: BorderRadius.circular(2),
+        ),
       ),
     );
   }
