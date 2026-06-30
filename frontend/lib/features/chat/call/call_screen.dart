@@ -54,6 +54,12 @@ class _CallScreenState extends State<CallScreen> {
   bool _cameraBlocked = false;
   bool _micBlocked = false;
 
+  // In-call layout state.
+  bool _gridView = false;
+  String? _pinnedKey;
+  bool _mirrorSelf = true;
+  bool _hideSelf = false;
+
   @override
   void initState() {
     super.initState();
@@ -293,7 +299,11 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _toggleScreen() async {
     _screenOn = !_screenOn;
     try {
-      await _room.localParticipant?.setScreenShareEnabled(_screenOn);
+      // captureScreenAudio shares tab/system audio along with the screen.
+      await _room.localParticipant?.setScreenShareEnabled(
+        _screenOn,
+        captureScreenAudio: _screenOn,
+      );
     } catch (_) {
       _screenOn = !_screenOn;
     }
@@ -343,12 +353,67 @@ class _CallScreenState extends State<CallScreen> {
           camera ??= t;
         }
       }
-      out.add(_VideoSource(participant: p, video: camera, isScreen: false));
+      final bool isLocal = p == _room.localParticipant;
+      if (!(isLocal && _hideSelf)) {
+        out.add(_VideoSource(participant: p, video: camera, isScreen: false));
+      }
       if (screen != null) {
         out.add(_VideoSource(participant: p, video: screen, isScreen: true));
       }
     }
     return out;
+  }
+
+  String _srcKey(_VideoSource s) => '${s.participant.sid}|${s.isScreen}';
+
+  _VideoSource? _findKey(List<_VideoSource> srcs, String? key) {
+    if (key == null) {
+      return null;
+    }
+    for (final _VideoSource s in srcs) {
+      if (_srcKey(s) == key) {
+        return s;
+      }
+    }
+    return null;
+  }
+
+  _VideoSource? _firstScreen(List<_VideoSource> srcs) {
+    for (final _VideoSource s in srcs) {
+      if (s.isScreen) {
+        return s;
+      }
+    }
+    return null;
+  }
+
+  _VideoSource? _activeSpeakerSource(List<_VideoSource> srcs) {
+    if (_room.activeSpeakers.isEmpty) {
+      return null;
+    }
+    final String sid = _room.activeSpeakers.first.sid;
+    for (final _VideoSource s in srcs) {
+      if (!s.isScreen && s.participant.sid == sid) {
+        return s;
+      }
+    }
+    return null;
+  }
+
+  /// Builds a tile, wired for click-to-pin and self-view mirroring.
+  Widget _tile(_VideoSource s) {
+    final bool isLocal = s.participant == _room.localParticipant;
+    final String key = _srcKey(s);
+    return _ParticipantTile(
+      participant: s.participant,
+      video: s.video,
+      isScreen: s.isScreen,
+      mirror: isLocal && !s.isScreen && _mirrorSelf,
+      pinned: _pinnedKey == key,
+      onTap: () => setState(
+        () => _pinnedKey = _pinnedKey == key ? null : key,
+      ),
+    );
   }
 
   @override
@@ -662,12 +727,40 @@ class _CallScreenState extends State<CallScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   const Text(
-                    'Devices',
+                    'Call settings',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    activeThumbColor: const Color(0xFF22C55E),
+                    title: const Text(
+                      'Mirror my video',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    value: _mirrorSelf,
+                    onChanged: (bool v) {
+                      setState(() => _mirrorSelf = v);
+                      setSheet(() {});
+                    },
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    activeThumbColor: const Color(0xFF22C55E),
+                    title: const Text(
+                      'Hide my video',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    value: _hideSelf,
+                    onChanged: (bool v) {
+                      setState(() => _hideSelf = v);
+                      setSheet(() {});
+                    },
                   ),
                   const SizedBox(height: 8),
                   _deviceDropdown(
@@ -733,59 +826,56 @@ class _CallScreenState extends State<CallScreen> {
       );
     }
     final List<_VideoSource> sources = _videoSources();
-
-    // When someone is sharing their screen, feature it as the main stage and
-    // drop everyone else into a thumbnail strip below — far clearer than an
-    // equal grid where the screen is just another small tile.
-    _VideoSource? screen;
-    for (final _VideoSource s in sources) {
-      if (s.isScreen) {
-        screen = s;
-        break;
-      }
-    }
-    if (screen != null) {
-      final _VideoSource featured = screen;
-      final List<_VideoSource> thumbs = <_VideoSource>[
-        for (final _VideoSource s in sources)
-          if (!identical(s, featured)) s,
-      ];
-      return Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: <Widget>[
-            Expanded(
-              child: _ParticipantTile(
-                participant: featured.participant,
-                video: featured.video,
-                isScreen: true,
-              ),
-            ),
-            if (thumbs.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 112,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: thumbs.length,
-                  separatorBuilder: (BuildContext context, int i) =>
-                      const SizedBox(width: 12),
-                  itemBuilder: (BuildContext context, int i) => AspectRatio(
-                    aspectRatio: 4 / 3,
-                    child: _ParticipantTile(
-                      participant: thumbs[i].participant,
-                      video: thumbs[i].video,
-                      isScreen: thumbs[i].isScreen,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
+    if (sources.isEmpty) {
+      return const Center(
+        child: Text(
+          'Waiting for others to join…',
+          style: TextStyle(color: Colors.white54),
         ),
       );
     }
 
+    // Feature one source as the main stage: an explicit pin wins, then a shared
+    // screen, then (in speaker view) the active speaker. Grid view shows all
+    // tiles equally unless something is pinned or being shared.
+    _VideoSource? featured = _findKey(sources, _pinnedKey) ?? _firstScreen(sources);
+    if (featured == null && !_gridView) {
+      featured = _activeSpeakerSource(sources) ?? sources.first;
+    }
+    if (featured == null) {
+      return _grid(sources);
+    }
+
+    final String fkey = _srcKey(featured);
+    final List<_VideoSource> thumbs = <_VideoSource>[
+      for (final _VideoSource s in sources)
+        if (_srcKey(s) != fkey) s,
+    ];
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: <Widget>[
+          Expanded(child: _tile(featured)),
+          if (thumbs.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 112,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: thumbs.length,
+                separatorBuilder: (BuildContext context, int i) =>
+                    const SizedBox(width: 12),
+                itemBuilder: (BuildContext context, int i) =>
+                    AspectRatio(aspectRatio: 4 / 3, child: _tile(thumbs[i])),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _grid(List<_VideoSource> sources) {
     final int cols = sources.length <= 1
         ? 1
         : sources.length <= 4
@@ -798,14 +888,7 @@ class _CallScreenState extends State<CallScreen> {
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
         childAspectRatio: 16 / 10,
-        children: <Widget>[
-          for (final _VideoSource s in sources)
-            _ParticipantTile(
-              participant: s.participant,
-              video: s.video,
-              isScreen: s.isScreen,
-            ),
-        ],
+        children: <Widget>[for (final _VideoSource s in sources) _tile(s)],
       ),
     );
   }
@@ -832,6 +915,12 @@ class _CallScreenState extends State<CallScreen> {
             icon: Icons.screen_share,
             active: _screenOn,
             onTap: _toggleScreen,
+          ),
+          const SizedBox(width: 16),
+          _RoundButton(
+            icon: _gridView ? Icons.view_sidebar_outlined : Icons.grid_view,
+            active: false,
+            onTap: () => setState(() => _gridView = !_gridView),
           ),
           const SizedBox(width: 16),
           _RoundButton(
@@ -871,10 +960,16 @@ class _ParticipantTile extends StatelessWidget {
     required this.participant,
     required this.video,
     required this.isScreen,
+    this.mirror = false,
+    this.pinned = false,
+    this.onTap,
   });
   final Participant participant;
   final VideoTrack? video;
   final bool isScreen;
+  final bool mirror;
+  final bool pinned;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -882,14 +977,17 @@ class _ParticipantTile extends StatelessWidget {
         ? participant.name
         : participant.identity;
     final String name = isScreen ? '$baseName · Screen' : baseName;
-    return Container(
+    final Color? border = participant.isSpeaking
+        ? const Color(0xFF22C55E)
+        : pinned
+        ? const Color(0xFF6366F1)
+        : null;
+    Widget tile = Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: const Color(0xFF1A2238),
         borderRadius: BorderRadius.circular(14),
-        border: participant.isSpeaking
-            ? Border.all(color: const Color(0xFF22C55E), width: 2)
-            : null,
+        border: border != null ? Border.all(color: border, width: 2) : null,
       ),
       child: Stack(
         fit: StackFit.expand,
@@ -898,9 +996,24 @@ class _ParticipantTile extends StatelessWidget {
             VideoTrackRenderer(
               video!,
               fit: isScreen ? VideoViewFit.contain : VideoViewFit.cover,
+              mirrorMode: mirror
+                  ? VideoViewMirrorMode.mirror
+                  : VideoViewMirrorMode.off,
             )
           else
             Center(child: UserAvatar(name: baseName, radius: 34)),
+          if (!isScreen)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: _QualityBars(quality: participant.connectionQuality),
+            ),
+          if (pinned)
+            const Positioned(
+              top: 8,
+              left: 8,
+              child: Icon(Icons.push_pin, color: Colors.white, size: 16),
+            ),
           Positioned(
             left: 8,
             bottom: 8,
@@ -930,6 +1043,60 @@ class _ParticipantTile extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+    if (onTap != null) {
+      tile = MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(onTap: onTap, child: tile),
+      );
+    }
+    return tile;
+  }
+}
+
+/// Small 3-bar signal indicator reflecting a participant's connection quality.
+class _QualityBars extends StatelessWidget {
+  const _QualityBars({required this.quality});
+  final ConnectionQuality quality;
+
+  @override
+  Widget build(BuildContext context) {
+    final int level = switch (quality) {
+      ConnectionQuality.excellent => 3,
+      ConnectionQuality.good => 2,
+      ConnectionQuality.poor => 1,
+      _ => 0,
+    };
+    final Color color = switch (quality) {
+      ConnectionQuality.excellent ||
+      ConnectionQuality.good => const Color(0xFF22C55E),
+      ConnectionQuality.poor => const Color(0xFFF59E0B),
+      ConnectionQuality.lost => Colors.redAccent,
+      _ => Colors.white38,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: <Widget>[
+          for (int i = 0; i < 3; i++) ...<Widget>[
+            if (i > 0) const SizedBox(width: 2),
+            Container(
+              width: 3,
+              height: 4.0 + i * 3,
+              decoration: BoxDecoration(
+                color: i < level ? color : Colors.white24,
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+          ],
         ],
       ),
     );
