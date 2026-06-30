@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -33,8 +34,15 @@ class CallScreen extends ConsumerStatefulWidget {
 }
 
 class _CallScreenState extends ConsumerState<CallScreen> {
-  final Room _room = Room();
+  // Adaptive stream + dynacast let LiveKit scale quality to the network and
+  // visible tiles automatically.
+  final Room _room = Room(
+    roomOptions: const RoomOptions(adaptiveStream: true, dynacast: true),
+  );
   bool _inLobby = true;
+  DateTime? _connectedAt;
+  Timer? _ticker;
+  bool _lowData = false;
   bool _connecting = false;
   String? _error;
   bool _micOn = true;
@@ -278,16 +286,56 @@ class _CallScreenState extends ConsumerState<CallScreen> {
       if (name.isNotEmpty && name != widget.selfName) {
         await _room.localParticipant?.setName(name);
       }
+      _connectedAt = DateTime.now();
+      _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) {
+          setState(() {});
+        }
+      });
       if (mounted) {
         setState(() => _connecting = false);
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         setState(() {
           _connecting = false;
-          _error = '$e';
+          _error =
+              "Couldn't reach the call server. Check your connection and try "
+              'again.';
         });
       }
+    }
+  }
+
+  String _elapsed() {
+    if (_connectedAt == null) {
+      return '';
+    }
+    final Duration d = DateTime.now().difference(_connectedAt!);
+    final String m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final String s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return d.inHours > 0 ? '${d.inHours}:$m:$s' : '$m:$s';
+  }
+
+  Future<void> _toggleLowData() async {
+    _lowData = !_lowData;
+    if (_lowData && _camOn) {
+      _camOn = false;
+      await _room.localParticipant?.setCameraEnabled(false);
+    }
+    for (final RemoteParticipant p in _room.remoteParticipants.values) {
+      for (final TrackPublication<Track> pub in p.videoTrackPublications) {
+        if (pub is RemoteTrackPublication) {
+          if (_lowData) {
+            await pub.unsubscribe();
+          } else {
+            await pub.subscribe();
+          }
+        }
+      }
+    }
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -577,6 +625,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
   @override
   void dispose() {
+    _ticker?.cancel();
     _stopPreview();
     _stopMicMeter();
     _nameController.dispose();
@@ -680,6 +729,10 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     if (_inLobby) {
       return _lobby();
     }
+    // On narrow screens the side panel becomes a full-screen overlay instead
+    // of squeezing the call area.
+    final bool wide = MediaQuery.sizeOf(context).width >= 720;
+    final bool panelOpen = _panel != _SidePanel.none;
     return Scaffold(
       backgroundColor: const Color(0xFF0B1020),
       body: SafeArea(
@@ -696,9 +749,11 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                     ],
                   ),
                 ),
-                if (_panel != _SidePanel.none) _sidePanel(),
+                if (panelOpen && wide) _sidePanel(),
               ],
             ),
+            if (panelOpen && !wide)
+              Positioned.fill(child: _sidePanel(full: true)),
             if (_poll != null) _pollCard(),
             IgnorePointer(
               child: Stack(
@@ -727,10 +782,10 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     );
   }
 
-  Widget _sidePanel() {
+  Widget _sidePanel({bool full = false}) {
     final bool people = _panel == _SidePanel.people;
     return Container(
-      width: 320,
+      width: full ? double.infinity : 320,
       decoration: const BoxDecoration(
         color: Color(0xFF11182B),
         border: Border(left: BorderSide(color: Colors.white12)),
@@ -1548,29 +1603,81 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     );
   }
 
-  Widget _header() => Padding(
-    padding: const EdgeInsets.all(16),
-    child: Row(
+  Widget _header() {
+    final bool reconnecting =
+        _room.connectionState == ConnectionState.reconnecting;
+    return Column(
       children: <Widget>[
-        const Icon(Icons.videocam, color: Colors.white70, size: 20),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            widget.title.isEmpty ? 'Call' : widget.title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+        if (reconnecting)
+          Container(
+            width: double.infinity,
+            color: const Color(0xFFF59E0B),
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Reconnecting…',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        Text(
-          '${_participants.length} in call',
-          style: const TextStyle(color: Colors.white54, fontSize: 12),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: <Widget>[
+              const Icon(Icons.videocam, color: Colors.white70, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  widget.title.isEmpty ? 'Call' : widget.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (_connectedAt != null) ...<Widget>[
+                Text(
+                  _elapsed(),
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontFeatures: <FontFeature>[
+                      FontFeature.tabularFigures(),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Container(width: 1, height: 12, color: Colors.white24),
+                const SizedBox(width: 10),
+              ],
+              Text(
+                '${_participants.length} in call',
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+            ],
+          ),
         ),
       ],
-    ),
-  );
+    );
+  }
 
   Widget _stage() {
     if (_connecting) {
@@ -1709,6 +1816,11 @@ class _CallScreenState extends ConsumerState<CallScreen> {
             icon: _gridView ? Icons.view_sidebar_outlined : Icons.grid_view,
             active: false,
             onTap: () => setState(() => _gridView = !_gridView),
+          ),
+          _RoundButton(
+            icon: _lowData ? Icons.data_saver_on : Icons.data_saver_off,
+            active: _lowData,
+            onTap: _toggleLowData,
           ),
           _RoundButton(
             icon: Icons.tune,
