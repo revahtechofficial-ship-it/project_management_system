@@ -1,11 +1,7 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
-
-/// A full-bleed "aurora" backdrop: a soft base gradient with a few large,
-/// heavily-blurred color blobs. Glass surfaces blur over it for depth
+/// A clean, minimal app backdrop: a whisper-soft vertical gradient over a
+/// neutral base. Kept intentionally flat so card surfaces read as the focus
 /// (AGENTS.md §1 `core/widgets`).
 class AppBackground extends StatelessWidget {
   const AppBackground({super.key, required this.child});
@@ -15,82 +11,35 @@ class AppBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
+    // A barely-perceptible two-stop gradient — enough to give the page a soft
+    // sense of depth without the busy "aurora" look.
     final List<Color> base = dark
-        ? const <Color>[Color(0xFF0B0F1C), Color(0xFF0E1326), Color(0xFF0B0F1C)]
-        : const <Color>[Color(0xFFEFF1FE), Color(0xFFF5F3FD), Color(0xFFFDF2F8)];
+        ? const <Color>[Color(0xFF0E1220), Color(0xFF0B0F1A)]
+        : const <Color>[Color(0xFFFAFBFE), Color(0xFFF3F5FB)];
 
-    return Stack(
-      children: <Widget>[
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: base,
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: -120,
-          left: -90,
-          child: _Blob(
-              color: AppColors.brand, size: 380, opacity: dark ? 0.30 : 0.22),
-        ),
-        Positioned(
-          bottom: -140,
-          right: -110,
-          child: _Blob(
-              color: AppColors.violet, size: 460, opacity: dark ? 0.26 : 0.20),
-        ),
-        Positioned(
-          top: 180,
-          right: 120,
-          child: _Blob(
-              color: AppColors.sky, size: 300, opacity: dark ? 0.18 : 0.14),
-        ),
-        Positioned.fill(child: child),
-      ],
-    );
-  }
-}
-
-class _Blob extends StatelessWidget {
-  const _Blob(
-      {required this.color, required this.size, required this.opacity});
-
-  final Color color;
-  final double size;
-  final double opacity;
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color.withValues(alpha: opacity),
-          ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: base,
         ),
       ),
+      child: child,
     );
   }
 }
 
-/// A frosted-glass panel: a translucent gradient fill with a real backdrop
-/// blur, a hairline highlight border and a soft drop shadow. The shared
-/// building block for cards and chrome.
+/// A flat surface card: a solid fill, a hairline border and a single soft
+/// shadow for subtle depth. The shared building block for cards and chrome
+/// across the app (formerly a frosted-glass panel; kept the name and API so
+/// callers need no changes).
 class GlassSurface extends StatelessWidget {
   const GlassSurface({
     super.key,
     required this.child,
-    this.borderRadius = 20,
-    this.blur = 18,
+    this.borderRadius = 18,
+    this.blur = 0,
     this.tint,
     this.border,
     this.shadow = true,
@@ -98,9 +47,12 @@ class GlassSurface extends StatelessWidget {
 
   final Widget child;
   final double borderRadius;
+
+  /// Retained for backwards compatibility; the surface is now flat, so this no
+  /// longer applies a backdrop blur.
   final double blur;
 
-  /// Optional base color of the glass (defaults to the surface color).
+  /// Optional base fill color (defaults to the theme surface).
   final Color? tint;
 
   /// Optional override of the hairline border.
@@ -111,47 +63,29 @@ class GlassSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final bool dark = Theme.of(context).brightness == Brightness.dark;
-    final Color baseTint = tint ?? scheme.surface;
+    final Color base = tint ?? scheme.surface;
     final BorderRadius radius = BorderRadius.circular(borderRadius);
 
     return DecoratedBox(
       decoration: BoxDecoration(
+        color: base,
         borderRadius: radius,
+        border: border ??
+            Border.all(
+              color: scheme.outlineVariant.withValues(alpha: dark ? 0.5 : 0.8),
+              width: 1,
+            ),
         boxShadow: shadow
             ? <BoxShadow>[
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: dark ? 0.30 : 0.09),
-                  blurRadius: 22,
-                  offset: const Offset(0, 10),
+                  color: Colors.black.withValues(alpha: dark ? 0.24 : 0.05),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
                 ),
               ]
             : null,
       ),
-      child: ClipRRect(
-        borderRadius: radius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: <Color>[
-                  baseTint.withValues(alpha: dark ? 0.55 : 0.82),
-                  baseTint.withValues(alpha: dark ? 0.34 : 0.66),
-                ],
-              ),
-              border: border ??
-                  Border.all(
-                    color: Colors.white.withValues(alpha: dark ? 0.10 : 0.65),
-                    width: 1,
-                  ),
-            ),
-            child: child,
-          ),
-        ),
-      ),
+      child: ClipRRect(borderRadius: radius, child: child),
     );
   }
 }

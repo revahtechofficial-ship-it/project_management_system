@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 /// Builds the app's light and dark [ThemeData] from a single seed, tuned for a
-/// modern glassmorphism look: translucent inputs, soft rounded components and
-/// an aurora base color (AGENTS.md §1 `constants`; theming skill).
+/// clean, modern SaaS look: flat solid surfaces with subtle depth, soft
+/// neutral backgrounds, generously rounded corners and hairline borders
+/// (AGENTS.md §1 `constants`; theming skill).
 class AppTheme {
   AppTheme._();
 
@@ -13,26 +14,29 @@ class AppTheme {
 
   static ThemeData _build(Brightness brightness) {
     final bool dark = brightness == Brightness.dark;
-    // Darken (light) / lighten (dark) the muted text + borders that come out of
-    // the seed so secondary copy and card edges read clearly — the defaults are
-    // too low-contrast on the translucent glass surfaces.
+    // Tune the muted text + hairline borders from the seed: readable secondary
+    // copy, and very light card edges so surfaces read as flat panels with
+    // just a whisper of separation.
     final ColorScheme scheme = ColorScheme.fromSeed(
       seedColor: AppColors.brand,
       brightness: brightness,
     ).copyWith(
+      surface: dark ? const Color(0xFF161B27) : Colors.white,
       onSurfaceVariant: dark
-          ? const Color(0xFFB4BCCC)
-          : const Color(0xFF4B5563),
+          ? const Color(0xFFAEB6C6)
+          : const Color(0xFF5B6472),
       outlineVariant: dark
-          ? const Color(0xFF333B4F)
-          : const Color(0xFFC4CAD8),
+          ? const Color(0xFF2A3140)
+          : const Color(0xFFE4E9F1),
     );
     final Color base =
-        dark ? const Color(0xFF0B0F1C) : const Color(0xFFF1F3FC);
+        dark ? const Color(0xFF0B0F1A) : const Color(0xFFF3F5FB);
+    final Color inputFill =
+        dark ? const Color(0xFF1C2230) : const Color(0xFFF1F4F9);
 
     OutlineInputBorder borderOf(Color c, [double w = 1]) =>
         OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: c, width: w),
         );
 
@@ -42,25 +46,32 @@ class AppTheme {
       scaffoldBackgroundColor: base,
       // A slightly stronger hover so list rows and ink wells visibly respond
       // to the mouse across the app (the M3 default is barely perceptible).
-      hoverColor: scheme.onSurface.withValues(alpha: dark ? 0.06 : 0.05),
+      hoverColor: scheme.onSurface.withValues(alpha: dark ? 0.06 : 0.04),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
       ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: scheme.outlineVariant),
+        ),
+      ),
       dividerTheme: DividerThemeData(
-        color: scheme.outlineVariant.withValues(alpha: 0.6),
+        color: scheme.outlineVariant.withValues(alpha: 0.7),
         thickness: 1,
         space: 1,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: scheme.surfaceContainerHighest
-            .withValues(alpha: dark ? 0.35 : 0.55),
-        border: borderOf(scheme.outlineVariant.withValues(alpha: 0.5)),
-        enabledBorder:
-            borderOf(scheme.outlineVariant.withValues(alpha: 0.5)),
+        fillColor: inputFill,
+        border: borderOf(scheme.outlineVariant),
+        enabledBorder: borderOf(scheme.outlineVariant),
         focusedBorder: borderOf(scheme.primary, 1.6),
       ),
       filledButtonTheme: FilledButtonThemeData(

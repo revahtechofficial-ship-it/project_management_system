@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -187,7 +185,8 @@ class AppShell extends ConsumerWidget {
   }
 }
 
-/// A blurred glass strip used for the sidebar and top bar chrome.
+/// A flat, solid strip used for the sidebar and top bar chrome, separated from
+/// the page by a hairline border.
 class _Chrome extends StatelessWidget {
   const _Chrome({required this.child, required this.border});
   final Widget child;
@@ -196,18 +195,9 @@ class _Chrome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(alpha: dark ? 0.45 : 0.6),
-            border: border,
-          ),
-          child: child,
-        ),
-      ),
+    return DecoratedBox(
+      decoration: BoxDecoration(color: scheme.surface, border: border),
+      child: child,
     );
   }
 }
@@ -556,9 +546,9 @@ class _NavTile extends StatelessWidget {
           boxShadow: selected
               ? <BoxShadow>[
                   BoxShadow(
-                    color: AppColors.brand.withValues(alpha: 0.35),
-                    blurRadius: 14,
-                    offset: const Offset(0, 5),
+                    color: AppColors.brand.withValues(alpha: 0.22),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
                 ]
               : null,
