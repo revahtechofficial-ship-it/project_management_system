@@ -86,6 +86,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   _SidePanel _panel = _SidePanel.none;
   _Poll? _poll;
   bool _pollMine = false;
+  bool _reactionsOpen = false;
+  bool _devicesExpanded = false;
 
   @override
   void initState() {
@@ -755,6 +757,20 @@ class _CallScreenState extends ConsumerState<CallScreen> {
             if (panelOpen && !wide)
               Positioned.fill(child: _sidePanel(full: true)),
             if (_poll != null) _pollCard(),
+            if (_reactionsOpen) ...<Widget>[
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () => setState(() => _reactionsOpen = false),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 96,
+                child: Center(child: _reactionStrip()),
+              ),
+            ],
             IgnorePointer(
               child: Stack(
                 children: <Widget>[
@@ -1021,7 +1037,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     );
   }
 
-  void _showReactions() {
+  /// A compact emoji popover that floats just above the control bar.
+  Widget _reactionStrip() {
     const List<String> emojis = <String>[
       '👍',
       '❤️',
@@ -1032,33 +1049,36 @@ class _CallScreenState extends ConsumerState<CallScreen> {
       '🙏',
       '🔥',
     ];
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: const Color(0xFF11182B),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2238),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white12),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      builder: (BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-        child: Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 8,
-          runSpacing: 8,
-          children: <Widget>[
-            for (final String e in emojis)
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () {
-                  _react(e);
-                  Navigator.pop(context);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Text(e, style: const TextStyle(fontSize: 30)),
-                ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          for (final String e in emojis)
+            InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () {
+                _react(e);
+                setState(() => _reactionsOpen = false);
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Text(e, style: const TextStyle(fontSize: 24)),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -1177,21 +1197,55 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  _deviceDropdown(
-                    Icons.videocam_outlined,
-                    _cameras,
-                    _cameraId,
-                    _selectCamera,
+                  const SizedBox(height: 8),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => setState(
+                      () => _devicesExpanded = !_devicesExpanded,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(
+                            Icons.tune,
+                            color: Colors.white54,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Device settings',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                          const Spacer(),
+                          AnimatedRotation(
+                            turns: _devicesExpanded ? 0.5 : 0,
+                            duration: const Duration(milliseconds: 150),
+                            child: const Icon(
+                              Icons.expand_more,
+                              color: Colors.white54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  _deviceDropdown(Icons.mic_none, _mics, _micId, _selectMic),
-                  _deviceDropdown(
-                    Icons.volume_up_outlined,
-                    _speakers,
-                    _speakerId,
-                    _selectSpeaker,
-                  ),
-                  const SizedBox(height: 22),
+                  if (_devicesExpanded) ...<Widget>[
+                    _deviceDropdown(
+                      Icons.videocam_outlined,
+                      _cameras,
+                      _cameraId,
+                      _selectCamera,
+                    ),
+                    _deviceDropdown(Icons.mic_none, _mics, _micId, _selectMic),
+                    _deviceDropdown(
+                      Icons.volume_up_outlined,
+                      _speakers,
+                      _speakerId,
+                      _selectSpeaker,
+                    ),
+                  ],
+                  const SizedBox(height: 18),
                   Row(
                     children: <Widget>[
                       Expanded(
@@ -1794,6 +1848,12 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                 onTap: _toggleScreen,
               ),
               _RoundButton(
+                icon: Icons.add_reaction_outlined,
+                active: _reactionsOpen,
+                tooltip: 'Reactions',
+                onTap: () => setState(() => _reactionsOpen = !_reactionsOpen),
+              ),
+              _RoundButton(
                 icon: Icons.people_alt_outlined,
                 active: _panel == _SidePanel.people,
                 tooltip: 'Participants',
@@ -1831,8 +1891,6 @@ class _CallScreenState extends ConsumerState<CallScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            _moreTile(sheet, Icons.add_reaction_outlined, 'Send a reaction',
-                _showReactions),
             _moreTile(
               sheet,
               Icons.front_hand,
@@ -1897,7 +1955,7 @@ class _VideoSource {
   final bool isScreen;
 }
 
-class _ParticipantTile extends StatelessWidget {
+class _ParticipantTile extends StatefulWidget {
   const _ParticipantTile({
     required this.participant,
     required this.video,
@@ -1916,16 +1974,24 @@ class _ParticipantTile extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
+  State<_ParticipantTile> createState() => _ParticipantTileState();
+}
+
+class _ParticipantTileState extends State<_ParticipantTile> {
+  bool _hover = false;
+
+  @override
   Widget build(BuildContext context) {
-    final String baseName = participant.name.isNotEmpty
-        ? participant.name
-        : participant.identity;
-    final String name = isScreen ? '$baseName · Screen' : baseName;
-    final Color? border = participant.isSpeaking
+    final Participant p = widget.participant;
+    final String baseName = p.name.isNotEmpty ? p.name : p.identity;
+    final String name = widget.isScreen ? '$baseName · Screen' : baseName;
+    final bool clickable = widget.onTap != null;
+    final Color? border = p.isSpeaking
         ? const Color(0xFF22C55E)
-        : pinned
+        : widget.pinned
         ? const Color(0xFF6366F1)
         : null;
+
     Widget tile = Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -1936,58 +2002,106 @@ class _ParticipantTile extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          if (video != null)
+          if (widget.video != null)
             VideoTrackRenderer(
-              video!,
-              fit: isScreen ? VideoViewFit.contain : VideoViewFit.cover,
-              mirrorMode: mirror
+              widget.video!,
+              fit: widget.isScreen ? VideoViewFit.contain : VideoViewFit.cover,
+              mirrorMode: widget.mirror
                   ? VideoViewMirrorMode.mirror
                   : VideoViewMirrorMode.off,
             )
           else
             Center(child: UserAvatar(name: baseName, radius: 34)),
-          if (!isScreen)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: _QualityBars(quality: participant.connectionQuality),
+          // Hover scrim + pin hint for click-to-pin tiles.
+          if (clickable && _hover) ...<Widget>[
+            Positioned.fill(
+              child: ColoredBox(color: Colors.black.withValues(alpha: 0.18)),
             ),
-          if (pinned)
-            const Positioned(
-              top: 8,
-              left: 8,
-              child: Icon(Icons.push_pin, color: Colors.white, size: 16),
-            ),
-          Positioned(
-            left: 8,
-            bottom: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  if (handUp)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 4),
-                      child: Text('✋', style: TextStyle(fontSize: 12)),
-                    ),
-                  if (participant.isMuted)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 4),
-                      child: Icon(
-                        Icons.mic_off,
-                        color: Colors.redAccent,
+            Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Icon(
+                        widget.pinned
+                            ? Icons.push_pin
+                            : Icons.push_pin_outlined,
+                        color: Colors.white,
                         size: 14,
                       ),
-                    ),
-                  Text(
-                    name,
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        widget.pinned ? 'Unpin' : 'Pin',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+              ),
+            ),
+          ],
+          // One condensed bottom bar: hand · mic · name … pin · signal.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(10, 14, 10, 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: <Color>[
+                    Colors.black.withValues(alpha: 0.6),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: Row(
+                children: <Widget>[
+                  if (widget.handUp)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 5),
+                      child: Text('✋', style: TextStyle(fontSize: 13)),
+                    ),
+                  Icon(
+                    p.isMuted ? Icons.mic_off : Icons.mic,
+                    size: 14,
+                    color: p.isMuted ? Colors.redAccent : Colors.white70,
+                  ),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
+                  if (widget.pinned)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 6),
+                      child: Icon(Icons.push_pin, color: Colors.white, size: 14),
+                    ),
+                  if (!widget.isScreen)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: _QualityBars(quality: p.connectionQuality),
+                    ),
                 ],
               ),
             ),
@@ -1995,13 +2109,16 @@ class _ParticipantTile extends StatelessWidget {
         ],
       ),
     );
-    if (onTap != null) {
-      tile = MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(onTap: onTap, child: tile),
-      );
+
+    if (!clickable) {
+      return tile;
     }
-    return tile;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(onTap: widget.onTap, child: tile),
+    );
   }
 }
 
