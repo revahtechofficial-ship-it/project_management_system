@@ -215,9 +215,12 @@ class _Sidebar extends ConsumerStatefulWidget {
 }
 
 class _SidebarState extends ConsumerState<_Sidebar> {
-  /// Titles of groups the user has collapsed. Persists while the shell is
-  /// mounted (i.e. across page navigations).
-  final Set<String> _collapsed = <String>{};
+  /// Titles of collapsed groups. Every group starts collapsed so the menu
+  /// opens compact (section headers only); tapping a header expands it. The
+  /// set persists while the shell is mounted (i.e. across page navigations).
+  final Set<String> _collapsed = <String>{
+    for (final _NavGroup group in _navGroups) group.title,
+  };
 
   void _toggle(String title) {
     setState(() {
