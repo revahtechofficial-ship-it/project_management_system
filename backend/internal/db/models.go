@@ -415,6 +415,12 @@ type TaskTemplate struct {
 	CreatedAt       time.Time `json:"created_at"`
 }
 
+type TaskWatcher struct {
+	TaskID    int64     `json:"task_id"`
+	UserID    int64     `json:"user_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type TimeEntry struct {
 	ID          int64              `json:"id"`
 	UserID      int64              `json:"user_id"`

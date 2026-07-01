@@ -315,6 +315,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
         children: <Widget>[
           Expanded(child: Text(_isEdit ? 'Edit task' : 'New task')),
           if (_isEdit) ...<Widget>[
+            _WatchButton(taskId: widget.task!.id),
             CopyButton(
               text: '#${widget.task!.id}',
               tooltip: 'Copy task ID',
@@ -1521,6 +1522,44 @@ class _ChecklistSectionState extends ConsumerState<_ChecklistSection> {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// A follow/unfollow toggle: watchers get notified about comments, status
+/// changes and completion on a task they don't own.
+class _WatchButton extends ConsumerWidget {
+  const _WatchButton({required this.taskId});
+  final int taskId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final ({int count, bool watching})? data =
+        ref.watch(taskWatchProvider(taskId)).asData?.value;
+    final bool watching = data?.watching ?? false;
+    final int count = data?.count ?? 0;
+    return IconButton(
+      tooltip: watching
+          ? 'Following${count > 0 ? ' · $count' : ''}'
+          : 'Follow for updates',
+      icon: Icon(
+        watching
+            ? Icons.notifications_active
+            : Icons.notifications_none_outlined,
+        size: 20,
+        color: watching ? scheme.primary : null,
+      ),
+      onPressed: () async {
+        final repo = ref.read(tasksRepositoryProvider);
+        if (watching) {
+          await repo.unwatch(taskId);
+        } else {
+          await repo.watch(taskId);
+        }
+        ref.invalidate(taskWatchProvider(taskId));
+        ref.invalidate(watchedTaskIdsProvider);
+      },
     );
   }
 }

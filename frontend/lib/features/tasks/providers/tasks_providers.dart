@@ -43,3 +43,16 @@ class TasksNotifier extends AsyncNotifier<List<Task>> {
 
 final AsyncNotifierProvider<TasksNotifier, List<Task>> tasksProvider =
     AsyncNotifierProvider<TasksNotifier, List<Task>>(TasksNotifier.new);
+
+/// Whether the current user follows a task, and its watcher count. Keyed by
+/// task id; invalidate after watch/unwatch to refresh.
+final taskWatchProvider =
+    FutureProvider.family<({int count, bool watching}), int>((ref, int id) {
+  return ref.watch(tasksRepositoryProvider).watchers(id);
+});
+
+/// The ids of tasks the current user follows.
+final FutureProvider<Set<int>> watchedTaskIdsProvider =
+    FutureProvider<Set<int>>((ref) {
+  return ref.watch(tasksRepositoryProvider).watching();
+});

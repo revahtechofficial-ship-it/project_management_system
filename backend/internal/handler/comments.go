@@ -131,14 +131,28 @@ func (h *TaskHandler) notifyOnComment(ctx context.Context, taskID int64,
 			"You were mentioned in a comment", body, "/tasks")
 	}
 	t, err := h.q.GetTask(ctx, taskID)
-	if err != nil || t.AssigneeID == nil {
+	if err != nil {
 		return
 	}
-	a := *t.AssigneeID
-	if mentioned[a] || (actor != nil && *actor == a) {
-		return
+	skip := map[int64]bool{}
+	if actor != nil {
+		skip[*actor] = true
 	}
-	notifyUser(ctx, h.q, a, "comment", "New comment on your task", t.Title, "/tasks")
+	for m := range mentioned {
+		skip[m] = true
+	}
+	if t.AssigneeID != nil {
+		a := *t.AssigneeID
+		if !mentioned[a] && (actor == nil || *actor != a) {
+			notifyUser(ctx, h.q, a, "comment", "New comment on your task",
+				t.Title, "/tasks")
+		}
+		skip[a] = true
+	}
+	// Also notify anyone following the task (excluding the actor, mentions and
+	// the assignee, who were handled above).
+	h.notifyWatchers(ctx, taskID, skip, "comment",
+		"New comment on a task you follow", t.Title)
 }
 
 func (h *TaskHandler) deleteComment(w http.ResponseWriter, r *http.Request) {

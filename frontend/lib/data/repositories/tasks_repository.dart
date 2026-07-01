@@ -180,6 +180,30 @@ class TasksRepository {
   /// Deletes the task identified by [id].
   Future<void> delete(int id) => _dio.delete<void>('/api/v1/tasks/$id');
 
+  /// Starts following task [id] for updates.
+  Future<void> watch(int id) => _dio.post<void>('/api/v1/tasks/$id/watch');
+
+  /// Stops following task [id].
+  Future<void> unwatch(int id) => _dio.delete<void>('/api/v1/tasks/$id/watch');
+
+  /// Whether the current user follows task [id], and its total watcher count.
+  Future<({int count, bool watching})> watchers(int id) async {
+    final Response<Map<String, dynamic>> res = await _dio
+        .get<Map<String, dynamic>>('/api/v1/tasks/$id/watchers');
+    final Map<String, dynamic> data = res.data ?? <String, dynamic>{};
+    return (
+      count: data['count'] as int? ?? 0,
+      watching: data['watching'] as bool? ?? false,
+    );
+  }
+
+  /// The ids of tasks the current user follows.
+  Future<Set<int>> watching() async {
+    final Response<List<dynamic>> res =
+        await _dio.get<List<dynamic>>('/api/v1/tasks/watching');
+    return <int>{for (final dynamic e in res.data ?? <dynamic>[]) e as int};
+  }
+
   /// Applies one [action] to every task in [ids] in a single request. [value]
   /// is action-specific: a bool for `done`, a status/priority string, a user id
   /// (or null) for `assignee`, and ignored for `delete`.

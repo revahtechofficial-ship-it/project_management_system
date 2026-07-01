@@ -35,7 +35,11 @@ func (h *TaskHandler) Routes() http.Handler {
 	r.Get("/", h.list)
 	r.Post("/", h.create)
 	r.Post("/bulk", h.bulk)
+	r.Get("/watching", h.watching)
 	r.Get("/{id}", h.get)
+	r.Post("/{id}/watch", h.watch)
+	r.Delete("/{id}/watch", h.unwatch)
+	r.Get("/{id}/watchers", h.watchers)
 	r.Put("/{id}", h.update)
 	r.Patch("/{id}", h.setDone)
 	r.Patch("/{id}/status", h.setStatus)
@@ -621,11 +625,15 @@ func (h *TaskHandler) setDone(w http.ResponseWriter, r *http.Request) {
 		h.spawnNext(r.Context(), task)
 	}
 	if body.Done != prior.Done {
+		title := "A task you follow was reopened"
 		if body.Done {
 			logActivity(r.Context(), h.q, id, "completed", "")
+			title = "A task you follow was completed"
 		} else {
 			logActivity(r.Context(), h.q, id, "reopened", "")
 		}
+		h.notifyWatchers(r.Context(), id, skipActor(r.Context()), "task",
+			title, task.Title)
 	}
 	writeJSON(w, http.StatusOK, h.taskWithAssignees(r.Context(), task))
 }
@@ -668,10 +676,16 @@ func (h *TaskHandler) setStatus(w http.ResponseWriter, r *http.Request) {
 	if body.Status == "done" && !prior.Done {
 		h.spawnNext(r.Context(), task)
 	}
+	watchTitle := "A task you follow was updated"
 	if body.Status == "done" {
 		logActivity(r.Context(), h.q, id, "completed", "")
+		watchTitle = "A task you follow was completed"
 	} else {
 		logActivity(r.Context(), h.q, id, "status", body.Status)
+	}
+	if body.Status != prior.Status {
+		h.notifyWatchers(r.Context(), id, skipActor(r.Context()), "task",
+			watchTitle, task.Title)
 	}
 	runAutomations(r.Context(), h.q, id, "status_changed")
 	if body.Status == "done" && !prior.Done {
