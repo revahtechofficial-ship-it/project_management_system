@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
 import '../../core/widgets/status_pill.dart';
@@ -52,7 +53,7 @@ class GoalsPage extends ConsumerWidget {
           const SizedBox(height: 20),
           Expanded(
             child: async.when(
-              loading: () => const LoadingView(),
+              loading: () => const SkeletonList(rows: 5),
               error: (Object e, _) => ErrorView(
                 error: e,
                 onRetry: () => ref.invalidate(objectivesProvider),
@@ -61,7 +62,9 @@ class GoalsPage extends ConsumerWidget {
                 if (items.isEmpty) {
                   return const EmptyState(
                     icon: Icons.flag_outlined,
-                    message: 'No goals yet. Create your first objective.',
+                    title: 'No goals yet',
+                    message: 'Set an objective to align your team around '
+                        'measurable outcomes.',
                   );
                 }
                 return _GoalsList(objectives: items);

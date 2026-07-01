@@ -11,9 +11,35 @@ final Provider<TasksRepository> tasksRepositoryProvider =
       return TasksRepository(ref.watch(dioProvider));
     });
 
-/// The list of tasks from the backend. Invalidate to refresh.
-final FutureProvider<List<Task>> tasksProvider = FutureProvider<List<Task>>((
-  ref,
-) {
-  return ref.watch(tasksRepositoryProvider).list();
-});
+/// The list of tasks from the backend. Invalidate to refresh; use
+/// [TasksNotifier.toggleDone] for an optimistic completion toggle.
+class TasksNotifier extends AsyncNotifier<List<Task>> {
+  @override
+  Future<List<Task>> build() {
+    return ref.watch(tasksRepositoryProvider).list();
+  }
+
+  /// Flips a task's completion locally for instant feedback, then persists it
+  /// and reconciles with the server. Rolls back the local change on failure.
+  Future<void> toggleDone(int id, bool done) async {
+    final List<Task>? current = state.asData?.value;
+    if (current != null) {
+      state = AsyncData<List<Task>>(<Task>[
+        for (final Task t in current)
+          if (t.id == id) t.copyWith(done: done) else t,
+      ]);
+    }
+    try {
+      await ref.read(tasksRepositoryProvider).setDone(id, done: done);
+    } catch (error, stack) {
+      if (current != null) {
+        state = AsyncData<List<Task>>(current);
+      }
+      Error.throwWithStackTrace(error, stack);
+    }
+    ref.invalidateSelf();
+  }
+}
+
+final AsyncNotifierProvider<TasksNotifier, List<Task>> tasksProvider =
+    AsyncNotifierProvider<TasksNotifier, List<Task>>(TasksNotifier.new);

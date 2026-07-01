@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/date_format.dart';
 import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
 import '../../data/models/release.dart';
@@ -45,7 +46,7 @@ class ReleasesPage extends ConsumerWidget {
           const SizedBox(height: 20),
           Expanded(
             child: async.when(
-              loading: () => const LoadingView(),
+              loading: () => const SkeletonList(rows: 5),
               error: (Object e, _) => ErrorView(
                 error: e,
                 onRetry: () => ref.invalidate(releasesProvider),
@@ -54,8 +55,8 @@ class ReleasesPage extends ConsumerWidget {
                 if (releases.isEmpty) {
                   return const EmptyState(
                     icon: Icons.rocket_launch_outlined,
-                    message: 'No releases yet. Plan one to group work into a '
-                        'version.',
+                    title: 'No releases yet',
+                    message: 'Plan a release to group work into a version.',
                   );
                 }
                 return ListView.separated(

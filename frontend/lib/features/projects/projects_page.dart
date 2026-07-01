@@ -141,9 +141,13 @@ class ProjectsPage extends ConsumerWidget {
         if (projectsAsync.isLoading && projects.isEmpty && spaces.isEmpty)
           const SkeletonTiles()
         else if (projects.isEmpty && spaces.isEmpty)
-          const EmptyState(
+          EmptyState(
             icon: Icons.folder_off_rounded,
-            message: 'No projects yet. Create your first one.',
+            title: 'No projects yet',
+            message: 'Create your first project to organise your work.',
+            actionLabel: 'New project',
+            actionIcon: Icons.create_new_folder_outlined,
+            onAction: () => _openForm(context, ref),
           )
         else ...<Widget>[
           for (final Space space in spaces)

@@ -235,9 +235,13 @@ class _TasksPageState extends ConsumerState<TasksPage> {
 
   Widget _body(List<Task> items) {
     if (items.isEmpty) {
-      return const EmptyState(
+      return EmptyState(
         icon: Icons.checklist_rounded,
-        message: 'No tasks yet. Create your first one.',
+        title: 'No tasks yet',
+        message: 'Create your first task to start tracking your work.',
+        actionLabel: 'New task',
+        actionIcon: Icons.add_task,
+        onAction: _newTask,
       );
     }
     return switch (_view) {
@@ -291,15 +295,12 @@ class _TaskTile extends ConsumerWidget {
       onTap: onEdit,
       leading: Checkbox(
         value: task.done,
-        onChanged: (bool? value) async {
+        onChanged: (bool? value) {
           final bool done = value ?? false;
           if (done) {
             celebrate(context);
           }
-          await ref
-              .read(tasksRepositoryProvider)
-              .setDone(task.id, done: done);
-          ref.invalidate(tasksProvider);
+          ref.read(tasksProvider.notifier).toggleDone(task.id, done);
         },
       ),
       title: Text(

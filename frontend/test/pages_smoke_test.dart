@@ -30,6 +30,15 @@ class _SignedOutController extends AuthController {
   Future<AuthState> build() async => const AuthState.signedOut();
 }
 
+/// Serves a fixed task list without hitting the repository.
+class _FakeTasks extends TasksNotifier {
+  _FakeTasks(this._tasks);
+  final List<Task> _tasks;
+
+  @override
+  Future<List<Task>> build() async => _tasks;
+}
+
 Future<void> _pump(WidgetTester tester, Widget page) async {
   tester.view.physicalSize = const Size(1440, 1024);
   tester.view.devicePixelRatio = 1.0;
@@ -40,7 +49,7 @@ Future<void> _pump(WidgetTester tester, Widget page) async {
     ProviderScope(
       overrides: [
         authControllerProvider.overrideWith(_SignedOutController.new),
-        tasksProvider.overrideWith((ref) async => const <Task>[]),
+        tasksProvider.overrideWith(() => _FakeTasks(const <Task>[])),
         teamMembersProvider.overrideWith((ref) async => const []),
         projectsProvider.overrideWith((ref) async => const []),
         notificationsProvider.overrideWith((ref) async => const []),
@@ -75,7 +84,7 @@ void main() {
         overrides: [
           authControllerProvider.overrideWith(_SignedOutController.new),
           tasksProvider.overrideWith(
-            (ref) async => <Task>[
+            () => _FakeTasks(<Task>[
               Task(
                 id: 1,
                 done: false,
@@ -83,7 +92,7 @@ void main() {
                 updatedAt: DateTime(2024),
                 title: 'Test task',
               ),
-            ],
+            ]),
           ),
         ],
         child: const MaterialApp(home: TasksPage()),
@@ -169,7 +178,7 @@ void main() {
       ProviderScope(
         overrides: [
           authControllerProvider.overrideWith(_SignedOutController.new),
-          tasksProvider.overrideWith((ref) async => const <Task>[]),
+          tasksProvider.overrideWith(() => _FakeTasks(const <Task>[])),
           teamMembersProvider.overrideWith((ref) async => const []),
           projectsProvider.overrideWith((ref) async => const []),
           notificationsProvider.overrideWith((ref) async => const []),

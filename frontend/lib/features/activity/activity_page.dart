@@ -7,6 +7,7 @@ import '../../core/utils/date_format.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/back_to_top.dart';
 import '../../core/widgets/page_header.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/sticky_header.dart';
 import '../../data/models/feed_activity.dart';
 import 'providers/activity_providers.dart';
@@ -39,7 +40,10 @@ class ActivityPage extends ConsumerWidget {
           const SizedBox(height: 16),
           Expanded(
             child: async.when(
-              loading: () => const LoadingView(),
+              loading: () => const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: SkeletonList(rows: 8),
+              ),
               error: (Object e, _) => ErrorView(
                 error: e,
                 onRetry: () => ref.invalidate(activityFeedProvider),
@@ -110,7 +114,9 @@ class _FeedState extends State<_Feed> {
           child: filtered.isEmpty
               ? const EmptyState(
                   icon: Icons.history,
-                  message: 'No activity to show yet.',
+                  title: 'No activity yet',
+                  message: 'Task updates across your workspace will show up '
+                      'here as your team works.',
                 )
               : _GroupedList(items: filtered),
         ),
