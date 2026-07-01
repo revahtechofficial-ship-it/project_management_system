@@ -13,11 +13,13 @@ import '../../core/widgets/stat_card.dart';
 import '../../core/widgets/status_pill.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../data/enums/member_role.dart';
+import '../../data/models/skill.dart';
 import '../../data/models/team_member.dart';
 import '../../providers/auth_provider.dart';
+import 'providers/skills_providers.dart';
 import 'providers/team_providers.dart';
 
-enum _TeamView { directory, org }
+enum _TeamView { directory, org, skills }
 
 /// The team directory: workspace members (registered users) with role and
 /// real task workload from the backend, plus an org view grouped by
@@ -63,6 +65,11 @@ class _TeamPageState extends ConsumerState<TeamPage> {
                   value: _TeamView.org,
                   icon: Icon(Icons.account_tree_outlined, size: 18),
                   label: Text('Org'),
+                ),
+                ButtonSegment<_TeamView>(
+                  value: _TeamView.skills,
+                  icon: Icon(Icons.workspace_premium_outlined, size: 18),
+                  label: Text('Skills'),
                 ),
               ],
               selected: <_TeamView>{_view},
@@ -129,6 +136,8 @@ class _TeamPageState extends ConsumerState<TeamPage> {
             icon: Icons.group_off_rounded,
             message: 'No members yet.',
           )
+        else if (_view == _TeamView.skills)
+          const _SkillsView()
         else if (_view == _TeamView.org)
           _OrgChart(members: members)
         else
@@ -400,6 +409,314 @@ class _OrgMemberRow extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// The team skills matrix: an editor for your own skills plus every other
+/// member's skills grouped into cards.
+class _SkillsView extends ConsumerWidget {
+  const _SkillsView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<Skill>> allAsync = ref.watch(allSkillsProvider);
+    final int? myId =
+        ref.watch(authControllerProvider).asData?.value.user?.id;
+    return allAsync.when(
+      loading: () => const LoadingView(),
+      error: (Object e, _) => ErrorView(
+        error: e,
+        onRetry: () => ref.invalidate(allSkillsProvider),
+      ),
+      data: (List<Skill> skills) {
+        final Map<int, List<Skill>> byUser = <int, List<Skill>>{};
+        for (final Skill s in skills) {
+          byUser.putIfAbsent(s.userId, () => <Skill>[]).add(s);
+        }
+        final List<MapEntry<int, List<Skill>>> others = byUser.entries
+            .where((MapEntry<int, List<Skill>> e) => e.key != myId)
+            .toList()
+          ..sort((MapEntry<int, List<Skill>> a, MapEntry<int, List<Skill>> b) =>
+              a.value.first.userName
+                  .toLowerCase()
+                  .compareTo(b.value.first.userName.toLowerCase()));
+
+        return ListView(
+          children: <Widget>[
+            const _MySkillsCard(),
+            const SizedBox(height: 20),
+            Text(
+              'Across the team',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.4,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (others.isEmpty)
+              const EmptyState(
+                icon: Icons.workspace_premium_outlined,
+                message: 'No one else has added skills yet.',
+              )
+            else
+              LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints c) {
+                  final int cols =
+                      c.maxWidth >= 1080 ? 3 : (c.maxWidth >= 680 ? 2 : 1);
+                  const double gap = 16;
+                  final double w = (c.maxWidth - gap * (cols - 1)) / cols;
+                  return Wrap(
+                    spacing: gap,
+                    runSpacing: gap,
+                    children: <Widget>[
+                      for (final MapEntry<int, List<Skill>> e in others)
+                        SizedBox(
+                          width: w,
+                          child: _MemberSkillsCard(
+                            name: e.value.first.userName,
+                            avatarUrl: e.value.first.avatarUrl,
+                            skills: e.value,
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// The current user's own skills, editable inline.
+class _MySkillsCard extends ConsumerStatefulWidget {
+  const _MySkillsCard();
+
+  @override
+  ConsumerState<_MySkillsCard> createState() => _MySkillsCardState();
+}
+
+class _MySkillsCardState extends ConsumerState<_MySkillsCard> {
+  final TextEditingController _name = TextEditingController();
+  int _level = 3;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  Future<void> _add() async {
+    final String skill = _name.text.trim();
+    if (skill.isEmpty || _busy) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await ref.read(skillsRepositoryProvider).upsert(skill, _level);
+      _name.clear();
+      ref.invalidate(mySkillsProvider);
+      ref.invalidate(allSkillsProvider);
+    } catch (e) {
+      if (mounted) {
+        context.showError('Could not save: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _remove(int id) async {
+    await ref.read(skillsRepositoryProvider).delete(id);
+    ref.invalidate(mySkillsProvider);
+    ref.invalidate(allSkillsProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Skill> mine =
+        ref.watch(mySkillsProvider).asData?.value ?? const <Skill>[];
+    return DashboardCard(
+      title: 'My skills',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          if (mine.isEmpty)
+            Text(
+              'Add the skills you can help with — teammates can find you by them.',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                for (final Skill s in mine)
+                  _SkillChip(
+                    skill: s.skill,
+                    level: s.level,
+                    onRemove: () => _remove(s.id),
+                  ),
+              ],
+            ),
+          const SizedBox(height: 14),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  controller: _name,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    labelText: 'Add a skill',
+                    hintText: 'e.g. Go, Flutter, Design',
+                  ),
+                  onSubmitted: (_) => _add(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              DropdownButton<int>(
+                value: _level,
+                onChanged: (int? v) => setState(() => _level = v ?? 3),
+                items: <DropdownMenuItem<int>>[
+                  for (int i = 1; i <= 5; i++)
+                    DropdownMenuItem<int>(value: i, child: Text('Level $i')),
+                ],
+              ),
+              const SizedBox(width: 12),
+              FilledButton(
+                onPressed: _busy ? null : _add,
+                child: const Text('Add'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MemberSkillsCard extends StatelessWidget {
+  const _MemberSkillsCard({
+    required this.name,
+    required this.avatarUrl,
+    required this.skills,
+  });
+  final String name;
+  final String? avatarUrl;
+  final List<Skill> skills;
+
+  @override
+  Widget build(BuildContext context) {
+    return DashboardCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              UserAvatar(name: name, radius: 16, imageUrl: avatarUrl),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  name.isEmpty ? 'Member' : name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 18),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              for (final Skill s in skills)
+                _SkillChip(skill: s.skill, level: s.level),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkillChip extends StatelessWidget {
+  const _SkillChip({
+    required this.skill,
+    required this.level,
+    this.onRemove,
+  });
+  final String skill;
+  final int level;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: EdgeInsets.fromLTRB(10, 6, onRemove == null ? 10 : 4, 6),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(skill,
+              style: const TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 8),
+          _LevelDots(level: level),
+          if (onRemove != null)
+            InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: onRemove,
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: Icon(Icons.close,
+                    size: 14, color: scheme.onSurfaceVariant),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LevelDots extends StatelessWidget {
+  const _LevelDots({required this.level});
+  final int level;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        for (int i = 1; i <= 5; i++)
+          Padding(
+            padding: const EdgeInsets.only(right: 2),
+            child: Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: i <= level
+                    ? scheme.primary
+                    : scheme.outlineVariant,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

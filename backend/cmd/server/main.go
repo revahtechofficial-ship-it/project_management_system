@@ -161,6 +161,7 @@ func main() {
 		teamHandler := handler.NewTeamHandler(queries)
 		api.Get("/api/v1/team", teamHandler.List)
 		api.Patch("/api/v1/team/{id}/role", teamHandler.SetRole)
+		api.Mount("/api/v1/skills", handler.NewSkillHandler(queries).Routes())
 		api.Post("/api/v1/baseline", taskHandler.SetBaseline)
 		api.Delete("/api/v1/attachments/{id}", taskHandler.DeleteAttachment)
 		api.Patch("/api/v1/profile", accountHandler.UpdateProfile)

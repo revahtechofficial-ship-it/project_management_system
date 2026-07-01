@@ -467,6 +467,14 @@ type User struct {
 	TwoFactorEnabled bool               `json:"two_factor_enabled"`
 }
 
+type UserSkill struct {
+	ID        int64     `json:"id"`
+	UserID    int64     `json:"user_id"`
+	Skill     string    `json:"skill"`
+	Level     int32     `json:"level"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Webhook struct {
 	ID        int64     `json:"id"`
 	Url       string    `json:"url"`
