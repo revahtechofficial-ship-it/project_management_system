@@ -411,7 +411,9 @@ SELECT
         WHERE cm2.conversation_id = c.id
           AND cm2.user_id <> $1
           AND c.type = 'dm'
-        LIMIT 1), '')::text AS other_user_avatar
+        LIMIT 1), '')::text AS other_user_avatar,
+    (SELECT COUNT(*) FROM conversation_members cmx
+        WHERE cmx.conversation_id = c.id)::int AS member_count
 FROM conversation_members cm
 JOIN conversations c ON c.id = cm.conversation_id
 WHERE cm.user_id = $1
@@ -433,6 +435,7 @@ type ListConversationsForUserRow struct {
 	OtherUserID     int64              `json:"other_user_id"`
 	OtherUserName   string             `json:"other_user_name"`
 	OtherUserAvatar string             `json:"other_user_avatar"`
+	MemberCount     int32              `json:"member_count"`
 }
 
 func (q *Queries) ListConversationsForUser(ctx context.Context, userID *int64) ([]ListConversationsForUserRow, error) {
@@ -459,6 +462,7 @@ func (q *Queries) ListConversationsForUser(ctx context.Context, userID *int64) (
 			&i.OtherUserID,
 			&i.OtherUserName,
 			&i.OtherUserAvatar,
+			&i.MemberCount,
 		); err != nil {
 			return nil, err
 		}

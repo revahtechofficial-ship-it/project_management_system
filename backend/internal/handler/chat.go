@@ -99,6 +99,7 @@ type conversationResponse struct {
 	LastKind     string    `json:"last_kind"`
 	LastAt       time.Time `json:"last_at"`
 	LastSenderID *int64    `json:"last_sender_id"`
+	MemberCount  int32     `json:"member_count"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 
@@ -169,6 +170,7 @@ func conversationFromRow(r db.ListConversationsForUserRow) conversationResponse 
 		LastKind:     r.LastKind,
 		LastAt:       r.LastAt,
 		LastSenderID: r.LastSenderID,
+		MemberCount:  r.MemberCount,
 		CreatedAt:    r.CreatedAt,
 	}
 }

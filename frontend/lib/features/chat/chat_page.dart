@@ -106,8 +106,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   bool _hasMoreOlder = true;
   bool _sending = false;
   bool _emojiOpen = false;
-  String? _typingName;
-  Timer? _typingClear;
+  final Map<int, String> _typingUsers = <int, String>{};
+  final Map<int, Timer> _typingClear = <int, Timer>{};
   DateTime? _lastTypingSent;
   final TextEditingController _composer = TextEditingController();
   final ScrollController _scroll = ScrollController();
@@ -128,7 +128,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   void dispose() {
-    _typingClear?.cancel();
+    for (final Timer t in _typingClear.values) {
+      t.cancel();
+    }
     _recTimer?.cancel();
     _recorder.dispose();
     _scroll.removeListener(_onScroll);
@@ -432,7 +434,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           if (!_messages.any((ChatMessage m) => m.id == msg.id)) {
             setState(() {
               _messages = <ChatMessage>[..._messages, msg];
-              _typingName = null;
+              _typingClear.remove(msg.senderId)?.cancel();
+              _typingUsers.remove(msg.senderId);
             });
             _scrollToBottom();
           }
@@ -440,11 +443,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         }
       case 'typing':
         if (e['conversation_id'] == _selectedId && e['from_id'] != _myId) {
-          setState(() => _typingName = e['from_name'] as String?);
-          _typingClear?.cancel();
-          _typingClear = Timer(const Duration(seconds: 4), () {
+          final int? fromId = e['from_id'] as int?;
+          final String? name = e['from_name'] as String?;
+          if (fromId == null || name == null || name.isEmpty) {
+            return;
+          }
+          setState(() => _typingUsers[fromId] = name);
+          _typingClear.remove(fromId)?.cancel();
+          _typingClear[fromId] = Timer(const Duration(seconds: 4), () {
             if (mounted) {
-              setState(() => _typingName = null);
+              setState(() => _typingUsers.remove(fromId));
             }
           });
         }
@@ -1278,13 +1286,28 @@ class _ConversationTile extends StatelessWidget {
         status: status,
         child: _ConvAvatar(conversation: conversation, radius: 20),
       ),
-      title: Text(
-        conversation.name.isEmpty ? 'Conversation' : conversation.name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontWeight: unread > 0 ? FontWeight.w800 : FontWeight.w600,
-        ),
+      title: Row(
+        children: <Widget>[
+          if (conversation.isGroup)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Icon(
+                Icons.groups,
+                size: 15,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          Expanded(
+            child: Text(
+              conversation.name.isEmpty ? 'Conversation' : conversation.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: unread > 0 ? FontWeight.w800 : FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
       subtitle: Text(
         conversation.preview,
@@ -1385,6 +1408,11 @@ class _ThreadPane extends StatelessWidget {
                     itemBuilder: (BuildContext context, int i) {
                       final ChatMessage m = state._messages[i];
                       final bool isMine = m.senderId == state._myId;
+                      final ChatMessage? prev =
+                          i > 0 ? state._messages[i - 1] : null;
+                      final bool firstOfGroup = prev == null ||
+                          prev.senderId != m.senderId ||
+                          m.createdAt.difference(prev.createdAt).inMinutes >= 5;
                       final bool seen =
                           isMine &&
                           !c.isGroup &&
@@ -1399,6 +1427,7 @@ class _ThreadPane extends StatelessWidget {
                         myId: state._myId,
                         seen: seen,
                         otherOnline: otherOnline,
+                        firstOfGroup: firstOfGroup,
                         reactions: state._reactions[m.id],
                         onReact: (String emoji) =>
                             state._toggleReaction(m.id, emoji),
@@ -1408,7 +1437,8 @@ class _ThreadPane extends StatelessWidget {
                     },
                   ),
           ),
-          if (state._typingName != null) _TypingRow(name: state._typingName!),
+          if (state._typingUsers.isNotEmpty)
+            _TypingRow(names: state._typingUsers.values.toList()),
           if (state._replyTarget != null)
             _ReplyBanner(
               message: state._replyTarget!,
@@ -1520,6 +1550,17 @@ class _ThreadHeader extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       color: (status ?? UserStatus.offline).color,
+                    ),
+                  )
+                else if (conversation.memberCount > 0)
+                  Text(
+                    '${conversation.memberCount} '
+                    'member${conversation.memberCount == 1 ? '' : 's'}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
               ],
@@ -1728,11 +1769,13 @@ class _MessageBubble extends StatelessWidget {
     required this.onOpenThread,
     this.seen = false,
     this.otherOnline = false,
+    this.firstOfGroup = true,
     this.reactions,
   });
   final ChatMessage message;
   final bool isMine;
   final bool isGroup;
+  final bool firstOfGroup;
   final String? token;
   final ChatRepository repo;
   final int? myId;
@@ -1809,7 +1852,7 @@ class _MessageBubble extends StatelessWidget {
         (reactions ?? const <String, Set<int>>{}).entries
             .where((MapEntry<String, Set<int>> e) => e.value.isNotEmpty)
             .toList();
-    final bool showAvatar = isGroup && !isMine;
+    final bool showAvatar = isGroup && !isMine && firstOfGroup;
     final Widget content = Column(
       crossAxisAlignment: isMine
           ? CrossAxisAlignment.end
@@ -1819,7 +1862,7 @@ class _MessageBubble extends StatelessWidget {
           onLongPress: onLongPress,
           child: Container(
             constraints: const BoxConstraints(maxWidth: 360),
-            margin: const EdgeInsets.only(top: 4),
+            margin: EdgeInsets.only(top: firstOfGroup ? 4 : 1),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: bubble,
@@ -1830,7 +1873,8 @@ class _MessageBubble extends StatelessWidget {
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: <Widget>[
-                if (isGroup && !isMine && message.senderName != null)
+                if (isGroup && !isMine && firstOfGroup &&
+                    message.senderName != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2),
                     child: Text(
@@ -2040,9 +2084,13 @@ class _MessageBubble extends StatelessWidget {
     );
 
     if (!showAvatar) {
+      final bool grouped = isGroup && !isMine;
       return Align(
         alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-        child: content,
+        child: Padding(
+          padding: EdgeInsets.only(left: grouped ? 32 : 0),
+          child: content,
+        ),
       );
     }
     return Align(
@@ -2865,8 +2913,23 @@ class _EditBanner extends StatelessWidget {
 
 /// The "X is typing…" hint shown above the composer.
 class _TypingRow extends StatelessWidget {
-  const _TypingRow({required this.name});
-  final String name;
+  const _TypingRow({required this.names});
+  final List<String> names;
+
+  String get _label {
+    switch (names.length) {
+      case 0:
+        return '';
+      case 1:
+        return '${names[0]} is typing…';
+      case 2:
+        return '${names[0]} & ${names[1]} are typing…';
+      case 3:
+        return '${names[0]}, ${names[1]} & ${names[2]} are typing…';
+      default:
+        return 'Several people are typing…';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2875,7 +2938,7 @@ class _TypingRow extends StatelessWidget {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(
-          '$name is typing…',
+          _label,
           style: TextStyle(
             fontSize: 12,
             fontStyle: FontStyle.italic,

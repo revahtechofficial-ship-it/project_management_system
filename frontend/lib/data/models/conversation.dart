@@ -12,6 +12,7 @@ class Conversation {
   final String lastKind;
   final DateTime lastAt;
   final int? lastSenderId;
+  final int memberCount;
   final DateTime createdAt;
 
   const Conversation({
@@ -27,6 +28,7 @@ class Conversation {
     this.lastBody = '',
     this.lastKind = '',
     this.lastSenderId,
+    this.memberCount = 0,
   });
 
   bool get isGroup => type == 'group';
@@ -51,6 +53,7 @@ class Conversation {
         lastBody: lastBody,
         lastKind: lastKind,
         lastSenderId: lastSenderId,
+        memberCount: memberCount,
       );
 
   factory Conversation.fromJson(Map<String, dynamic> json) => Conversation(
@@ -65,6 +68,7 @@ class Conversation {
         lastKind: json['last_kind'] as String? ?? '',
         lastAt: DateTime.parse(json['last_at'] as String),
         lastSenderId: json['last_sender_id'] as int?,
+        memberCount: json['member_count'] as int? ?? 0,
         createdAt: DateTime.parse(json['created_at'] as String),
       );
 
@@ -80,6 +84,7 @@ class Conversation {
         'last_kind': lastKind,
         'last_at': lastAt.toIso8601String(),
         'last_sender_id': lastSenderId,
+        'member_count': memberCount,
         'created_at': createdAt.toIso8601String(),
       };
 
@@ -101,10 +106,11 @@ class Conversation {
           other.lastKind == lastKind &&
           other.lastAt == lastAt &&
           other.lastSenderId == lastSenderId &&
+          other.memberCount == memberCount &&
           other.createdAt == createdAt;
 
   @override
   int get hashCode => Object.hash(id, type, name, otherUserId, otherAvatarUrl,
       groupAvatarUrl, unreadCount, lastBody, lastKind, lastAt, lastSenderId,
-      createdAt);
+      memberCount, createdAt);
 }

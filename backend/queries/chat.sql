@@ -209,7 +209,9 @@ SELECT
         WHERE cm2.conversation_id = c.id
           AND cm2.user_id <> sqlc.arg(user_id)
           AND c.type = 'dm'
-        LIMIT 1), '')::text AS other_user_avatar
+        LIMIT 1), '')::text AS other_user_avatar,
+    (SELECT COUNT(*) FROM conversation_members cmx
+        WHERE cmx.conversation_id = c.id)::int AS member_count
 FROM conversation_members cm
 JOIN conversations c ON c.id = cm.conversation_id
 WHERE cm.user_id = sqlc.arg(user_id)

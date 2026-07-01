@@ -960,7 +960,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               ? const Center(
                   child: Text(
                     'No messages yet.',
-                    style: TextStyle(color: Colors.white38),
+                    style: TextStyle(color: Colors.white60),
                   ),
                 )
               : ListView.builder(
@@ -979,7 +979,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                           Text(
                             m.isMe ? 'You' : m.sender,
                             style: const TextStyle(
-                              color: Colors.white38,
+                              color: Colors.white70,
                               fontSize: 11,
                             ),
                           ),
@@ -1143,7 +1143,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                             'the camera button to retry.',
                                             textAlign: TextAlign.center,
                                             style: TextStyle(
-                                              color: Colors.white54,
+                                              color: Colors.white70,
                                               fontSize: 13,
                                             ),
                                           ),
@@ -1986,10 +1986,12 @@ class _ParticipantTileState extends State<_ParticipantTile> {
     final String baseName = p.name.isNotEmpty ? p.name : p.identity;
     final String name = widget.isScreen ? '$baseName · Screen' : baseName;
     final bool clickable = widget.onTap != null;
+    const Color speakingColor = Color(0xFF22C55E);
+    const Color pinnedColor = Color(0xFF6366F1);
     final Color? border = p.isSpeaking
-        ? const Color(0xFF22C55E)
+        ? speakingColor
         : widget.pinned
-        ? const Color(0xFF6366F1)
+        ? pinnedColor
         : null;
 
     Widget tile = Container(
@@ -1997,7 +1999,21 @@ class _ParticipantTileState extends State<_ParticipantTile> {
       decoration: BoxDecoration(
         color: const Color(0xFF1A2238),
         borderRadius: BorderRadius.circular(14),
-        border: border != null ? Border.all(color: border, width: 2) : null,
+        // Speaking tiles get a solid ring plus an outer glow so an active
+        // speaker reads differently from a statically-pinned tile, not just
+        // by hue (green vs indigo).
+        border: border != null
+            ? Border.all(color: border, width: p.isSpeaking ? 3 : 2)
+            : null,
+        boxShadow: p.isSpeaking
+            ? <BoxShadow>[
+                BoxShadow(
+                  color: speakingColor.withValues(alpha: 0.45),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
       ),
       child: Stack(
         fit: StackFit.expand,
