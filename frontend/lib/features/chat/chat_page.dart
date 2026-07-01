@@ -1494,6 +1494,7 @@ class _ThreadHeader extends StatelessWidget {
         children: <Widget>[
           if (showBack)
             IconButton(
+              tooltip: 'Back',
               icon: const Icon(Icons.arrow_back),
               onPressed: state._back,
             ),
@@ -2174,6 +2175,7 @@ void _showImageLightbox(BuildContext context, String url) {
             top: 24,
             right: 24,
             child: IconButton(
+              tooltip: 'Close',
               icon: const Icon(Icons.close, color: Colors.white, size: 28),
               onPressed: () => Navigator.of(dialog).pop(),
             ),
@@ -2260,6 +2262,7 @@ void _showVideoLightbox(BuildContext context, String url) {
         children: <Widget>[
           _VideoPlayerView(url: url),
           IconButton(
+            tooltip: 'Close',
             icon: const Icon(Icons.close, color: Colors.white, size: 28),
             onPressed: () => Navigator.of(dialog).pop(),
           ),
@@ -2874,6 +2877,7 @@ class _ReplyBanner extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: 'Cancel',
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.close, size: 18),
             onPressed: onCancel,
@@ -2901,6 +2905,7 @@ class _EditBanner extends StatelessWidget {
           const SizedBox(width: 8),
           const Expanded(child: Text('Editing message')),
           IconButton(
+            tooltip: 'Cancel',
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.close, size: 18),
             onPressed: onCancel,

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../constants/app_colors.dart';
 
-/// Shared user-feedback helpers — one place for success/error/info snackbars
-/// and confirmation dialogs so every page gives consistent feedback
+/// Shared user-feedback helpers — one place for typed snackbars, clipboard
+/// feedback and confirmation dialogs so every page gives consistent feedback
 /// (AGENTS.md §1 `core/utils`).
 
-enum _SnackKind { success, error, info }
+enum _SnackKind { success, error, info, warning }
 
 /// Concise, color-coded snackbars. Use from any widget: `context.showSuccess(…)`.
 extension FeedbackMessages on BuildContext {
@@ -16,6 +17,17 @@ extension FeedbackMessages on BuildContext {
   void showError(String message) => _showSnack(this, message, _SnackKind.error);
 
   void showInfo(String message) => _showSnack(this, message, _SnackKind.info);
+
+  void showWarning(String message) =>
+      _showSnack(this, message, _SnackKind.warning);
+
+  /// Copies [text] to the clipboard and confirms with a toast.
+  Future<void> copyToClipboard(String text, {String label = 'Copied'}) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      showInfo(label);
+    }
+  }
 }
 
 void _showSnack(BuildContext context, String message, _SnackKind kind) {
@@ -23,6 +35,7 @@ void _showSnack(BuildContext context, String message, _SnackKind kind) {
     _SnackKind.success => (AppColors.green, Icons.check_circle_rounded),
     _SnackKind.error => (AppColors.rose, Icons.error_rounded),
     _SnackKind.info => (AppColors.slate, Icons.info_rounded),
+    _SnackKind.warning => (AppColors.amber, Icons.warning_amber_rounded),
   };
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()

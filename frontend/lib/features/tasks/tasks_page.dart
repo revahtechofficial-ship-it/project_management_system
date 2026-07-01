@@ -6,6 +6,7 @@ import '../../core/utils/date_format.dart';
 import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
+import '../../core/widgets/inline_edit.dart';
 import '../../core/widgets/motion.dart';
 import '../../core/widgets/page_header.dart';
 import '../../core/widgets/skeleton.dart';
@@ -280,6 +281,86 @@ class _TaskTile extends ConsumerWidget {
   final Task task;
   final VoidCallback onEdit;
 
+  /// Persists an inline title change by re-sending the task's current fields.
+  Future<void> _rename(WidgetRef ref, String title) async {
+    await ref.read(tasksRepositoryProvider).update(
+          task.id,
+          title: title,
+          description: task.description,
+          projectId: task.projectId,
+          assigneeId: task.assigneeId,
+          startDate: task.startDate,
+          dueDate: task.dueDate,
+          statusKey: task.statusKey,
+          recurrence: task.recurrence,
+          priority: task.priority,
+          tags: task.tags,
+          estimateMinutes: task.estimateMinutes,
+          assigneeIds: task.assigneeIds,
+          sprintId: task.sprintId,
+          points: task.points,
+          issueType: task.issueType,
+          severity: task.severity,
+          releaseId: task.releaseId,
+        );
+    ref.invalidate(tasksProvider);
+  }
+
+  Future<void> _showMenu(
+    BuildContext context,
+    WidgetRef ref,
+    Offset position,
+  ) async {
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject()! as RenderBox;
+    PopupMenuItem<String> item(String value, IconData icon, String label) =>
+        PopupMenuItem<String>(
+          value: value,
+          child: Row(
+            children: <Widget>[
+              Icon(icon, size: 18),
+              const SizedBox(width: 10),
+              Text(label),
+            ],
+          ),
+        );
+    final String? choice = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        position & const Size(40, 40),
+        Offset.zero & overlay.size,
+      ),
+      items: <PopupMenuEntry<String>>[
+        item('open', Icons.open_in_new, 'Open'),
+        item(
+          'done',
+          task.done ? Icons.remove_done : Icons.done_all,
+          task.done ? 'Mark incomplete' : 'Mark complete',
+        ),
+        item('copy', Icons.tag, 'Copy ID'),
+        const PopupMenuDivider(),
+        item('delete', Icons.delete_outline, 'Delete'),
+      ],
+    );
+    if (!context.mounted) {
+      return;
+    }
+    switch (choice) {
+      case 'open':
+        onEdit();
+      case 'done':
+        if (!task.done) {
+          celebrate(context);
+        }
+        ref.read(tasksProvider.notifier).toggleDone(task.id, !task.done);
+      case 'copy':
+        context.copyToClipboard('#${task.id}', label: 'Task ID copied');
+      case 'delete':
+        await ref.read(tasksRepositoryProvider).delete(task.id);
+        ref.invalidate(tasksProvider);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
@@ -290,26 +371,33 @@ class _TaskTile extends ConsumerWidget {
     final List<WorkflowStatus> statuses =
         ref.watch(statusesProvider).asData?.value ?? const <WorkflowStatus>[];
     final WorkflowStatus ws = WorkflowStatus.forKey(statuses, task.statusKey);
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      onTap: onEdit,
-      leading: Checkbox(
-        value: task.done,
-        onChanged: (bool? value) {
-          final bool done = value ?? false;
-          if (done) {
-            celebrate(context);
-          }
-          ref.read(tasksProvider.notifier).toggleDone(task.id, done);
-        },
-      ),
-      title: Text(
-        task.title,
-        style: TextStyle(
-          decoration: task.done ? TextDecoration.lineThrough : null,
-          color: task.done ? scheme.onSurfaceVariant : null,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onSecondaryTapDown: (TapDownDetails d) =>
+          _showMenu(context, ref, d.globalPosition),
+      onLongPressStart: (LongPressStartDetails d) =>
+          _showMenu(context, ref, d.globalPosition),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+        onTap: onEdit,
+        leading: Checkbox(
+          value: task.done,
+          onChanged: (bool? value) {
+            final bool done = value ?? false;
+            if (done) {
+              celebrate(context);
+            }
+            ref.read(tasksProvider.notifier).toggleDone(task.id, done);
+          },
         ),
-      ),
+        title: InlineEditText(
+          value: task.title,
+          onSubmit: (String v) => _rename(ref, v),
+          style: TextStyle(
+            decoration: task.done ? TextDecoration.lineThrough : null,
+            color: task.done ? scheme.onSurfaceVariant : null,
+          ),
+        ),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 6),
         child: Wrap(
@@ -382,13 +470,14 @@ class _TaskTile extends ConsumerWidget {
           ],
         ),
       ),
-      trailing: IconButton(
-        tooltip: 'Delete',
-        icon: Icon(Icons.delete_outline, color: scheme.onSurfaceVariant),
-        onPressed: () async {
-          await ref.read(tasksRepositoryProvider).delete(task.id);
-          ref.invalidate(tasksProvider);
-        },
+        trailing: IconButton(
+          tooltip: 'Delete',
+          icon: Icon(Icons.delete_outline, color: scheme.onSurfaceVariant),
+          onPressed: () async {
+            await ref.read(tasksRepositoryProvider).delete(task.id);
+            ref.invalidate(tasksProvider);
+          },
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/feedback.dart';
+import '../../../core/widgets/copy_button.dart';
 import '../../../core/widgets/favorite_button.dart';
 import '../../../core/widgets/motion.dart';
 import '../../../core/widgets/user_avatar.dart';
@@ -314,6 +315,13 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
         children: <Widget>[
           Expanded(child: Text(_isEdit ? 'Edit task' : 'New task')),
           if (_isEdit) ...<Widget>[
+            CopyButton(
+              text: '#${widget.task!.id}',
+              tooltip: 'Copy task ID',
+              label: 'Task ID copied',
+              icon: Icons.tag,
+              size: 20,
+            ),
             IconButton(
               tooltip: 'Set a reminder',
               icon: const Icon(Icons.notifications_active_outlined, size: 20),

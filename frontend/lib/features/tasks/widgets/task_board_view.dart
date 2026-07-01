@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/app_chip.dart';
+import '../../../core/widgets/avatar_stack.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/user_avatar.dart';
 import '../../../data/models/task.dart';
@@ -349,10 +351,10 @@ class _CardBody extends StatelessWidget {
                                 color: AppColors.brand,
                               ),
                             if (task.assigneeNames.isNotEmpty)
-                              _MiniChip(
-                                icon: Icons.person_outline,
-                                label: task.assigneeLabel,
-                                color: AppColors.teal,
+                              AvatarStack(
+                                names: task.assigneeNames,
+                                radius: 9,
+                                max: 3,
                               ),
                             if (task.dueDate != null)
                               _MiniChip(
@@ -403,28 +405,6 @@ class _MiniChip extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 3),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      AppChip(icon: icon, label: label, color: color);
 }
