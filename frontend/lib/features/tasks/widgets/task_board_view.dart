@@ -1,3 +1,5 @@
+import 'dart:ui' show PathMetric;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -195,14 +197,21 @@ class _BoardCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Draggable<Task>(
         data: task,
-        feedback: Material(
-          color: Colors.transparent,
-          child: SizedBox(
-            width: 256,
-            child: _CardBody(task: task, accent: accent, dragging: true),
+        // A slightly rotated, scaled, shadowed card reads as "lifted".
+        feedback: Transform.rotate(
+          angle: 0.02,
+          child: Transform.scale(
+            scale: 1.03,
+            child: Material(
+              color: Colors.transparent,
+              child: SizedBox(
+                width: 256,
+                child: _CardBody(task: task, accent: accent, dragging: true),
+              ),
+            ),
           ),
         ),
-        childWhenDragging: Opacity(opacity: 0.4, child: card),
+        childWhenDragging: const _DropPlaceholder(),
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: () => onTap(task),
@@ -211,6 +220,54 @@ class _BoardCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The dashed outline left in a column while its card is being dragged.
+class _DropPlaceholder extends StatelessWidget {
+  const _DropPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DashedRRectPainter(
+        color: Theme.of(context).colorScheme.outlineVariant,
+      ),
+      child: const SizedBox(height: 56, width: double.infinity),
+    );
+  }
+}
+
+class _DashedRRectPainter extends CustomPainter {
+  _DashedRRectPainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final Path path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Offset.zero & size,
+          const Radius.circular(10),
+        ),
+      );
+    const double dash = 6;
+    const double gap = 4;
+    for (final PathMetric metric in path.computeMetrics()) {
+      double dist = 0;
+      while (dist < metric.length) {
+        canvas.drawPath(metric.extractPath(dist, dist + dash), paint);
+        dist += dash + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRRectPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _CardBody extends StatelessWidget {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../constants/app_colors.dart';
 import 'glass.dart';
+import 'motion.dart';
 
 /// A KPI tile: a gradient icon badge, a large value, a label, and either a
 /// trend pill, a footer caption, or a progress bar — on a frosted-glass
@@ -38,7 +39,7 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    return GlassSurface(
+    final Widget card = GlassSurface(
       borderRadius: 18,
       child: Material(
         type: MaterialType.transparency,
@@ -79,7 +80,7 @@ class StatCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
-                Text(value,
+                AnimatedNumberText(value,
                     style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
@@ -94,12 +95,23 @@ class StatCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: progress!.clamp(0.0, 1.0),
-                      minHeight: 6,
-                      backgroundColor: scheme.surfaceContainerHighest
-                          .withValues(alpha: 0.6),
-                      color: color,
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween<double>(
+                        begin: 0,
+                        end: progress!.clamp(0.0, 1.0),
+                      ),
+                      duration: prefersReducedMotion(context)
+                          ? Duration.zero
+                          : const Duration(milliseconds: 700),
+                      curve: Curves.easeOutCubic,
+                      builder: (BuildContext context, double v, _) =>
+                          LinearProgressIndicator(
+                        value: v,
+                        minHeight: 6,
+                        backgroundColor: scheme.surfaceContainerHighest
+                            .withValues(alpha: 0.6),
+                        color: color,
+                      ),
                     ),
                   ),
                 ] else if (trend != null) ...<Widget>[
@@ -117,6 +129,9 @@ class StatCard extends StatelessWidget {
         ),
       ),
     );
+    return onTap != null
+        ? HoverLift(borderRadius: 18, child: card)
+        : card;
   }
 }
 
@@ -179,8 +194,11 @@ class StatCardGrid extends StatelessWidget {
           spacing: gap,
           runSpacing: gap,
           children: <Widget>[
-            for (final Widget card in cards)
-              SizedBox(width: cardW, child: card),
+            for (final (int i, Widget card) in cards.indexed)
+              SizedBox(
+                width: cardW,
+                child: FadeSlideIn(index: i, child: card),
+              ),
           ],
         );
       },

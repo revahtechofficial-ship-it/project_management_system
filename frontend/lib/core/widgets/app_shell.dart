@@ -16,6 +16,7 @@ import '../../providers/sidebar_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../constants/app_colors.dart';
 import 'glass.dart';
+import 'motion.dart';
 import 'revah_logo.dart';
 import 'user_avatar.dart';
 
@@ -130,6 +131,8 @@ class AppShell extends ConsumerWidget {
       });
     });
 
+    final Widget page = _RoutedPage(location: location, child: child);
+
     final Widget scaffold = wide
         ? Scaffold(
             backgroundColor: Colors.transparent,
@@ -141,7 +144,7 @@ class AppShell extends ConsumerWidget {
                     child: Column(
                       children: <Widget>[
                         const _TopBar(),
-                        Expanded(child: child),
+                        Expanded(child: page),
                       ],
                     ),
                   ),
@@ -168,7 +171,7 @@ class AppShell extends ConsumerWidget {
               backgroundColor: Colors.transparent,
               child: _Sidebar(location: location, collapsible: false),
             ),
-            body: AppBackground(child: child),
+            body: AppBackground(child: page),
           );
 
     // Ctrl/Cmd+K opens the command bar; "?" shows the shortcuts cheat sheet.
@@ -182,6 +185,38 @@ class AppShell extends ConsumerWidget {
             showShortcutsHelp(context),
       },
       child: Focus(autofocus: true, child: scaffold),
+    );
+  }
+}
+
+/// Cross-fades + slides the routed page when the location changes, giving a
+/// subtle transition between in-app screens. Instant under reduced motion.
+class _RoutedPage extends StatelessWidget {
+  const _RoutedPage({required this.location, required this.child});
+  final String location;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (prefersReducedMotion(context)) {
+      return child;
+    }
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 240),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (Widget child, Animation<double> animation) =>
+          FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.02),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
+        ),
+      ),
+      child: KeyedSubtree(key: ValueKey<String>(location), child: child),
     );
   }
 }
@@ -406,25 +441,59 @@ class _SidebarState extends ConsumerState<_Sidebar> {
           );
         }
       } else {
-        final bool groupCollapsed = _collapsed.contains(group.title);
         children.add(
-          _SectionHeader(
+          _NavSection(
             title: group.title,
-            collapsed: groupCollapsed,
-            onTap: () => _toggle(group.title),
+            collapsed: _collapsed.contains(group.title),
+            onToggle: () => _toggle(group.title),
+            tiles: <Widget>[
+              for (final _NavItem item in items)
+                _NavTile(item: item, selected: location == item.location),
+            ],
           ),
         );
-        if (!groupCollapsed) {
-          for (final _NavItem item in items) {
-            children.add(
-              _NavTile(item: item, selected: location == item.location),
-            );
-          }
-        }
-        children.add(const SizedBox(height: 6));
       }
     }
     return children;
+  }
+}
+
+/// A sidebar group: a tappable header over its tiles, with the tiles smoothly
+/// collapsing to (and expanding from) zero height.
+class _NavSection extends StatelessWidget {
+  const _NavSection({
+    required this.title,
+    required this.collapsed,
+    required this.onToggle,
+    required this.tiles,
+  });
+  final String title;
+  final bool collapsed;
+  final VoidCallback onToggle;
+  final List<Widget> tiles;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _SectionHeader(title: title, collapsed: collapsed, onTap: onToggle),
+        AnimatedSize(
+          duration: prefersReducedMotion(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          alignment: Alignment.topCenter,
+          child: collapsed
+              ? const SizedBox(width: double.infinity)
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: tiles,
+                ),
+        ),
+        const SizedBox(height: 6),
+      ],
+    );
   }
 }
 

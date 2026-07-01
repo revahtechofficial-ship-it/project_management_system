@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/feedback.dart';
 import '../../../core/widgets/favorite_button.dart';
+import '../../../core/widgets/motion.dart';
 import '../../../core/widgets/user_avatar.dart';
 import '../../reminders/widgets/reminder_dialog.dart';
 import '../../releases/providers/releases_providers.dart';
@@ -1263,6 +1264,9 @@ class _SubtaskTileState extends ConsumerState<_SubtaskTile> {
   }
 
   Future<void> _toggle(bool v) async {
+    if (v && mounted) {
+      celebrate(context);
+    }
     await ref.read(tasksRepositoryProvider).setDone(widget.task.id, done: v);
     widget.onChanged();
   }

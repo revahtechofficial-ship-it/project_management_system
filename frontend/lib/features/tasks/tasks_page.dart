@@ -6,6 +6,7 @@ import '../../core/utils/date_format.dart';
 import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
+import '../../core/widgets/motion.dart';
 import '../../core/widgets/page_header.dart';
 import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/status_pill.dart';
@@ -291,9 +292,13 @@ class _TaskTile extends ConsumerWidget {
       leading: Checkbox(
         value: task.done,
         onChanged: (bool? value) async {
+          final bool done = value ?? false;
+          if (done) {
+            celebrate(context);
+          }
           await ref
               .read(tasksRepositoryProvider)
-              .setDone(task.id, done: value ?? false);
+              .setDone(task.id, done: done);
           ref.invalidate(tasksProvider);
         },
       ),
