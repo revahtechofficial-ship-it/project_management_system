@@ -9,10 +9,14 @@ import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../../data/models/task.dart';
 import '../../data/models/time_entry.dart';
+import '../../data/models/timesheet_submission.dart';
+import '../../providers/auth_provider.dart';
 import '../tasks/providers/tasks_providers.dart';
 import 'providers/time_providers.dart';
+import 'providers/timesheets_providers.dart';
 import 'widgets/time_entry_dialog.dart';
 import 'widgets/time_reports_view.dart';
 
@@ -21,7 +25,7 @@ String ymd(DateTime d) =>
     '${d.month.toString().padLeft(2, '0')}-'
     '${d.day.toString().padLeft(2, '0')}';
 
-enum _TimeView { timesheet, estimates, reports }
+enum _TimeView { timesheet, estimates, reports, approvals }
 
 /// The time tracker: a built-in timer, a manual time log, the timesheet, and a
 /// reporting view with team/billable analytics (AGENTS.md §1 feature page).
@@ -44,6 +48,8 @@ class _TimePageState extends ConsumerState<TimePage> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isAdmin =
+        ref.watch(authControllerProvider).asData?.value.isAdmin ?? false;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -54,22 +60,28 @@ class _TimePageState extends ConsumerState<TimePage> {
             subtitle: 'Track time with the timer or log it manually',
             actions: <Widget>[
               SegmentedButton<_TimeView>(
-                segments: const <ButtonSegment<_TimeView>>[
-                  ButtonSegment<_TimeView>(
+                segments: <ButtonSegment<_TimeView>>[
+                  const ButtonSegment<_TimeView>(
                     value: _TimeView.timesheet,
                     icon: Icon(Icons.list_alt_outlined, size: 18),
                     label: Text('Timesheet'),
                   ),
-                  ButtonSegment<_TimeView>(
+                  const ButtonSegment<_TimeView>(
                     value: _TimeView.estimates,
                     icon: Icon(Icons.balance_outlined, size: 18),
                     label: Text('Estimates'),
                   ),
-                  ButtonSegment<_TimeView>(
+                  const ButtonSegment<_TimeView>(
                     value: _TimeView.reports,
                     icon: Icon(Icons.bar_chart_outlined, size: 18),
                     label: Text('Reports'),
                   ),
+                  if (isAdmin)
+                    const ButtonSegment<_TimeView>(
+                      value: _TimeView.approvals,
+                      icon: Icon(Icons.fact_check_outlined, size: 18),
+                      label: Text('Approvals'),
+                    ),
                 ],
                 selected: <_TimeView>{_view},
                 showSelectedIcon: false,
@@ -90,6 +102,7 @@ class _TimePageState extends ConsumerState<TimePage> {
               _TimeView.timesheet => const _TimesheetBody(),
               _TimeView.estimates => const _EstimatesView(),
               _TimeView.reports => const TimeReportsView(),
+              _TimeView.approvals => const _ApprovalsView(),
             },
           ),
         ],
@@ -117,6 +130,8 @@ class _TimesheetBody extends ConsumerWidget {
           data: (TimeEntry? t) =>
               t == null ? const _StartBar() : _RunningBar(entry: t),
         ),
+        const SizedBox(height: 16),
+        const _WeekSubmitBar(),
         const SizedBox(height: 16),
         Expanded(
           child: entries.when(
@@ -514,6 +529,229 @@ class _EstimateRow extends StatelessWidget {
                 style: TextStyle(fontSize: 12, color: color),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shows this week's logged total and its submission status, with a button to
+/// submit (or re-submit) the week for manager approval.
+class _WeekSubmitBar extends ConsumerWidget {
+  const _WeekSubmitBar();
+
+  static DateTime _mondayOf(DateTime d) {
+    final DateTime day = DateTime(d.year, d.month, d.day);
+    return day.subtract(Duration(days: day.weekday - 1));
+  }
+
+  Future<void> _submit(
+      BuildContext context, WidgetRef ref, DateTime monday) async {
+    try {
+      await ref.read(timesheetsRepositoryProvider).submit(monday);
+      ref.invalidate(myTimesheetsProvider);
+      if (context.mounted) {
+        context.showSuccess('Timesheet submitted for approval');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        context.showError('Could not submit: $e');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final DateTime monday = _mondayOf(DateTime.now());
+    final DateTime nextMonday = monday.add(const Duration(days: 7));
+    final List<TimeEntry> entries =
+        ref.watch(myTimeEntriesProvider).asData?.value ?? const <TimeEntry>[];
+    final int weekMinutes = entries
+        .where((TimeEntry e) =>
+            !e.running &&
+            !e.startedAt.toLocal().isBefore(monday) &&
+            e.startedAt.toLocal().isBefore(nextMonday))
+        .fold<int>(0, (int s, TimeEntry e) => s + e.minutes);
+
+    final List<TimesheetSubmission> mine =
+        ref.watch(myTimesheetsProvider).asData?.value ??
+            const <TimesheetSubmission>[];
+    TimesheetSubmission? current;
+    for (final TimesheetSubmission t in mine) {
+      if (_mondayOf(t.weekStart.toLocal()) == monday) {
+        current = t;
+        break;
+      }
+    }
+
+    return DashboardCard(
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.event_note_outlined, color: scheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const Text('This week',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  '${shortDate(monday)} – '
+                  '${shortDate(nextMonday.subtract(const Duration(days: 1)))}'
+                  '  ·  ${TimeEntry.formatMinutes(weekMinutes)} logged',
+                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          if (current != null) ...<Widget>[
+            _StatusChip(status: current.status),
+            const SizedBox(width: 12),
+          ],
+          FilledButton.icon(
+            onPressed: () => _submit(context, ref, monday),
+            icon: Icon(current == null ? Icons.send : Icons.refresh, size: 18),
+            label: Text(current == null ? 'Submit week' : 'Re-submit'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.status});
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (Color color, String label) = switch (status) {
+      'approved' => (AppColors.green, 'Approved'),
+      'rejected' => (AppColors.rose, 'Rejected'),
+      _ => (AppColors.amber, 'Pending'),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+/// The manager approval queue: pending timesheets with approve/reject actions.
+class _ApprovalsView extends ConsumerWidget {
+  const _ApprovalsView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<TimesheetSubmission>> async =
+        ref.watch(pendingTimesheetsProvider);
+    return async.when(
+      loading: () => const LoadingView(),
+      error: (Object e, _) => ErrorView(
+        error: e,
+        onRetry: () => ref.invalidate(pendingTimesheetsProvider),
+      ),
+      data: (List<TimesheetSubmission> items) {
+        if (items.isEmpty) {
+          return const EmptyState(
+            icon: Icons.fact_check_outlined,
+            title: 'All caught up',
+            message: 'No timesheets are waiting for your approval.',
+          );
+        }
+        return ListView(
+          children: <Widget>[
+            for (final TimesheetSubmission t in items) _ApprovalCard(sub: t),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ApprovalCard extends ConsumerWidget {
+  const _ApprovalCard({required this.sub});
+  final TimesheetSubmission sub;
+
+  Future<void> _decide(
+      BuildContext context, WidgetRef ref, bool approved) async {
+    try {
+      await ref
+          .read(timesheetsRepositoryProvider)
+          .decide(sub.id, approved: approved);
+      ref.invalidate(pendingTimesheetsProvider);
+      if (context.mounted) {
+        context.showSuccess(approved ? 'Timesheet approved' : 'Timesheet rejected');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        context.showError('Could not update: $e');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: DashboardCard(
+        child: Row(
+          children: <Widget>[
+            UserAvatar(name: sub.userName, radius: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    sub.userName.isEmpty ? 'Member' : sub.userName,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    'Week of ${shortDate(sub.weekStart.toLocal())}'
+                    '  ·  ${TimeEntry.formatMinutes(sub.minutes)}',
+                    style:
+                        TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  ),
+                  if (sub.note.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(sub.note,
+                          style: TextStyle(color: scheme.onSurfaceVariant)),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.rose,
+                side: const BorderSide(color: AppColors.rose),
+              ),
+              onPressed: () => _decide(context, ref, false),
+              child: const Text('Reject'),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: () => _decide(context, ref, true),
+              child: const Text('Approve'),
+            ),
           ],
         ),
       ),

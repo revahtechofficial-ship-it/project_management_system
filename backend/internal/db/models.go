@@ -433,6 +433,18 @@ type TimeEntry struct {
 	CreatedAt   time.Time          `json:"created_at"`
 }
 
+type TimesheetSubmission struct {
+	ID          int64              `json:"id"`
+	UserID      int64              `json:"user_id"`
+	WeekStart   time.Time          `json:"week_start"`
+	Status      string             `json:"status"`
+	Minutes     int32              `json:"minutes"`
+	Note        string             `json:"note"`
+	ApproverID  *int64             `json:"approver_id"`
+	DecidedAt   pgtype.Timestamptz `json:"decided_at"`
+	SubmittedAt time.Time          `json:"submitted_at"`
+}
+
 type User struct {
 	ID               int64              `json:"id"`
 	Email            string             `json:"email"`
