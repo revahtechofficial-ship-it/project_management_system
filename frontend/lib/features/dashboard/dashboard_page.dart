@@ -16,11 +16,14 @@ import '../../core/widgets/stat_card.dart';
 import '../../core/widgets/task_status_chart.dart';
 import '../../core/widgets/weekly_activity_chart.dart';
 import '../../data/enums/task_priority.dart';
+import '../../data/models/auth_user.dart';
 import '../../data/models/favorite.dart';
 import '../../data/models/reminder.dart';
 import '../../data/models/task.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/onboarding_provider.dart';
 import '../favorites/providers/favorites_providers.dart';
+import '../onboarding/widgets/onboarding_tour.dart';
 import '../reminders/providers/reminders_providers.dart';
 import '../reminders/widgets/reminder_dialog.dart';
 import '../tasks/providers/tasks_providers.dart';
@@ -35,9 +38,22 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<Task>> tasksAsync = ref.watch(tasksProvider);
     final List<Task> tasks = tasksAsync.asData?.value ?? const <Task>[];
-    final String name =
-        ref.watch(authControllerProvider).asData?.value.user?.name ?? '';
+    final AuthUser? user =
+        ref.watch(authControllerProvider).asData?.value.user;
     final _Metrics metrics = _Metrics.from(tasks);
+
+    // Show the first-run tour once the "seen" flag has loaded as false.
+    if (ref.watch(onboardingProvider) == false) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!context.mounted) {
+          return;
+        }
+        await ref.read(onboardingProvider.notifier).markSeen();
+        if (context.mounted) {
+          await showOnboardingTour(context);
+        }
+      });
+    }
 
     final bool firstLoad = tasksAsync.isLoading && !tasksAsync.hasValue;
     return BackToTop(
@@ -45,7 +61,7 @@ class DashboardPage extends ConsumerWidget {
         controller: controller,
         padding: const EdgeInsets.all(24),
         children: <Widget>[
-          _GreetingHeader(name: name),
+          _GreetingHeader(name: user?.name ?? '', streak: metrics.streak),
         if (tasksAsync.hasError)
           Padding(
             padding: const EdgeInsets.only(top: 16),
@@ -55,6 +71,14 @@ class DashboardPage extends ConsumerWidget {
         if (firstLoad)
           const _DashboardSkeleton()
         else ...<Widget>[
+          const _QuickActionsRow(),
+          const SizedBox(height: 16),
+          _SummaryBand(metrics: metrics),
+          if (user != null && _profileCompletion(user) < 1.0) ...<Widget>[
+            const SizedBox(height: 16),
+            _ProfileMeter(user: user),
+          ],
+          const SizedBox(height: 20),
           _KpiSection(metrics: metrics),
           const SizedBox(height: 20),
           const _QuickAccessSection(),
@@ -217,8 +241,9 @@ class _RemindersCard extends ConsumerWidget {
 }
 
 class _GreetingHeader extends StatelessWidget {
-  const _GreetingHeader({required this.name});
+  const _GreetingHeader({required this.name, this.streak = 0});
   final String name;
+  final int streak;
 
   @override
   Widget build(BuildContext context) {
@@ -233,9 +258,19 @@ class _GreetingHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Text(
-              '${_greeting()}$who 👋',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  '${_greeting()}$who 👋',
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.w800),
+                ),
+                if (streak >= 2) ...<Widget>[
+                  const SizedBox(width: 12),
+                  _StreakChip(days: streak),
+                ],
+              ],
             ),
             const SizedBox(height: 4),
             Text(
@@ -246,6 +281,299 @@ class _GreetingHeader extends StatelessWidget {
         ),
         const _QuickAddButton(),
       ],
+    );
+  }
+}
+
+/// A "🔥 N-day streak" chip celebrating consecutive days of completions.
+class _StreakChip extends StatelessWidget {
+  const _StreakChip({required this.days});
+  final int days;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.orange.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '🔥 $days-day streak',
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: AppColors.orange,
+        ),
+      ),
+    );
+  }
+}
+
+/// Profile completeness as a 0..1 fraction over the optional profile fields.
+double _profileCompletion(AuthUser user) {
+  final List<bool> filled = <bool>[
+    user.avatarUrl != null && user.avatarUrl!.isNotEmpty,
+    user.phone.isNotEmpty,
+    user.jobTitle.isNotEmpty,
+    user.department.isNotEmpty,
+    user.location.isNotEmpty,
+    user.bio.isNotEmpty,
+  ];
+  final int done = filled.where((bool b) => b).length;
+  return done / filled.length;
+}
+
+/// A row of one-tap shortcuts to create/jump into common areas.
+class _QuickActionsRow extends StatelessWidget {
+  const _QuickActionsRow();
+
+  @override
+  Widget build(BuildContext context) {
+    const List<({IconData icon, String label, Color color, String route})>
+        actions = <({IconData icon, String label, Color color, String route})>[
+      (
+        icon: Icons.add_task,
+        label: 'New task',
+        color: AppColors.brand,
+        route: '/tasks'
+      ),
+      (
+        icon: Icons.create_new_folder_outlined,
+        label: 'New project',
+        color: AppColors.teal,
+        route: '/projects'
+      ),
+      (
+        icon: Icons.chat_bubble_outline,
+        label: 'Message',
+        color: AppColors.sky,
+        route: '/chat'
+      ),
+      (
+        icon: Icons.auto_awesome,
+        label: 'Ask AI',
+        color: AppColors.violet,
+        route: '/ai'
+      ),
+    ];
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints c) {
+        final int cols = c.maxWidth < 560 ? 2 : 4;
+        const double gap = 12;
+        final double w = (c.maxWidth - gap * (cols - 1)) / cols;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: <Widget>[
+            for (final ({
+              IconData icon,
+              String label,
+              Color color,
+              String route
+            }) a in actions)
+              SizedBox(
+                width: w,
+                child: _QuickActionCard(
+                  icon: a.icon,
+                  label: a.label,
+                  color: a.color,
+                  onTap: () => GoRouter.of(context).go(a.route),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _QuickActionCard extends StatelessWidget {
+  const _QuickActionCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassSurface(
+      borderRadius: 14,
+      child: Material(
+        type: MaterialType.transparency,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color, size: 18),
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A slim "at a glance" band summarising today's workload.
+class _SummaryBand extends StatelessWidget {
+  const _SummaryBand({required this.metrics});
+  final _Metrics metrics;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<({IconData icon, int value, String label, Color color})> stats =
+        <({IconData icon, int value, String label, Color color})>[
+      (
+        icon: Icons.today_rounded,
+        value: metrics.dueToday,
+        label: 'due today',
+        color: AppColors.brand
+      ),
+      (
+        icon: Icons.warning_amber_rounded,
+        value: metrics.overdue,
+        label: 'overdue',
+        color: AppColors.rose
+      ),
+      (
+        icon: Icons.timelapse_rounded,
+        value: metrics.pending,
+        label: 'in progress',
+        color: AppColors.orange
+      ),
+      (
+        icon: Icons.check_circle_rounded,
+        value: metrics.completedThisWeek,
+        label: 'done this week',
+        color: AppColors.green
+      ),
+    ];
+    return GlassSurface(
+      borderRadius: 14,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Wrap(
+          spacing: 22,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: <Widget>[
+            for (final ({
+              IconData icon,
+              int value,
+              String label,
+              Color color
+            }) s in stats)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Icon(s.icon, size: 18, color: s.color),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${s.value}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 16),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    s.label,
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A profile-completeness meter with a CTA, shown until the profile is full.
+class _ProfileMeter extends StatelessWidget {
+  const _ProfileMeter({required this.user});
+  final AuthUser user;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final double pct = _profileCompletion(user);
+    return GlassSurface(
+      borderRadius: 14,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: <Widget>[
+            Icon(Icons.account_circle_outlined, color: scheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      const Text(
+                        'Complete your profile',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${(pct * 100).round()}%',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: pct,
+                      minHeight: 6,
+                      backgroundColor:
+                          scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            FilledButton(
+              onPressed: () => GoRouter.of(context).go('/profile'),
+              child: const Text('Complete'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1067,6 +1395,9 @@ class _Metrics {
     required this.projectLoad,
     required this.byPriority,
     required this.activityByDay,
+    required this.overdue,
+    required this.dueToday,
+    required this.streak,
   });
 
   final int total;
@@ -1088,6 +1419,16 @@ class _Metrics {
 
   /// Tasks created per day, for the contribution heatmap.
   final Map<DateTime, int> activityByDay;
+
+  /// Open tasks past their due date.
+  final int overdue;
+
+  /// Open tasks due today.
+  final int dueToday;
+
+  /// Consecutive days (ending today, with a one-day grace) that had at least
+  /// one task completed.
+  final int streak;
 
   factory _Metrics.from(List<Task> tasks) {
     final int completed = tasks.where((Task t) => t.done).length;
@@ -1164,6 +1505,41 @@ class _Metrics {
       activityByDay[d] = (activityByDay[d] ?? 0) + 1;
     }
 
+    final int overdue = tasks
+        .where((Task t) =>
+            !t.done &&
+            t.dueDate != null &&
+            t.dueDate!.toLocal().isBefore(today))
+        .length;
+    final int dueToday = tasks
+        .where((Task t) =>
+            !t.done &&
+            t.dueDate != null &&
+            sameDay(t.dueDate!.toLocal(), today))
+        .length;
+
+    // Completion streak: consecutive days (with a one-day grace for today)
+    // that had at least one task completed.
+    final Set<DateTime> doneDays = <DateTime>{
+      for (final Task t in tasks)
+        if (t.done)
+          DateTime(
+            t.updatedAt.toLocal().year,
+            t.updatedAt.toLocal().month,
+            t.updatedAt.toLocal().day,
+          ),
+    };
+    int streak = 0;
+    DateTime cursor = today;
+    if (!doneDays.contains(today) &&
+        doneDays.contains(today.subtract(const Duration(days: 1)))) {
+      cursor = today.subtract(const Duration(days: 1));
+    }
+    while (doneDays.contains(cursor)) {
+      streak++;
+      cursor = cursor.subtract(const Duration(days: 1));
+    }
+
     return _Metrics(
       total: total,
       completed: completed,
@@ -1180,6 +1556,9 @@ class _Metrics {
       projectLoad: projectLoad,
       byPriority: byPriority,
       activityByDay: activityByDay,
+      overdue: overdue,
+      dueToday: dueToday,
+      streak: streak,
     );
   }
 }

@@ -70,7 +70,10 @@ Future<void> _pump(WidgetTester tester, Widget page) async {
 void main() {
   // Never hit the network for fonts during tests; fall back to the default.
   GoogleFonts.config.allowRuntimeFetching = false;
-  setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
+  // Mark onboarding seen so the dashboard doesn't auto-open the first-run tour.
+  setUp(() => SharedPreferences.setMockInitialValues(
+        <String, Object>{'onboarding_seen': true},
+      ));
 
   testWidgets('Dashboard renders', (WidgetTester tester) async {
     await _pump(tester, const DashboardPage());
