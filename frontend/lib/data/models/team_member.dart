@@ -8,6 +8,8 @@ class TeamMember {
   final String email;
   final MemberRole role;
   final String? avatarUrl;
+  final String jobTitle;
+  final String department;
   final int openTasks;
   final int completedTasks;
   final DateTime createdAt;
@@ -19,6 +21,8 @@ class TeamMember {
     this.name = '',
     this.email = '',
     this.avatarUrl,
+    this.jobTitle = '',
+    this.department = '',
     this.openTasks = 0,
     this.completedTasks = 0,
   });
@@ -34,6 +38,8 @@ class TeamMember {
         email: json['email'] as String? ?? '',
         role: MemberRole.fromJson(json['role'] as String? ?? ''),
         avatarUrl: json['avatar_url'] as String?,
+        jobTitle: json['job_title'] as String? ?? '',
+        department: json['department'] as String? ?? '',
         openTasks: json['open_tasks'] as int? ?? 0,
         completedTasks: json['completed_tasks'] as int? ?? 0,
         createdAt: DateTime.parse(json['created_at'] as String),
@@ -45,6 +51,8 @@ class TeamMember {
         'email': email,
         'role': role.toJson(),
         'avatar_url': avatarUrl,
+        'job_title': jobTitle,
+        'department': department,
         'open_tasks': openTasks,
         'completed_tasks': completedTasks,
         'created_at': createdAt.toIso8601String(),
@@ -63,6 +71,8 @@ class TeamMember {
           other.name == name &&
           other.email == email &&
           other.role == role &&
+          other.jobTitle == jobTitle &&
+          other.department == department &&
           other.openTasks == openTasks &&
           other.completedTasks == completedTasks &&
           other.createdAt == createdAt;
@@ -73,6 +83,8 @@ class TeamMember {
         name,
         email,
         role,
+        jobTitle,
+        department,
         openTasks,
         completedTasks,
         createdAt,

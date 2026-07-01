@@ -16,6 +16,8 @@ type teamMemberResponse struct {
 	FullName       string    `json:"full_name"`
 	Role           string    `json:"role"`
 	AvatarURL      *string   `json:"avatar_url"`
+	JobTitle       string    `json:"job_title"`
+	Department     string    `json:"department"`
 	OpenTasks      int32     `json:"open_tasks"`
 	CompletedTasks int32     `json:"completed_tasks"`
 	CreatedAt      time.Time `json:"created_at"`
@@ -47,6 +49,8 @@ func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 			FullName:       m.FullName,
 			Role:           m.Role,
 			AvatarURL:      avatarURLPtr(m.Avatar),
+			JobTitle:       m.JobTitle,
+			Department:     m.Department,
 			OpenTasks:      m.OpenTasks,
 			CompletedTasks: m.CompletedTasks,
 			CreatedAt:      m.CreatedAt,

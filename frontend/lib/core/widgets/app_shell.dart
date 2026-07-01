@@ -48,6 +48,7 @@ const _NavItem _dashboardItem = _NavItem(
 /// The sidebar grouped by purpose so 20+ destinations stay scannable.
 const List<_NavGroup> _navGroups = <_NavGroup>[
   _NavGroup('Work', <_NavItem>[
+    _NavItem(Icons.wb_sunny_outlined, 'My Day', '/focus'),
     _NavItem(Icons.check_circle_outline, 'Tasks', '/tasks'),
     _NavItem(Icons.directions_run, 'Sprints', '/sprints'),
     _NavItem(Icons.rocket_launch_outlined, 'Releases', '/releases'),

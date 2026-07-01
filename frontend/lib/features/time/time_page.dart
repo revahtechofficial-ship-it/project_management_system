@@ -21,7 +21,7 @@ String ymd(DateTime d) =>
     '${d.month.toString().padLeft(2, '0')}-'
     '${d.day.toString().padLeft(2, '0')}';
 
-enum _TimeView { timesheet, reports }
+enum _TimeView { timesheet, estimates, reports }
 
 /// The time tracker: a built-in timer, a manual time log, the timesheet, and a
 /// reporting view with team/billable analytics (AGENTS.md §1 feature page).
@@ -61,6 +61,11 @@ class _TimePageState extends ConsumerState<TimePage> {
                     label: Text('Timesheet'),
                   ),
                   ButtonSegment<_TimeView>(
+                    value: _TimeView.estimates,
+                    icon: Icon(Icons.balance_outlined, size: 18),
+                    label: Text('Estimates'),
+                  ),
+                  ButtonSegment<_TimeView>(
                     value: _TimeView.reports,
                     icon: Icon(Icons.bar_chart_outlined, size: 18),
                     label: Text('Reports'),
@@ -81,9 +86,11 @@ class _TimePageState extends ConsumerState<TimePage> {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: _view == _TimeView.timesheet
-                ? const _TimesheetBody()
-                : const TimeReportsView(),
+            child: switch (_view) {
+              _TimeView.timesheet => const _TimesheetBody(),
+              _TimeView.estimates => const _EstimatesView(),
+              _TimeView.reports => const TimeReportsView(),
+            },
           ),
         ],
       ),
@@ -320,6 +327,195 @@ class _RunningBarState extends ConsumerState<_RunningBar> {
             label: const Text('Stop'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Estimate vs actual: compares each task's estimate against the time logged
+/// against it, surfacing where work is running over or under.
+class _EstimatesView extends ConsumerWidget {
+  const _EstimatesView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final List<Task> tasks =
+        ref.watch(tasksProvider).asData?.value ?? const <Task>[];
+    final AsyncValue<List<TimeEntry>> entriesAsync =
+        ref.watch(myTimeEntriesProvider);
+
+    return entriesAsync.when(
+      loading: () => const LoadingView(),
+      error: (Object e, _) => ErrorView(
+        error: e,
+        onRetry: () => ref.invalidate(myTimeEntriesProvider),
+      ),
+      data: (List<TimeEntry> entries) {
+        final Map<int, int> actualByTask = <int, int>{};
+        for (final TimeEntry e in entries) {
+          if (e.taskId != null) {
+            actualByTask[e.taskId!] =
+                (actualByTask[e.taskId!] ?? 0) + e.minutes;
+          }
+        }
+        final List<({Task task, int estimate, int actual})> rows =
+            <({Task task, int estimate, int actual})>[
+          for (final Task t in tasks)
+            if (t.estimateMinutes > 0 || (actualByTask[t.id] ?? 0) > 0)
+              (
+                task: t,
+                estimate: t.estimateMinutes,
+                actual: actualByTask[t.id] ?? 0,
+              ),
+        ]..sort((({Task task, int estimate, int actual}) a,
+                ({Task task, int estimate, int actual}) b) =>
+            (b.actual - b.estimate).compareTo(a.actual - a.estimate));
+
+        if (rows.isEmpty) {
+          return const EmptyState(
+            icon: Icons.balance_outlined,
+            title: 'Nothing to compare yet',
+            message: 'Add an estimate to a task and log time against it to see '
+                'estimate vs actual here.',
+          );
+        }
+
+        final int totalEst =
+            rows.fold<int>(0, (int s, ({Task task, int estimate, int actual}) r) => s + r.estimate);
+        final int totalAct =
+            rows.fold<int>(0, (int s, ({Task task, int estimate, int actual}) r) => s + r.actual);
+
+        return ListView(
+          children: <Widget>[
+            _EstimateSummary(estimate: totalEst, actual: totalAct),
+            const SizedBox(height: 16),
+            for (final ({Task task, int estimate, int actual}) r in rows)
+              _EstimateRow(task: r.task, estimate: r.estimate, actual: r.actual),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _EstimateSummary extends StatelessWidget {
+  const _EstimateSummary({required this.estimate, required this.actual});
+  final int estimate;
+  final int actual;
+
+  @override
+  Widget build(BuildContext context) {
+    final int variance = actual - estimate;
+    final Color color = variance <= 0 ? AppColors.green : AppColors.rose;
+    return DashboardCard(
+      child: Wrap(
+        spacing: 28,
+        runSpacing: 12,
+        children: <Widget>[
+          _summaryStat('Estimated', TimeEntry.formatMinutes(estimate), null),
+          _summaryStat('Actual', TimeEntry.formatMinutes(actual), null),
+          _summaryStat(
+            'Variance',
+            '${variance >= 0 ? '+' : '−'}'
+                '${TimeEntry.formatMinutes(variance.abs())}',
+            color,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryStat(String label, String value, Color? color) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: color,
+              fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+            ),
+          ),
+          Text(label, style: const TextStyle(fontSize: 12)),
+        ],
+      );
+}
+
+class _EstimateRow extends StatelessWidget {
+  const _EstimateRow({
+    required this.task,
+    required this.estimate,
+    required this.actual,
+  });
+  final Task task;
+  final int estimate;
+  final int actual;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final bool over = estimate > 0 && actual > estimate;
+    final Color color = over ? AppColors.rose : AppColors.green;
+    // Fill relative to the estimate; when there's no estimate, show it full.
+    final double ratio =
+        estimate <= 0 ? 1 : (actual / estimate).clamp(0.0, 1.0);
+    final int variance = actual - estimate;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: DashboardCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    task.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Text(
+                  estimate <= 0
+                      ? '${TimeEntry.formatMinutes(actual)} (no estimate)'
+                      : '${TimeEntry.formatMinutes(actual)} / '
+                          '${TimeEntry.formatMinutes(estimate)}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurfaceVariant,
+                    fontFeatures:
+                        const <FontFeature>[FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: ratio,
+                minHeight: 6,
+                backgroundColor:
+                    scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                color: color,
+              ),
+            ),
+            if (estimate > 0) ...<Widget>[
+              const SizedBox(height: 6),
+              Text(
+                over
+                    ? '${TimeEntry.formatMinutes(variance)} over estimate'
+                    : variance == 0
+                        ? 'On estimate'
+                        : '${TimeEntry.formatMinutes(-variance)} remaining',
+                style: TextStyle(fontSize: 12, color: color),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

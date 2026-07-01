@@ -16,6 +16,8 @@ SELECT u.id,
        u.full_name,
        u.role,
        u.avatar,
+       u.job_title,
+       u.department,
        u.created_at,
        COALESCE(o.open, 0)::int AS open_tasks,
        COALESCE(d.done, 0)::int AS completed_tasks
@@ -41,6 +43,8 @@ type ListMembersRow struct {
 	FullName       string    `json:"full_name"`
 	Role           string    `json:"role"`
 	Avatar         string    `json:"avatar"`
+	JobTitle       string    `json:"job_title"`
+	Department     string    `json:"department"`
 	CreatedAt      time.Time `json:"created_at"`
 	OpenTasks      int32     `json:"open_tasks"`
 	CompletedTasks int32     `json:"completed_tasks"`
@@ -61,6 +65,8 @@ func (q *Queries) ListMembers(ctx context.Context) ([]ListMembersRow, error) {
 			&i.FullName,
 			&i.Role,
 			&i.Avatar,
+			&i.JobTitle,
+			&i.Department,
 			&i.CreatedAt,
 			&i.OpenTasks,
 			&i.CompletedTasks,

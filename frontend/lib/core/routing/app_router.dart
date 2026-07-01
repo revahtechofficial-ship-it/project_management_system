@@ -14,6 +14,7 @@ import '../../features/automation/automation_page.dart';
 import '../../features/chat/chat_page.dart';
 import '../../features/dashboard/dashboard_page.dart';
 import '../../features/dashboard/dashboards_page.dart';
+import '../../features/focus/focus_page.dart';
 import '../../features/goals/goals_page.dart';
 import '../../features/integrations/integrations_page.dart';
 import '../../features/landing/landing_page.dart';
@@ -69,6 +70,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
         builder: (c, s, Widget child) => AppShell(child: child),
         routes: <RouteBase>[
           GoRoute(path: '/', builder: (c, s) => const DashboardPage()),
+          GoRoute(path: '/focus', builder: (c, s) => const FocusPage()),
           GoRoute(path: '/tasks', builder: (c, s) => const TasksPage()),
           GoRoute(path: '/sprints', builder: (c, s) => const SprintsPage()),
           GoRoute(path: '/releases', builder: (c, s) => const ReleasesPage()),

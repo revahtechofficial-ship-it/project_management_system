@@ -4,6 +4,8 @@ SELECT u.id,
        u.full_name,
        u.role,
        u.avatar,
+       u.job_title,
+       u.department,
        u.created_at,
        COALESCE(o.open, 0)::int AS open_tasks,
        COALESCE(d.done, 0)::int AS completed_tasks

@@ -17,13 +17,23 @@ import '../../data/models/team_member.dart';
 import '../../providers/auth_provider.dart';
 import 'providers/team_providers.dart';
 
+enum _TeamView { directory, org }
+
 /// The team directory: workspace members (registered users) with role and
-/// real task workload from the backend.
-class TeamPage extends ConsumerWidget {
+/// real task workload from the backend, plus an org view grouped by
+/// department.
+class TeamPage extends ConsumerStatefulWidget {
   const TeamPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TeamPage> createState() => _TeamPageState();
+}
+
+class _TeamPageState extends ConsumerState<TeamPage> {
+  _TeamView _view = _TeamView.directory;
+
+  @override
+  Widget build(BuildContext context) {
     final AsyncValue<List<TeamMember>> teamAsync =
         ref.watch(teamMembersProvider);
     final List<TeamMember> members =
@@ -42,6 +52,24 @@ class TeamPage extends ConsumerWidget {
           title: 'Team',
           subtitle: 'Everyone in your Revah Tech workspace',
           actions: <Widget>[
+            SegmentedButton<_TeamView>(
+              segments: const <ButtonSegment<_TeamView>>[
+                ButtonSegment<_TeamView>(
+                  value: _TeamView.directory,
+                  icon: Icon(Icons.badge_outlined, size: 18),
+                  label: Text('Directory'),
+                ),
+                ButtonSegment<_TeamView>(
+                  value: _TeamView.org,
+                  icon: Icon(Icons.account_tree_outlined, size: 18),
+                  label: Text('Org'),
+                ),
+              ],
+              selected: <_TeamView>{_view},
+              showSelectedIcon: false,
+              onSelectionChanged: (Set<_TeamView> s) =>
+                  setState(() => _view = s.first),
+            ),
             OutlinedButton.icon(
               onPressed: () => ref.invalidate(teamMembersProvider),
               icon: const Icon(Icons.refresh, size: 18),
@@ -101,6 +129,8 @@ class TeamPage extends ConsumerWidget {
             icon: Icons.group_off_rounded,
             message: 'No members yet.',
           )
+        else if (_view == _TeamView.org)
+          _OrgChart(members: members)
         else
           LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
@@ -234,6 +264,140 @@ class _MemberCard extends ConsumerWidget {
           Text('${(member.progress * 100).round()}% completed',
               style: TextStyle(
                   fontSize: 11, color: scheme.onSurfaceVariant)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Members grouped by department — a lightweight org view. (A true reporting
+/// tree would need a manager relationship on users, which isn't modelled yet.)
+class _OrgChart extends StatelessWidget {
+  const _OrgChart({required this.members});
+  final List<TeamMember> members;
+
+  @override
+  Widget build(BuildContext context) {
+    final Map<String, List<TeamMember>> byDept = <String, List<TeamMember>>{};
+    for (final TeamMember m in members) {
+      final String dept =
+          m.department.trim().isEmpty ? 'Unassigned' : m.department.trim();
+      byDept.putIfAbsent(dept, () => <TeamMember>[]).add(m);
+    }
+    final List<String> depts = byDept.keys.toList()
+      ..sort((String a, String b) {
+        if (a == 'Unassigned') return 1;
+        if (b == 'Unassigned') return -1;
+        return a.toLowerCase().compareTo(b.toLowerCase());
+      });
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints c) {
+        final int cols = c.maxWidth >= 1080 ? 3 : (c.maxWidth >= 680 ? 2 : 1);
+        const double gap = 16;
+        final double cardW = (c.maxWidth - gap * (cols - 1)) / cols;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: <Widget>[
+            for (final String dept in depts)
+              SizedBox(
+                width: cardW,
+                child: _OrgDeptCard(
+                  department: dept,
+                  members: byDept[dept]!
+                    ..sort((TeamMember a, TeamMember b) =>
+                        a.role.index.compareTo(b.role.index)),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _OrgDeptCard extends StatelessWidget {
+  const _OrgDeptCard({required this.department, required this.members});
+  final String department;
+  final List<TeamMember> members;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return DashboardCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.apartment_rounded, size: 18, color: scheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  department,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+              ),
+              Text('${members.length}',
+                  style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const Divider(height: 20),
+          for (final TeamMember m in members) _OrgMemberRow(member: m),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrgMemberRow extends StatelessWidget {
+  const _OrgMemberRow({required this.member});
+  final TeamMember member;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final String subtitle = member.jobTitle.trim().isNotEmpty
+        ? member.jobTitle
+        : member.role.label;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: <Widget>[
+          UserAvatar(name: member.name, radius: 16, imageUrl: member.avatarUrl),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  member.name.isEmpty ? member.email : member.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          if (member.role == MemberRole.owner || member.role == MemberRole.admin)
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: StatusPill(
+                  label: member.role.label, color: member.role.color),
+            ),
         ],
       ),
     );
