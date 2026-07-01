@@ -22,6 +22,7 @@ import '../tasks/providers/custom_fields_providers.dart';
 import '../tasks/providers/statuses_providers.dart';
 import '../tasks/providers/task_templates_providers.dart';
 import 'providers/settings_providers.dart';
+import 'widgets/accent_picker_dialog.dart';
 import 'widgets/change_password_dialog.dart';
 import 'widgets/custom_field_dialog.dart';
 
@@ -50,10 +51,7 @@ class SettingsPage extends ConsumerWidget {
             const SizedBox(height: 20),
             _ProfileCard(user: user),
             const SizedBox(height: 16),
-            _AppearanceCard(
-              themeMode: themeMode,
-              compactMode: settings.compactMode,
-            ),
+            _AppearanceCard(themeMode: themeMode, settings: settings),
             const SizedBox(height: 16),
             _NotificationsCard(settings: settings),
             const SizedBox(height: 16),
@@ -184,63 +182,197 @@ class _ProfileCard extends ConsumerWidget {
 }
 
 class _AppearanceCard extends ConsumerWidget {
-  const _AppearanceCard({required this.themeMode, required this.compactMode});
+  const _AppearanceCard({required this.themeMode, required this.settings});
 
   final ThemeMode themeMode;
-  final bool compactMode;
+  final SettingsState settings;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final SettingsController c = ref.read(settingsControllerProvider.notifier);
+    final bool isCustom = !AppColors.accentPresets
+        .any((({String name, Color color}) p) =>
+            p.color.toARGB32() == settings.accent);
+
     return DashboardCard(
       title: 'Appearance',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            'Theme',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant,
+          _label(context, 'Accent color'),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: <Widget>[
+              for (final ({String name, Color color}) preset
+                  in AppColors.accentPresets)
+                _AccentDot(
+                  color: preset.color,
+                  selected: preset.color.toARGB32() == settings.accent,
+                  onTap: () => c.setAccent(preset.color.toARGB32()),
+                ),
+              _AccentDot(
+                color: Color(settings.accent),
+                selected: isCustom,
+                icon: Icons.tune,
+                onTap: () => showAccentPicker(
+                  context,
+                  ref,
+                  Color(settings.accent),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 28),
+          _label(context, 'Theme'),
+          const SizedBox(height: 10),
+          Opacity(
+            opacity: settings.autoDark ? 0.5 : 1,
+            child: IgnorePointer(
+              ignoring: settings.autoDark,
+              child: SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<ThemeMode>(
+                  segments: const <ButtonSegment<ThemeMode>>[
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.system,
+                      label: Text('System'),
+                      icon: Icon(Icons.brightness_auto),
+                    ),
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.light,
+                      label: Text('Light'),
+                      icon: Icon(Icons.light_mode),
+                    ),
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.dark,
+                      label: Text('Dark'),
+                      icon: Icon(Icons.dark_mode),
+                    ),
+                  ],
+                  selected: <ThemeMode>{themeMode},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (Set<ThemeMode> selection) => ref
+                      .read(themeModeProvider.notifier)
+                      .setMode(selection.first),
+                ),
+              ),
             ),
           ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Auto dark mode'),
+            subtitle: const Text('Switch to dark in the evening (7 PM–7 AM)'),
+            value: settings.autoDark,
+            onChanged: c.setAutoDark,
+          ),
+          const Divider(height: 28),
+          _label(context, 'Density'),
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
-            child: SegmentedButton<ThemeMode>(
-              segments: const <ButtonSegment<ThemeMode>>[
-                ButtonSegment<ThemeMode>(
-                  value: ThemeMode.system,
-                  label: Text('System'),
-                  icon: Icon(Icons.brightness_auto),
+            child: SegmentedButton<bool>(
+              segments: const <ButtonSegment<bool>>[
+                ButtonSegment<bool>(
+                  value: false,
+                  label: Text('Comfortable'),
+                  icon: Icon(Icons.density_medium),
                 ),
-                ButtonSegment<ThemeMode>(
-                  value: ThemeMode.light,
-                  label: Text('Light'),
-                  icon: Icon(Icons.light_mode),
-                ),
-                ButtonSegment<ThemeMode>(
-                  value: ThemeMode.dark,
-                  label: Text('Dark'),
-                  icon: Icon(Icons.dark_mode),
+                ButtonSegment<bool>(
+                  value: true,
+                  label: Text('Compact'),
+                  icon: Icon(Icons.density_small),
                 ),
               ],
-              selected: <ThemeMode>{themeMode},
+              selected: <bool>{settings.compactMode},
               showSelectedIcon: false,
-              onSelectionChanged: (Set<ThemeMode> selection) =>
-                  ref.read(themeModeProvider.notifier).setMode(selection.first),
+              onSelectionChanged: (Set<bool> s) => c.setCompactMode(s.first),
+            ),
+          ),
+          const Divider(height: 28),
+          _label(context, 'Text size'),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<double>(
+              segments: const <ButtonSegment<double>>[
+                ButtonSegment<double>(value: 0.9, label: Text('Small')),
+                ButtonSegment<double>(value: 1.0, label: Text('Default')),
+                ButtonSegment<double>(value: 1.15, label: Text('Large')),
+                ButtonSegment<double>(value: 1.3, label: Text('Larger')),
+              ],
+              selected: <double>{settings.textScale},
+              showSelectedIcon: false,
+              onSelectionChanged: (Set<double> s) => c.setTextScale(s.first),
             ),
           ),
           const Divider(height: 28),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Compact mode'),
-            subtitle: const Text('Denser spacing across the app'),
-            value: compactMode,
-            onChanged: (bool v) =>
-                ref.read(settingsControllerProvider.notifier).setCompactMode(v),
+            title: const Text('Reduce motion'),
+            subtitle: const Text('Minimise animations and transitions'),
+            value: settings.reduceMotion,
+            onChanged: c.setReduceMotion,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _label(BuildContext context, String text) => Text(
+        text,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      );
+}
+
+/// A tappable accent swatch used in the Appearance card.
+class _AccentDot extends StatelessWidget {
+  const _AccentDot({
+    required this.color,
+    required this.selected,
+    required this.onTap,
+    this.icon,
+  });
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: selected ? Colors.white : Colors.transparent,
+            width: 3,
+          ),
+          boxShadow: selected
+              ? <BoxShadow>[
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.5),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+        child: icon != null
+            ? Icon(icon, color: Colors.white, size: 18)
+            : (selected
+                ? const Icon(Icons.check, color: Colors.white, size: 18)
+                : null),
       ),
     );
   }

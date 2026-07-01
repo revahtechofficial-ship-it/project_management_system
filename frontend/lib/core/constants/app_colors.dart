@@ -23,6 +23,28 @@ class AppColors {
     brand, violet, sky, teal, green, amber, orange, rose,
   ];
 
+  /// Named accent presets the user can pick to re-seed the color scheme
+  /// (Settings → Appearance).
+  static const List<({String name, Color color})> accentPresets =
+      <({String name, Color color})>[
+    (name: 'Indigo', color: brand),
+    (name: 'Emerald', color: Color(0xFF059669)),
+    (name: 'Violet', color: violet),
+    (name: 'Rose', color: Color(0xFFE11D48)),
+    (name: 'Slate', color: Color(0xFF475569)),
+  ];
+
+  /// A subtle top-light → bottom-dark gradient derived from an accent [c], for
+  /// the active-nav pill and hero accents. Stays dark enough for white text.
+  static LinearGradient accentGradient(Color c) => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: <Color>[
+          Color.lerp(c, const Color(0xFFFFFFFF), 0.10)!,
+          Color.lerp(c, const Color(0xFF000000), 0.14)!,
+        ],
+      );
+
   /// Premium brand gradient (indigo → violet) for primary accents and the
   /// active navigation pill.
   static const LinearGradient brandGradient = LinearGradient(

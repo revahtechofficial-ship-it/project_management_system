@@ -9,6 +9,7 @@ import '../../features/chat/widgets/status_picker.dart';
 import '../../features/notifications/providers/notifications_providers.dart';
 import '../../features/search/widgets/command_palette.dart';
 import '../../features/search/widgets/shortcuts_help.dart';
+import '../../features/settings/providers/settings_providers.dart';
 import '../../data/models/auth_user.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/sidebar_provider.dart';
@@ -243,10 +244,13 @@ class _SidebarState extends ConsumerState<_Sidebar> {
     final bool rail =
         autoRail || (widget.collapsible && ref.watch(sidebarCollapsedProvider));
 
+    final bool reduceMotion =
+        ref.watch(settingsControllerProvider).reduceMotion;
     return _Chrome(
       border: Border(right: BorderSide(color: scheme.outlineVariant)),
       child: AnimatedSize(
-        duration: const Duration(milliseconds: 180),
+        duration:
+            reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
         curve: Curves.easeInOut,
         alignment: Alignment.centerLeft,
         child: SizedBox(
@@ -544,12 +548,12 @@ class _NavTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: selected ? AppColors.brandGradient : null,
+          gradient: selected ? AppColors.accentGradient(scheme.primary) : null,
           borderRadius: BorderRadius.circular(12),
           boxShadow: selected
               ? <BoxShadow>[
                   BoxShadow(
-                    color: AppColors.brand.withValues(alpha: 0.22),
+                    color: scheme.primary.withValues(alpha: 0.22),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),

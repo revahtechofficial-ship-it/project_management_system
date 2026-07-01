@@ -9,16 +9,31 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
-  static ThemeData light() => _build(Brightness.light);
-  static ThemeData dark() => _build(Brightness.dark);
+  static ThemeData light({
+    Color? seed,
+    bool compact = false,
+    bool reduceMotion = false,
+  }) =>
+      _build(Brightness.light, seed ?? AppColors.brand, compact, reduceMotion);
+  static ThemeData dark({
+    Color? seed,
+    bool compact = false,
+    bool reduceMotion = false,
+  }) =>
+      _build(Brightness.dark, seed ?? AppColors.brand, compact, reduceMotion);
 
-  static ThemeData _build(Brightness brightness) {
+  static ThemeData _build(
+    Brightness brightness,
+    Color seed,
+    bool compact,
+    bool reduceMotion,
+  ) {
     final bool dark = brightness == Brightness.dark;
     // Tune the muted text + hairline borders from the seed: readable secondary
     // copy, and very light card edges so surfaces read as flat panels with
     // just a whisper of separation.
     final ColorScheme scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.brand,
+      seedColor: seed,
       brightness: brightness,
     ).copyWith(
       surface: dark ? const Color(0xFF161B27) : Colors.white,
@@ -44,6 +59,19 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: base,
+      visualDensity:
+          compact ? VisualDensity.compact : VisualDensity.standard,
+      pageTransitionsTheme: reduceMotion
+          ? const PageTransitionsTheme(
+              builders: <TargetPlatform, PageTransitionsBuilder>{
+                TargetPlatform.android: _NoTransitionsBuilder(),
+                TargetPlatform.iOS: _NoTransitionsBuilder(),
+                TargetPlatform.linux: _NoTransitionsBuilder(),
+                TargetPlatform.macOS: _NoTransitionsBuilder(),
+                TargetPlatform.windows: _NoTransitionsBuilder(),
+              },
+            )
+          : null,
       // A slightly stronger hover so list rows and ink wells visibly respond
       // to the mouse across the app (the M3 default is barely perceptible).
       hoverColor: scheme.onSurface.withValues(alpha: dark ? 0.06 : 0.04),
@@ -110,4 +138,20 @@ class AppTheme {
       ),
     );
   }
+}
+
+/// A page transition that renders the destination instantly, used when the
+/// "reduce motion" preference is enabled.
+class _NoTransitionsBuilder extends PageTransitionsBuilder {
+  const _NoTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) =>
+      child;
 }

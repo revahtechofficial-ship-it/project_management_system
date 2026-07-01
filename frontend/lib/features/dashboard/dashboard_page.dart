@@ -300,11 +300,15 @@ class _QuickAddButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          gradient: AppColors.brandGradient,
+          gradient: AppColors.accentGradient(
+            Theme.of(context).colorScheme.primary,
+          ),
           borderRadius: BorderRadius.circular(12),
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: AppColors.brand.withValues(alpha: 0.3),
+              color: Theme.of(context).colorScheme.primary.withValues(
+                    alpha: 0.3,
+                  ),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
