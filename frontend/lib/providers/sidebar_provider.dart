@@ -3,14 +3,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Whether the wide-screen sidebar is collapsed to an icon rail, persisted
 /// across launches (AGENTS.md §1 `providers`). The shell's collapse toggle
-/// drives this so the choice survives reloads.
+/// drives this so the choice survives reloads. Defaults to collapsed so the
+/// app opens with a compact menu; the user expands it with the toggle.
 class SidebarController extends Notifier<bool> {
   static const String _key = 'sidebar_collapsed';
 
   @override
   bool build() {
     _restore();
-    return false;
+    return true;
   }
 
   Future<void> _restore() async {
