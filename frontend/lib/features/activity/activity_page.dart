@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
 import '../../core/widgets/async_states.dart';
+import '../../core/widgets/back_to_top.dart';
 import '../../core/widgets/page_header.dart';
+import '../../core/widgets/sticky_header.dart';
 import '../../data/models/feed_activity.dart';
 import 'providers/activity_providers.dart';
 
@@ -137,33 +139,23 @@ class _GroupedList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
     final DateTime now = DateTime.now();
     final DateTime today = DateTime(now.year, now.month, now.day);
-    final List<Widget> children = <Widget>[];
-    String? currentDay;
+    final List<StickySection> sections = <StickySection>[];
     for (final FeedActivity a in items) {
       final String label = _dayLabel(a.createdAt.toLocal(), today);
-      if (label != currentDay) {
-        currentDay = label;
-        children.add(
-          Padding(
-            padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.4,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        );
+      if (sections.isEmpty || sections.last.label != label) {
+        sections.add(StickySection(label: label, children: <Widget>[]));
       }
-      children.add(_ActivityRow(activity: a));
+      sections.last.children.add(_ActivityRow(activity: a));
     }
-    return ListView(children: children);
+    return BackToTop(
+      builder: (ScrollController controller) => StickySectionList(
+        controller: controller,
+        sections: sections,
+        padding: const EdgeInsets.only(bottom: 16),
+      ),
+    );
   }
 }
 

@@ -9,6 +9,7 @@ import '../../../data/models/favorite.dart';
 import '../../../data/models/project_hit.dart';
 import '../../../data/models/search_results.dart';
 import '../../../data/models/task.dart';
+import '../../../providers/navigation_provider.dart';
 import '../../favorites/providers/favorites_providers.dart';
 import '../../reminders/widgets/reminder_dialog.dart';
 import '../../tasks/providers/tasks_providers.dart';
@@ -73,6 +74,17 @@ const List<_QuickAction> _quickActions = <_QuickAction>[
   _QuickAction(label: 'Go to Integrations', icon: Icons.extension_outlined, kind: _ActionKind.navigate, route: '/integrations'),
   _QuickAction(label: 'Go to Settings', icon: Icons.settings_outlined, kind: _ActionKind.navigate, route: '/settings'),
 ];
+
+/// The navigate quick-action for [route], if one exists (used to render the
+/// "Recent" list from stored locations).
+_QuickAction? _actionForRoute(String route) {
+  for (final _QuickAction a in _quickActions) {
+    if (a.kind == _ActionKind.navigate && a.route == route) {
+      return a;
+    }
+  }
+  return null;
+}
 
 /// A spotlight-style search box that queries tasks and projects, paginates
 /// task results, and opens the selected item.
@@ -250,6 +262,11 @@ class _CommandPaletteState extends ConsumerState<CommandPalette> {
     if (_query.isEmpty) {
       final List<Favorite> favorites =
           ref.watch(favoritesProvider).asData?.value ?? const <Favorite>[];
+      // Drop the first entry (the current page) and keep those we can name.
+      final List<_QuickAction> recent = <_QuickAction>[
+        for (final String loc in ref.watch(recentPagesProvider).skip(1))
+          if (_actionForRoute(loc) case final _QuickAction a) a,
+      ];
       return ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: <Widget>[
@@ -265,6 +282,16 @@ class _CommandPaletteState extends ConsumerState<CommandPalette> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 onTap: () => _goRoute(f.route.isEmpty ? '/' : f.route),
+              ),
+          ],
+          if (recent.isNotEmpty) ...<Widget>[
+            _SectionLabel('Recent'),
+            for (final _QuickAction a in recent)
+              ListTile(
+                dense: true,
+                leading: Icon(a.icon, size: 20),
+                title: Text(a.label.replaceFirst('Go to ', '')),
+                onTap: () => _goRoute(a.route),
               ),
           ],
           _SectionLabel('Quick actions'),

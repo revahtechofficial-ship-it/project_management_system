@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/widgets/back_to_top.dart';
 import '../../core/widgets/chart_legend.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/glass.dart';
@@ -35,10 +36,12 @@ class DashboardPage extends ConsumerWidget {
     final _Metrics metrics = _Metrics.from(tasks);
 
     final bool firstLoad = tasksAsync.isLoading && !tasksAsync.hasValue;
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: <Widget>[
-        _GreetingHeader(name: name),
+    return BackToTop(
+      builder: (ScrollController controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.all(24),
+        children: <Widget>[
+          _GreetingHeader(name: name),
         if (tasksAsync.hasError)
           Padding(
             padding: const EdgeInsets.only(top: 16),
@@ -59,7 +62,8 @@ class DashboardPage extends ConsumerWidget {
           _SecondaryListsSection(metrics: metrics),
           const SizedBox(height: 8),
         ],
-      ],
+        ],
+      ),
     );
   }
 }

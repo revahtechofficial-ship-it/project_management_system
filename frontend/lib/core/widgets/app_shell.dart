@@ -12,6 +12,7 @@ import '../../features/search/widgets/shortcuts_help.dart';
 import '../../features/settings/providers/settings_providers.dart';
 import '../../data/models/auth_user.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/navigation_provider.dart';
 import '../../providers/sidebar_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../constants/app_colors.dart';
@@ -96,6 +97,12 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final String location = GoRouterState.of(context).matchedLocation;
     final bool wide = MediaQuery.sizeOf(context).width >= 900;
+
+    // Record the visit for the command palette's "Recent" list (after the
+    // frame, so we never mutate a provider mid-build).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(recentPagesProvider.notifier).visit(location);
+    });
 
     // Keep the browser tab/title in sync with the current page so history and
     // multiple tabs are legible.
@@ -301,7 +308,12 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                       horizontal: rail ? 14 : 12,
                       vertical: rail ? 4 : 0,
                     ),
-                    children: _navChildren(location, isAdmin, rail),
+                    children: _navChildren(
+                      location,
+                      isAdmin,
+                      rail,
+                      ref.watch(pinnedNavProvider),
+                    ),
                   ),
                 ),
                 Divider(color: scheme.outlineVariant.withValues(alpha: 0.6)),
@@ -412,7 +424,12 @@ class _SidebarState extends ConsumerState<_Sidebar> {
   /// Builds the nav list. In rail mode, section headers are replaced by thin
   /// dividers and tiles render icon-only with tooltips; otherwise groups carry
   /// collapsible headers. Admin-only items and empty groups are filtered out.
-  List<Widget> _navChildren(String location, bool isAdmin, bool rail) {
+  List<Widget> _navChildren(
+    String location,
+    bool isAdmin,
+    bool rail,
+    List<String> pinned,
+  ) {
     final List<Widget> children = <Widget>[
       _NavTile(
         item: _dashboardItem,
@@ -421,6 +438,28 @@ class _SidebarState extends ConsumerState<_Sidebar> {
       ),
       if (!rail) const SizedBox(height: 4),
     ];
+    // Pinned favorites, at the very top.
+    final List<_NavItem> pinnedItems = <_NavItem>[
+      for (final String loc in pinned)
+        if (_navItemFor(loc) case final _NavItem item)
+          if (!item.adminOnly || isAdmin) item,
+    ];
+    if (pinnedItems.isNotEmpty) {
+      if (rail) {
+        children.add(const _RailDivider());
+      } else {
+        children.add(const _MiniLabel('Pinned'));
+      }
+      for (final _NavItem item in pinnedItems) {
+        children.add(
+          _NavTile(
+            item: item,
+            selected: location == item.location,
+            collapsed: rail,
+          ),
+        );
+      }
+    }
     for (final _NavGroup group in _navGroups) {
       final List<_NavItem> items = <_NavItem>[
         for (final _NavItem item in group.items)
@@ -445,6 +484,7 @@ class _SidebarState extends ConsumerState<_Sidebar> {
           _NavSection(
             title: group.title,
             collapsed: _collapsed.contains(group.title),
+            hasActive: items.any((_NavItem i) => i.location == location),
             onToggle: () => _toggle(group.title),
             tiles: <Widget>[
               for (final _NavItem item in items)
@@ -464,11 +504,16 @@ class _NavSection extends StatelessWidget {
   const _NavSection({
     required this.title,
     required this.collapsed,
+    required this.hasActive,
     required this.onToggle,
     required this.tiles,
   });
   final String title;
   final bool collapsed;
+
+  /// Whether the current route lives inside this group (drives the dot that
+  /// marks a collapsed group holding the active page).
+  final bool hasActive;
   final VoidCallback onToggle;
   final List<Widget> tiles;
 
@@ -477,7 +522,12 @@ class _NavSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _SectionHeader(title: title, collapsed: collapsed, onTap: onToggle),
+        _SectionHeader(
+          title: title,
+          collapsed: collapsed,
+          showActiveDot: collapsed && hasActive,
+          onTap: onToggle,
+        ),
         AnimatedSize(
           duration: prefersReducedMotion(context)
               ? Duration.zero
@@ -535,10 +585,15 @@ class _SectionHeader extends StatelessWidget {
     required this.title,
     required this.collapsed,
     required this.onTap,
+    this.showActiveDot = false,
   });
   final String title;
   final bool collapsed;
   final VoidCallback onTap;
+
+  /// Shows an accent dot next to the title (used when a collapsed group holds
+  /// the active route).
+  final bool showActiveDot;
 
   @override
   Widget build(BuildContext context) {
@@ -562,6 +617,17 @@ class _SectionHeader extends StatelessWidget {
                   color: scheme.onSurfaceVariant,
                 ),
               ),
+              if (showActiveDot) ...<Widget>[
+                const SizedBox(width: 6),
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: scheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
               const Spacer(),
               AnimatedRotation(
                 turns: collapsed ? -0.25 : 0,
@@ -580,7 +646,29 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _NavTile extends StatelessWidget {
+/// A small static section label (non-collapsible), e.g. "Pinned".
+class _MiniLabel extends StatelessWidget {
+  const _MiniLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 12, 6, 4),
+      child: Text(
+        text.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+class _NavTile extends ConsumerWidget {
   const _NavTile({
     required this.item,
     required this.selected,
@@ -590,8 +678,43 @@ class _NavTile extends StatelessWidget {
   final bool selected;
   final bool collapsed;
 
+  Future<void> _showPinMenu(
+    BuildContext context,
+    WidgetRef ref,
+    Offset position,
+  ) async {
+    final bool pinned = ref.read(pinnedNavProvider).contains(item.location);
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject()! as RenderBox;
+    final String? choice = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        position & const Size(40, 40),
+        Offset.zero & overlay.size,
+      ),
+      items: <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+          value: 'pin',
+          child: Row(
+            children: <Widget>[
+              Icon(
+                pinned ? Icons.push_pin : Icons.push_pin_outlined,
+                size: 18,
+              ),
+              const SizedBox(width: 10),
+              Text(pinned ? 'Unpin from sidebar' : 'Pin to sidebar'),
+            ],
+          ),
+        ),
+      ],
+    );
+    if (choice == 'pin') {
+      await ref.read(pinnedNavProvider.notifier).toggle(item.location);
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final Color iconColor = selected ? Colors.white : scheme.onSurfaceVariant;
     final Widget inner = collapsed
@@ -650,7 +773,18 @@ class _NavTile extends StatelessWidget {
         ),
       ),
     );
-    return collapsed ? Tooltip(message: item.label, child: tile) : tile;
+    // Right-click (or long-press) a nav item to pin/unpin it.
+    final Widget interactive = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onSecondaryTapDown: (TapDownDetails d) =>
+          _showPinMenu(context, ref, d.globalPosition),
+      onLongPressStart: (LongPressStartDetails d) =>
+          _showPinMenu(context, ref, d.globalPosition),
+      child: tile,
+    );
+    return collapsed
+        ? Tooltip(message: item.label, child: interactive)
+        : interactive;
   }
 }
 
@@ -679,23 +813,93 @@ String _pageTitleFor(String location) {
   }
 }
 
-/// The current page's title, shown at the left of the top bar on non-dashboard
-/// routes so users always know where they are.
-class _PageTitle extends StatelessWidget {
-  const _PageTitle();
+/// The nav item for [location], if any (dashboard or a group item).
+_NavItem? _navItemFor(String location) {
+  for (final _NavItem item in <_NavItem>[
+    _dashboardItem,
+    for (final _NavGroup g in _navGroups) ...g.items,
+  ]) {
+    if (item.location == location) {
+      return item;
+    }
+  }
+  return null;
+}
+
+/// The title of the sidebar group that contains [location], if any.
+String? _groupTitleFor(String location) {
+  for (final _NavGroup g in _navGroups) {
+    if (g.items.any((_NavItem i) => i.location == location)) {
+      return g.title;
+    }
+  }
+  return null;
+}
+
+/// A single crumb: a [label] and an optional [route] to navigate to.
+typedef _Crumb = ({String label, String? route});
+
+/// A route-based breadcrumb trail (Home › Section › Page) at the left of the
+/// top bar, so users always know where they are and can jump up a level.
+class _Breadcrumbs extends StatelessWidget {
+  const _Breadcrumbs();
+
+  List<_Crumb> _crumbsFor(String location) {
+    final List<_Crumb> crumbs = <_Crumb>[(label: 'Home', route: '/')];
+    if (location == '/') {
+      return crumbs;
+    }
+    final String? group = _groupTitleFor(location);
+    if (group != null) {
+      crumbs.add((label: group, route: null));
+    }
+    final String title = _pageTitleFor(location);
+    if (title.isNotEmpty) {
+      crumbs.add((label: title, route: null));
+    }
+    return crumbs;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final String title = _pageTitleFor(GoRouterState.of(context).matchedLocation);
-    if (title.isEmpty) {
-      return const SizedBox.shrink();
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final String location = GoRouterState.of(context).matchedLocation;
+    final List<_Crumb> crumbs = _crumbsFor(location);
+    final List<Widget> row = <Widget>[];
+    for (int i = 0; i < crumbs.length; i++) {
+      final _Crumb crumb = crumbs[i];
+      final bool last = i == crumbs.length - 1;
+      if (i > 0) {
+        row.add(Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Icon(
+            Icons.chevron_right,
+            size: 16,
+            color: scheme.onSurfaceVariant,
+          ),
+        ));
+      }
+      final TextStyle style = TextStyle(
+        fontSize: last ? 16 : 13.5,
+        fontWeight: last ? FontWeight.w700 : FontWeight.w500,
+        color: last ? scheme.onSurface : scheme.onSurfaceVariant,
+      );
+      if (crumb.route != null && !last) {
+        row.add(InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: () => context.go(crumb.route!),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: Text(crumb.label, style: style),
+          ),
+        ));
+      } else {
+        row.add(Text(crumb.label, style: style));
+      }
     }
     return Padding(
       padding: const EdgeInsets.only(right: 16),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: row),
     );
   }
 }
@@ -714,7 +918,7 @@ class _TopBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: const <Widget>[
-              _PageTitle(),
+              Flexible(child: _Breadcrumbs()),
               _SearchButton(),
               Spacer(),
               _ThemeToggleButton(),
