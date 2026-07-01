@@ -6,12 +6,16 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_format.dart';
 import '../../core/widgets/back_to_top.dart';
 import '../../core/widgets/chart_legend.dart';
+import '../../core/widgets/contribution_heatmap.dart';
 import '../../core/widgets/dashboard_card.dart';
+import '../../core/widgets/donut_breakdown.dart';
 import '../../core/widgets/glass.dart';
+import '../../core/widgets/progress_ring.dart';
 import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/stat_card.dart';
 import '../../core/widgets/task_status_chart.dart';
 import '../../core/widgets/weekly_activity_chart.dart';
+import '../../data/enums/task_priority.dart';
 import '../../data/models/favorite.dart';
 import '../../data/models/reminder.dart';
 import '../../data/models/task.dart';
@@ -56,6 +60,8 @@ class DashboardPage extends ConsumerWidget {
           const _QuickAccessSection(),
           const SizedBox(height: 20),
           _ChartsSection(metrics: metrics),
+          const SizedBox(height: 20),
+          _InsightsSection(metrics: metrics),
           const SizedBox(height: 20),
           _ListsSection(metrics: metrics),
           const SizedBox(height: 20),
@@ -353,10 +359,10 @@ class _KpiSection extends StatelessWidget {
           color: AppColors.brand,
           label: 'Total tasks',
           value: '${metrics.total}',
-          footer: 'across all projects',
           trend: metrics.createdThisWeek > 0
               ? '+${metrics.createdThisWeek} this week'
               : null,
+          spark: metrics.created,
           onTap: openTasks,
         ),
         StatCard(
@@ -364,10 +370,10 @@ class _KpiSection extends StatelessWidget {
           color: AppColors.green,
           label: 'Completed',
           value: '${metrics.completed}',
-          footer: 'done so far',
           trend: metrics.completedThisWeek > 0
               ? '+${metrics.completedThisWeek} this week'
               : null,
+          spark: metrics.done,
           onTap: openTasks,
         ),
         StatCard(
@@ -475,6 +481,98 @@ class _ChartsSection extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Completion ring, open-by-priority donut and a tasks-created heatmap.
+class _InsightsSection extends StatelessWidget {
+  const _InsightsSection({required this.metrics});
+  final _Metrics metrics;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<DonutSegment> segments = <DonutSegment>[
+      for (final TaskPriority p in TaskPriority.values)
+        if ((metrics.byPriority[p] ?? 0) > 0)
+          DonutSegment(
+            label: p.label,
+            value: metrics.byPriority[p]!,
+            color: p.color,
+          ),
+    ];
+
+    final Widget completion = DashboardCard(
+      title: 'Completion',
+      child: SizedBox(
+        height: 200,
+        child: Center(
+          child: ProgressRing(
+            value: metrics.completionRate / 100,
+            color: AppColors.green,
+            size: 150,
+            label: '${metrics.completionRate}%',
+            caption: 'completed',
+          ),
+        ),
+      ),
+    );
+
+    final Widget priority = DashboardCard(
+      title: 'Open by priority',
+      child: SizedBox(
+        height: 200,
+        child: segments.isEmpty
+            ? const _EmptyState(
+                icon: Icons.flag_outlined,
+                message: 'No open tasks to prioritise.',
+              )
+            : Center(
+                child: DonutBreakdown(segments: segments, centerLabel: 'open'),
+              ),
+      ),
+    );
+
+    final Widget heatmap = DashboardCard(
+      title: 'Tasks created',
+      child: metrics.activityByDay.isEmpty
+          ? const _ChartPlaceholder(
+              icon: Icons.grid_on_rounded,
+              message: 'No tasks yet.\n'
+                  'Create tasks to build up your activity calendar.',
+            )
+          : ContributionHeatmap(
+              counts: metrics.activityByDay,
+              anchor: DateTime.now(),
+            ),
+    );
+
+    return Column(
+      children: <Widget>[
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            if (constraints.maxWidth < 920) {
+              return Column(
+                children: <Widget>[
+                  completion,
+                  const SizedBox(height: 16),
+                  priority,
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(child: completion),
+                const SizedBox(width: 16),
+                Expanded(flex: 2, child: priority),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        heatmap,
+      ],
     );
   }
 }
@@ -967,6 +1065,8 @@ class _Metrics {
     required this.recent,
     required this.upcoming,
     required this.projectLoad,
+    required this.byPriority,
+    required this.activityByDay,
   });
 
   final int total;
@@ -982,6 +1082,12 @@ class _Metrics {
   final List<Task> recent;
   final List<Task> upcoming;
   final List<({String name, int open})> projectLoad;
+
+  /// Open (not-done) task counts per priority, for the priority donut.
+  final Map<TaskPriority, int> byPriority;
+
+  /// Tasks created per day, for the contribution heatmap.
+  final Map<DateTime, int> activityByDay;
 
   factory _Metrics.from(List<Task> tasks) {
     final int completed = tasks.where((Task t) => t.done).length;
@@ -1041,6 +1147,23 @@ class _Metrics {
       ..sort((({String name, int open}) a, ({String name, int open}) b) =>
           b.open.compareTo(a.open));
 
+    // Open tasks by priority (for the donut breakdown).
+    final Map<TaskPriority, int> byPriority = <TaskPriority, int>{};
+    for (final Task t in tasks.where((Task t) => !t.done)) {
+      byPriority[t.priority] = (byPriority[t.priority] ?? 0) + 1;
+    }
+
+    // Tasks created per day (for the contribution heatmap).
+    final Map<DateTime, int> activityByDay = <DateTime, int>{};
+    for (final Task t in tasks) {
+      final DateTime d = DateTime(
+        t.createdAt.toLocal().year,
+        t.createdAt.toLocal().month,
+        t.createdAt.toLocal().day,
+      );
+      activityByDay[d] = (activityByDay[d] ?? 0) + 1;
+    }
+
     return _Metrics(
       total: total,
       completed: completed,
@@ -1055,6 +1178,8 @@ class _Metrics {
       recent: recent,
       upcoming: upcoming,
       projectLoad: projectLoad,
+      byPriority: byPriority,
+      activityByDay: activityByDay,
     );
   }
 }

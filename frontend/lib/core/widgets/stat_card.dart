@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import 'glass.dart';
 import 'motion.dart';
+import 'sparkline.dart';
 
 /// A KPI tile: a gradient icon badge, a large value, a label, and either a
 /// trend pill, a footer caption, or a progress bar — on a frosted-glass
@@ -19,6 +20,7 @@ class StatCard extends StatelessWidget {
     this.trend,
     this.trendPositive = true,
     this.onTap,
+    this.spark,
   });
 
   final IconData icon;
@@ -27,6 +29,9 @@ class StatCard extends StatelessWidget {
   final String value;
   final String? footer;
   final double? progress;
+
+  /// An optional tiny trend series rendered as a sparkline at the card foot.
+  final List<double>? spark;
 
   /// A short delta caption (e.g. "+3 this week"). Rendered as a colored pill
   /// and takes precedence over [footer].
@@ -122,6 +127,10 @@ class StatCard extends StatelessWidget {
                   Text(footer!,
                       style: TextStyle(
                           fontSize: 12, color: scheme.onSurfaceVariant)),
+                ],
+                if (spark != null && spark!.length >= 2) ...<Widget>[
+                  const SizedBox(height: 12),
+                  Sparkline(values: spark!, color: color),
                 ],
               ],
             ),
