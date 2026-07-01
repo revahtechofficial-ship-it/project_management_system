@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'package:revahms_web/app.dart';
 import 'package:revahms_web/providers/auth_provider.dart';
@@ -11,6 +12,7 @@ class _SignedOutController extends AuthController {
 }
 
 void main() {
+  GoogleFonts.config.allowRuntimeFetching = false;
   testWidgets('shows the landing page when signed out', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

@@ -18,11 +18,13 @@ class Sparkline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _SparkPainter(values: values, color: color, fill: fill),
+    return ExcludeSemantics(
+      child: SizedBox(
+        height: height,
+        width: double.infinity,
+        child: CustomPaint(
+          painter: _SparkPainter(values: values, color: color, fill: fill),
+        ),
       ),
     );
   }

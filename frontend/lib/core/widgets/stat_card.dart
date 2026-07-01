@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../constants/app_colors.dart';
+import '../constants/spacing.dart';
 import 'glass.dart';
 import 'motion.dart';
 import 'sparkline.dart';
@@ -89,7 +90,8 @@ class StatCard extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5)),
+                        letterSpacing: -0.5,
+                        fontFeatures: tabularFigures)),
                 const SizedBox(height: 2),
                 Text(label,
                     style: TextStyle(

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../constants/spacing.dart';
 import 'motion.dart';
 
 /// A circular progress indicator with a centred label — an alternative to a
@@ -60,6 +61,7 @@ class ProgressRing extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
                       color: scheme.onSurface,
+                      fontFeatures: tabularFigures,
                     ),
                   ),
                 if (caption != null)

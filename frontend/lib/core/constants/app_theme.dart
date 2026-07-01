@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
@@ -55,10 +56,18 @@ class AppTheme {
           borderSide: BorderSide(color: c, width: w),
         );
 
+    // Inter across the app, with a codified type scale for a crisp SaaS feel.
+    final TextTheme text = _typeScale(
+      GoogleFonts.interTextTheme(ThemeData(brightness: brightness).textTheme),
+    );
+
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      textTheme: text,
       scaffoldBackgroundColor: base,
+      // A visible focus tint so keyboard navigation is obvious.
+      focusColor: scheme.primary.withValues(alpha: dark ? 0.32 : 0.18),
       visualDensity:
           compact ? VisualDensity.compact : VisualDensity.standard,
       pageTransitionsTheme: reduceMotion
@@ -138,6 +147,21 @@ class AppTheme {
       ),
     );
   }
+
+  /// Codifies sizes/weights so headings and body copy stay consistent.
+  static TextTheme _typeScale(TextTheme t) => t.copyWith(
+        titleLarge: t.titleLarge
+            ?.copyWith(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.4),
+        titleMedium: t.titleMedium
+            ?.copyWith(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -0.2),
+        titleSmall:
+            t.titleSmall?.copyWith(fontSize: 14, fontWeight: FontWeight.w600),
+        bodyLarge: t.bodyLarge?.copyWith(fontSize: 15, height: 1.4),
+        bodyMedium: t.bodyMedium?.copyWith(fontSize: 14, height: 1.4),
+        bodySmall: t.bodySmall?.copyWith(fontSize: 12.5, height: 1.35),
+        labelLarge:
+            t.labelLarge?.copyWith(fontSize: 14, fontWeight: FontWeight.w600),
+      );
 }
 
 /// A page transition that renders the destination instantly, used when the

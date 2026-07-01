@@ -16,6 +16,7 @@ import '../../providers/navigation_provider.dart';
 import '../../providers/sidebar_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../constants/app_colors.dart';
+import '../constants/breakpoints.dart';
 import 'glass.dart';
 import 'motion.dart';
 import 'revah_logo.dart';
@@ -96,7 +97,8 @@ class AppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final String location = GoRouterState.of(context).matchedLocation;
-    final bool wide = MediaQuery.sizeOf(context).width >= 900;
+    final bool wide =
+        MediaQuery.sizeOf(context).width >= AppBreakpoints.medium;
 
     // Record the visit for the command palette's "Recent" list (after the
     // frame, so we never mutate a provider mid-build).
@@ -281,8 +283,8 @@ class _SidebarState extends ConsumerState<_Sidebar> {
     final bool isAdmin = user?.isAdmin ?? false;
     // Auto-collapse to the icon rail on tighter widths; above the breakpoint the
     // user's manual toggle decides.
-    final bool autoRail =
-        widget.collapsible && MediaQuery.sizeOf(context).width < 1180;
+    final bool autoRail = widget.collapsible &&
+        MediaQuery.sizeOf(context).width < AppBreakpoints.expanded;
     final bool rail =
         autoRail || (widget.collapsible && ref.watch(sidebarCollapsedProvider));
 

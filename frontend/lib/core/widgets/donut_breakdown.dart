@@ -1,6 +1,8 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../constants/spacing.dart';
+
 /// One slice of a [DonutBreakdown].
 class DonutSegment {
   const DonutSegment({
@@ -74,6 +76,7 @@ class DonutBreakdown extends StatelessWidget {
                   fontSize: size * 0.18,
                   fontWeight: FontWeight.w800,
                   color: scheme.onSurface,
+                  fontFeatures: tabularFigures,
                 ),
               ),
               if (centerLabel != null)

@@ -153,7 +153,10 @@ class _BurndownChartState extends State<_BurndownChart> {
           }
         }
 
-        return MouseRegion(
+        return Semantics(
+          label: 'Sprint burndown: remaining story points versus the ideal '
+              'trend',
+          child: MouseRegion(
           onHover: (e) => update(e.localPosition),
           onExit: (_) => setState(() => _hover = null),
           child: SizedBox(
@@ -174,6 +177,7 @@ class _BurndownChartState extends State<_BurndownChart> {
                 tooltipFg: scheme.onInverseSurface,
               ),
             ),
+          ),
           ),
         );
       },
