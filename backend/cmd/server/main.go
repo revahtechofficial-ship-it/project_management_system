@@ -142,6 +142,7 @@ func main() {
 		api.Mount("/api/v1/time-entries", handler.NewTimeHandler(queries).Routes())
 		api.Mount("/api/v1/timesheets", handler.NewTimesheetHandler(queries).Routes())
 		api.Mount("/api/v1/one-on-ones", handler.NewOneOnOneHandler(queries).Routes())
+		api.Mount("/api/v1/leave", handler.NewLeaveHandler(queries).Routes())
 		api.Mount("/api/v1/objectives", handler.NewObjectiveHandler(queries).Routes())
 		api.Mount("/api/v1/automations", handler.NewAutomationHandler(queries).Routes())
 		api.Mount("/api/v1/resources", handler.NewResourceHandler(queries).Routes())

@@ -17,6 +17,7 @@ import '../../features/dashboard/dashboards_page.dart';
 import '../../features/focus/focus_page.dart';
 import '../../features/goals/goals_page.dart';
 import '../../features/integrations/integrations_page.dart';
+import '../../features/leave/leave_page.dart';
 import '../../features/one_on_ones/one_on_ones_page.dart';
 import '../../features/landing/landing_page.dart';
 import '../../features/notifications/notifications_page.dart';
@@ -94,6 +95,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
             path: '/one-on-ones',
             builder: (c, s) => const OneOnOnesPage(),
           ),
+          GoRoute(path: '/leave', builder: (c, s) => const LeavePage()),
           GoRoute(path: '/reports', builder: (c, s) => const ReportsPage()),
           GoRoute(path: '/activity', builder: (c, s) => const ActivityPage()),
           GoRoute(

@@ -66,6 +66,7 @@ const List<_NavGroup> _navGroups = <_NavGroup>[
     _NavItem(Icons.description_outlined, 'Pages', '/pages'),
     _NavItem(Icons.groups_outlined, 'Team', '/team'),
     _NavItem(Icons.forum_outlined, '1:1s', '/one-on-ones'),
+    _NavItem(Icons.beach_access_outlined, 'Leave', '/leave'),
   ]),
   _NavGroup('Insights', <_NavItem>[
     _NavItem(Icons.space_dashboard_outlined, 'Dashboards', '/dashboards'),

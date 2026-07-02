@@ -174,6 +174,19 @@ type KeyResult struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+type LeaveRequest struct {
+	ID         int64              `json:"id"`
+	UserID     int64              `json:"user_id"`
+	Type       string             `json:"type"`
+	StartDate  time.Time          `json:"start_date"`
+	EndDate    time.Time          `json:"end_date"`
+	Status     string             `json:"status"`
+	Note       string             `json:"note"`
+	ApproverID *int64             `json:"approver_id"`
+	DecidedAt  pgtype.Timestamptz `json:"decided_at"`
+	CreatedAt  time.Time          `json:"created_at"`
+}
+
 type MemberCapacity struct {
 	UserID      int64     `json:"user_id"`
 	WeeklyHours int32     `json:"weekly_hours"`
