@@ -8,6 +8,9 @@ import '../../../core/widgets/copy_button.dart';
 import '../../../core/widgets/favorite_button.dart';
 import '../../../core/widgets/motion.dart';
 import '../../../core/widgets/user_avatar.dart';
+import '../../../data/models/approval.dart';
+import '../../approvals/providers/approvals_providers.dart';
+import '../../approvals/widgets/request_approval_dialog.dart';
 import '../../reminders/widgets/reminder_dialog.dart';
 import '../../releases/providers/releases_providers.dart';
 import '../../../data/enums/dependency_type.dart';
@@ -315,6 +318,10 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
         children: <Widget>[
           Expanded(child: Text(_isEdit ? 'Edit task' : 'New task')),
           if (_isEdit) ...<Widget>[
+            _ApprovalControl(
+              taskId: widget.task!.id,
+              title: widget.task!.title,
+            ),
             _WatchButton(taskId: widget.task!.id),
             CopyButton(
               text: '#${widget.task!.id}',
@@ -1560,6 +1567,50 @@ class _WatchButton extends ConsumerWidget {
         ref.invalidate(taskWatchProvider(taskId));
         ref.invalidate(watchedTaskIdsProvider);
       },
+    );
+  }
+}
+
+/// Shows the latest approval status for a task (if any) and lets the user
+/// request sign-off from a teammate.
+class _ApprovalControl extends ConsumerWidget {
+  const _ApprovalControl({required this.taskId, required this.title});
+  final int taskId;
+  final String title;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final List<Approval> approvals = ref
+            .watch(approvalsForSubjectProvider((type: 'task', id: taskId)))
+            .asData
+            ?.value ??
+        const <Approval>[];
+    final Approval? latest = approvals.isEmpty ? null : approvals.first;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        if (latest != null)
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: ApprovalStatusChip(status: latest.status),
+          ),
+        IconButton(
+          tooltip: 'Request approval',
+          icon: const Icon(Icons.verified_outlined, size: 20),
+          onPressed: () async {
+            final bool? made = await showRequestApprovalDialog(
+              context,
+              subjectType: 'task',
+              subjectId: taskId,
+              subjectTitle: title,
+            );
+            if (made ?? false) {
+              ref.invalidate(
+                  approvalsForSubjectProvider((type: 'task', id: taskId)));
+            }
+          },
+        ),
+      ],
     );
   }
 }

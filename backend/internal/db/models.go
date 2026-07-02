@@ -29,6 +29,19 @@ type ApiKey struct {
 	CreatedAt  time.Time          `json:"created_at"`
 }
 
+type Approval struct {
+	ID           int64              `json:"id"`
+	SubjectType  string             `json:"subject_type"`
+	SubjectID    int64              `json:"subject_id"`
+	SubjectTitle string             `json:"subject_title"`
+	RequesterID  int64              `json:"requester_id"`
+	ApproverID   int64              `json:"approver_id"`
+	Status       string             `json:"status"`
+	Note         string             `json:"note"`
+	DecidedAt    pgtype.Timestamptz `json:"decided_at"`
+	CreatedAt    time.Time          `json:"created_at"`
+}
+
 type Attachment struct {
 	ID          int64     `json:"id"`
 	TaskID      int64     `json:"task_id"`
