@@ -57,6 +57,12 @@ type Config struct {
 	// id (defaults to Opus 4.8).
 	AnthropicAPIKey string
 	AIModel         string
+
+	// InboundEmailSecret guards the public email-to-task webhook
+	// (POST /api/v1/inbound/email). When empty the webhook is disabled; when
+	// set, callers must present it via the ?secret= query or X-Inbound-Secret
+	// header. Point a mail forwarder (e.g. a Gmail Apps Script) at the webhook.
+	InboundEmailSecret string
 }
 
 // Load reads configuration from the environment. A .env file in the working
@@ -83,11 +89,12 @@ func Load() Config {
 		ResendFrom:     getenv("RESEND_FROM", ""),
 		UploadDir:      getenv("UPLOAD_DIR", "./uploads"),
 		// Defaults match `livekit-server --dev` (devkey/secret on :7880).
-		LiveKitURL:       getenv("LIVEKIT_URL", "ws://localhost:7880"),
-		LiveKitAPIKey:    getenv("LIVEKIT_API_KEY", "devkey"),
-		LiveKitAPISecret: getenv("LIVEKIT_API_SECRET", "secret"),
-		AnthropicAPIKey:  getenv("ANTHROPIC_API_KEY", ""),
-		AIModel:          getenv("AI_MODEL", "claude-opus-4-8"),
+		LiveKitURL:         getenv("LIVEKIT_URL", "ws://localhost:7880"),
+		LiveKitAPIKey:      getenv("LIVEKIT_API_KEY", "devkey"),
+		LiveKitAPISecret:   getenv("LIVEKIT_API_SECRET", "secret"),
+		AnthropicAPIKey:    getenv("ANTHROPIC_API_KEY", ""),
+		AIModel:            getenv("AI_MODEL", "claude-opus-4-8"),
+		InboundEmailSecret: getenv("INBOUND_EMAIL_SECRET", ""),
 	}
 }
 

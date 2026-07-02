@@ -105,6 +105,11 @@ func main() {
 		sub.With(appTokens.Middleware).Post("/change-password", accountHandler.ChangePassword)
 	})
 
+	// Email-to-task webhook (public; guarded by INBOUND_EMAIL_SECRET). A mail
+	// forwarder posts here to file a task; disabled when the secret is unset.
+	r.Post("/api/v1/inbound/email",
+		handler.NewInboundHandler(queries, cfg.InboundEmailSecret).Handle)
+
 	// Workspace API — all behind the app's own JWT (the Flutter web app).
 	if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
 		log.Printf("WARNING: could not create upload dir %s: %v", cfg.UploadDir, err)
