@@ -237,6 +237,24 @@ type Objective struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+type OneOnOne struct {
+	ID          int64     `json:"id"`
+	ManagerID   int64     `json:"manager_id"`
+	ReportID    int64     `json:"report_id"`
+	ScheduledAt time.Time `json:"scheduled_at"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type OneOnOneItem struct {
+	ID        int64     `json:"id"`
+	MeetingID int64     `json:"meeting_id"`
+	AuthorID  *int64    `json:"author_id"`
+	Kind      string    `json:"kind"`
+	Body      string    `json:"body"`
+	Done      bool      `json:"done"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type OtpCode struct {
 	ID        int64     `json:"id"`
 	Email     string    `json:"email"`
