@@ -385,6 +385,16 @@ class _NotificationsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final SettingsController c = ref.read(settingsControllerProvider.notifier);
+    // Email notifications are a server-side per-user preference (they drive
+    // actual outbound email), so this switch reflects the account, not the
+    // local-only settings.
+    final bool emailOn = ref
+            .watch(authControllerProvider)
+            .asData
+            ?.value
+            .user
+            ?.emailNotifications ??
+        true;
     return DashboardCard(
       title: 'Notifications',
       child: Column(
@@ -392,9 +402,11 @@ class _NotificationsCard extends ConsumerWidget {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Email notifications'),
-            subtitle: const Text('Task updates and mentions by email'),
-            value: settings.emailNotifications,
-            onChanged: c.setEmailNotifications,
+            subtitle: const Text('Get your notifications by email too'),
+            value: emailOn,
+            onChanged: (bool v) =>
+                ref.read(authControllerProvider.notifier)
+                    .setEmailNotifications(v),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,

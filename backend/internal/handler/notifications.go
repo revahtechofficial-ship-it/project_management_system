@@ -4,12 +4,44 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/revah-tech/revahms/backend/internal/account"
 	"github.com/revah-tech/revahms/backend/internal/db"
 )
+
+// notifier sends a notification email. Satisfied by *email.Sender.
+type notifier interface {
+	Notify(to, title, body string) error
+}
+
+// notifyMailer is the process-wide mailer used to also deliver notifications by
+// email. Set once at startup via SetNotifyMailer; nil disables email delivery.
+var notifyMailer notifier
+
+// SetNotifyMailer wires the mailer used to email in-app notifications.
+func SetNotifyMailer(m notifier) { notifyMailer = m }
+
+// deliverable guards against sending to obviously-undeliverable addresses
+// (empty, or example/test/localhost domains), so notification email never
+// bounces off placeholder test accounts.
+func deliverable(email string) bool {
+	e := strings.ToLower(strings.TrimSpace(email))
+	if e == "" || !strings.Contains(e, "@") {
+		return false
+	}
+	for _, bad := range []string{
+		"@example.com", "@example.org", "@example.net",
+		"@test.", "@localhost", "@invalid", ".test", ".local",
+	} {
+		if strings.Contains(e, bad) {
+			return false
+		}
+	}
+	return true
+}
 
 // NotificationHandler serves the /api/v1/notifications resource. Every endpoint
 // is scoped to the authenticated user — notifications are per-recipient.
@@ -110,7 +142,8 @@ func recipientOf(ctx context.Context) (*int64, bool) {
 // Recipients in Do Not Disturb mode are skipped.
 func notifyUser(ctx context.Context, q *db.Queries, userID int64,
 	typ, title, body, link string) {
-	if u, err := q.GetUserByID(ctx, userID); err == nil && u.Status == "dnd" {
+	user, err := q.GetUserByID(ctx, userID)
+	if err == nil && user.Status == "dnd" {
 		return
 	}
 	uid := userID
@@ -121,6 +154,13 @@ func notifyUser(ctx context.Context, q *db.Queries, userID int64,
 		Body:   body,
 		Link:   link,
 	})
+	// Also deliver by email when the recipient opted in and the address looks
+	// deliverable. Best-effort and off the request path so it never blocks.
+	if err == nil && user.EmailNotifications && notifyMailer != nil &&
+		deliverable(user.Email) {
+		to, subject, msg := user.Email, title, body
+		go func() { _ = notifyMailer.Notify(to, subject, msg) }()
+	}
 }
 
 // notifyAssigned tells a task's assignee they were given the task, skipping the

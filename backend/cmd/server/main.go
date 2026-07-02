@@ -60,6 +60,9 @@ func main() {
 	appTokens := account.NewTokens(cfg.JWTSecret)
 	accountHandler := handler.NewAccountHandler(account.NewService(queries, appTokens, mailer))
 
+	// Let in-app notifications also be delivered by email (opt-in per user).
+	handler.SetNotifyMailer(mailer)
+
 	// OIDC token verifier. Non-fatal if the issuer is unreachable so the BFF
 	// still starts; protected routes then return 503 until auth is available.
 	var verifier *auth.Verifier
@@ -165,6 +168,7 @@ func main() {
 		api.Mount("/api/v1/saved-filters", productivity.FilterRoutes())
 		api.Mount("/api/v1/reminders", productivity.ReminderRoutes())
 		api.Patch("/api/v1/security/two-factor", accountHandler.SetTwoFactor)
+		api.Patch("/api/v1/settings/email-notifications", accountHandler.SetEmailNotifications)
 		teamHandler := handler.NewTeamHandler(queries)
 		api.Get("/api/v1/team", teamHandler.List)
 		api.Patch("/api/v1/team/{id}/role", teamHandler.SetRole)

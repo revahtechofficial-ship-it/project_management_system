@@ -26,17 +26,18 @@ func normEmail(e string) string { return strings.ToLower(strings.TrimSpace(e)) }
 // used by login, /me, and the profile endpoints so every payload is identical.
 func userResponse(u db.User) map[string]any {
 	return map[string]any{
-		"id":                 u.ID,
-		"email":              u.Email,
-		"name":               u.FullName,
-		"role":               u.Role,
-		"avatar_url":         avatarURLPtr(u.Avatar),
-		"phone":              u.Phone,
-		"job_title":          u.JobTitle,
-		"department":         u.Department,
-		"location":           u.Location,
-		"bio":                u.Bio,
-		"two_factor_enabled": u.TwoFactorEnabled,
+		"id":                  u.ID,
+		"email":               u.Email,
+		"name":                u.FullName,
+		"role":                u.Role,
+		"avatar_url":          avatarURLPtr(u.Avatar),
+		"phone":               u.Phone,
+		"job_title":           u.JobTitle,
+		"department":          u.Department,
+		"location":            u.Location,
+		"bio":                 u.Bio,
+		"two_factor_enabled":  u.TwoFactorEnabled,
+		"email_notifications": u.EmailNotifications,
 	}
 }
 
@@ -200,6 +201,26 @@ func (h *AccountHandler) SetTwoFactor(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"two_factor_enabled": b.Enabled})
 }
 
+// SetEmailNotifications toggles whether the user also receives their in-app
+// notifications by email.
+func (h *AccountHandler) SetEmailNotifications(w http.ResponseWriter, r *http.Request) {
+	claims, ok := account.FromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, errors.New("unauthenticated"))
+		return
+	}
+	var b twoFactorReq
+	if err := decode(r, &b); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if err := h.svc.SetEmailNotifications(r.Context(), claims.UserID, b.Enabled); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"email_notifications": b.Enabled})
+}
+
 // claimsResponse is a minimal user payload built from the JWT when the full row
 // can't be loaded (keeps the same keys as userResponse for client safety).
 func claimsResponse(c account.Claims) map[string]any {
@@ -207,7 +228,7 @@ func claimsResponse(c account.Claims) map[string]any {
 		"id": c.UserID, "email": c.Email, "name": c.Name, "role": c.Role,
 		"avatar_url": nil, "phone": "", "job_title": "",
 		"department": "", "location": "", "bio": "",
-		"two_factor_enabled": false,
+		"two_factor_enabled": false, "email_notifications": true,
 	}
 }
 

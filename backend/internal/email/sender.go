@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -89,6 +90,47 @@ func (s *Sender) SendOTP(to, code, purpose string) error {
 		log.Printf("[email DEV] no email provider configured — OTP for %s (%s): %s", to, purpose, code)
 		return nil
 	}
+}
+
+// Notify sends a branded notification email (best-effort). Used when a user has
+// opted to also receive their in-app notifications by email.
+func (s *Sender) Notify(to, title, body string) error {
+	subject := fmt.Sprintf("%s — %s", s.appName, title)
+	plain := fmt.Sprintf("%s\n\n%s\n\n— %s", title, body, s.appName)
+	htmlBody := s.notifyHTML(title, body)
+	switch {
+	case s.resendKey != "":
+		return s.sendResend(to, subject, plain, htmlBody)
+	case s.smtpConfigured():
+		return s.sendSMTP(to, subject, plain, htmlBody)
+	default:
+		log.Printf("[email DEV] no provider — notification for %s: %s", to, title)
+		return nil
+	}
+}
+
+// notifyHTML renders a branded notification card. Title/body are HTML-escaped
+// since they can contain user content (e.g. task titles).
+func (s *Sender) notifyHTML(title, body string) string {
+	return `<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#eef0f5;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef0f5;padding:32px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 6px 24px rgba(17,24,39,0.08);">
+        <tr><td style="background:#4f46e5;background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:26px 32px;">
+          <div style="font-size:17px;font-weight:700;color:#ffffff;letter-spacing:0.2px;">` + s.appName + `</div>
+        </td></tr>
+        <tr><td style="padding:30px 32px 10px;">
+          <h1 style="margin:0 0 10px;font-size:19px;font-weight:700;color:#111827;">` + html.EscapeString(title) + `</h1>
+          <p style="margin:0 0 22px;font-size:14px;line-height:1.65;color:#374151;">` + html.EscapeString(body) + `</p>
+        </td></tr>
+        <tr><td style="padding:14px 32px 26px;">
+          <div style="border-top:1px solid #eef0f5;padding-top:16px;font-size:12px;color:#9ca3af;">You're receiving this because email notifications are on. Turn them off in Settings → Appearance/Notifications.</div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
 }
 
 // fromAddress is the verified sender for Resend (resendFrom, falling back to the

@@ -64,6 +64,21 @@ class AuthController extends AsyncNotifier<AuthState> {
     }
   }
 
+  /// Toggles emailing this user's notifications and refreshes the in-memory
+  /// user so Settings reflects the change immediately.
+  Future<void> setEmailNotifications(bool enabled) async {
+    await ref.read(authServiceProvider).setEmailNotifications(enabled);
+    final AuthSession? current = state.asData?.value.session;
+    if (current != null) {
+      state = AsyncData<AuthState>(AuthState(
+        session: AuthSession(
+          token: current.token,
+          user: current.user.copyWith(emailNotifications: enabled),
+        ),
+      ));
+    }
+  }
+
   Future<void> logout() async {
     await ref.read(authServiceProvider).logout();
     state = const AsyncData<AuthState>(AuthState.signedOut());

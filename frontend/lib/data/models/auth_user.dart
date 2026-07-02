@@ -15,6 +15,7 @@ class AuthUser {
   final String location;
   final String bio;
   final bool twoFactorEnabled;
+  final bool emailNotifications;
 
   const AuthUser({
     required this.id,
@@ -28,12 +29,14 @@ class AuthUser {
     this.location = '',
     this.bio = '',
     this.twoFactorEnabled = false,
+    this.emailNotifications = true,
   });
 
   /// Whether this user may perform admin-only actions.
   bool get isAdmin => role.isAdmin;
 
-  AuthUser copyWith({bool? twoFactorEnabled}) => AuthUser(
+  AuthUser copyWith({bool? twoFactorEnabled, bool? emailNotifications}) =>
+      AuthUser(
         id: id,
         email: email,
         name: name,
@@ -45,6 +48,7 @@ class AuthUser {
         location: location,
         bio: bio,
         twoFactorEnabled: twoFactorEnabled ?? this.twoFactorEnabled,
+        emailNotifications: emailNotifications ?? this.emailNotifications,
       );
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
@@ -59,6 +63,7 @@ class AuthUser {
         location: json['location'] as String? ?? '',
         bio: json['bio'] as String? ?? '',
         twoFactorEnabled: json['two_factor_enabled'] as bool? ?? false,
+        emailNotifications: json['email_notifications'] as bool? ?? true,
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -73,6 +78,7 @@ class AuthUser {
         'location': location,
         'bio': bio,
         'two_factor_enabled': twoFactorEnabled,
+        'email_notifications': emailNotifications,
       };
 
   @override
@@ -93,9 +99,11 @@ class AuthUser {
           other.department == department &&
           other.location == location &&
           other.bio == bio &&
-          other.twoFactorEnabled == twoFactorEnabled;
+          other.twoFactorEnabled == twoFactorEnabled &&
+          other.emailNotifications == emailNotifications;
 
   @override
   int get hashCode => Object.hash(id, email, name, role, avatarUrl, phone,
-      jobTitle, department, location, bio, twoFactorEnabled);
+      jobTitle, department, location, bio, twoFactorEnabled,
+      emailNotifications);
 }

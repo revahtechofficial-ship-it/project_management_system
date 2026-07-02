@@ -477,25 +477,26 @@ type TimesheetSubmission struct {
 }
 
 type User struct {
-	ID               int64              `json:"id"`
-	Email            string             `json:"email"`
-	PasswordHash     string             `json:"password_hash"`
-	FullName         string             `json:"full_name"`
-	EmailVerified    bool               `json:"email_verified"`
-	CreatedAt        time.Time          `json:"created_at"`
-	UpdatedAt        time.Time          `json:"updated_at"`
-	Role             string             `json:"role"`
-	Avatar           string             `json:"avatar"`
-	Status           string             `json:"status"`
-	StatusMessage    string             `json:"status_message"`
-	LastSeenAt       pgtype.Timestamptz `json:"last_seen_at"`
-	Phone            string             `json:"phone"`
-	JobTitle         string             `json:"job_title"`
-	Department       string             `json:"department"`
-	Location         string             `json:"location"`
-	Bio              string             `json:"bio"`
-	IsActive         bool               `json:"is_active"`
-	TwoFactorEnabled bool               `json:"two_factor_enabled"`
+	ID                 int64              `json:"id"`
+	Email              string             `json:"email"`
+	PasswordHash       string             `json:"password_hash"`
+	FullName           string             `json:"full_name"`
+	EmailVerified      bool               `json:"email_verified"`
+	CreatedAt          time.Time          `json:"created_at"`
+	UpdatedAt          time.Time          `json:"updated_at"`
+	Role               string             `json:"role"`
+	Avatar             string             `json:"avatar"`
+	Status             string             `json:"status"`
+	StatusMessage      string             `json:"status_message"`
+	LastSeenAt         pgtype.Timestamptz `json:"last_seen_at"`
+	Phone              string             `json:"phone"`
+	JobTitle           string             `json:"job_title"`
+	Department         string             `json:"department"`
+	Location           string             `json:"location"`
+	Bio                string             `json:"bio"`
+	IsActive           bool               `json:"is_active"`
+	TwoFactorEnabled   bool               `json:"two_factor_enabled"`
+	EmailNotifications bool               `json:"email_notifications"`
 }
 
 type UserSkill struct {

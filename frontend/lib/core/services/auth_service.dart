@@ -129,6 +129,17 @@ class AuthService {
     );
   }
 
+  /// Enables or disables emailing the signed-in user's notifications.
+  Future<void> setEmailNotifications(bool enabled) async {
+    final String token = await _token();
+    await _send(
+      'PATCH',
+      '/api/v1/settings/email-notifications',
+      <String, dynamic>{'enabled': enabled},
+      token,
+    );
+  }
+
   /// Requests a password-reset OTP.
   Future<void> forgotPassword(String email) async {
     await _post('/api/v1/auth/forgot-password', <String, dynamic>{'email': email});

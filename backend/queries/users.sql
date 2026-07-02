@@ -11,6 +11,9 @@ WHERE email = $1;
 SELECT * FROM users
 WHERE id = $1;
 
+-- name: SetUserEmailNotifications :exec
+UPDATE users SET email_notifications = sqlc.arg(enabled) WHERE id = sqlc.arg(id);
+
 -- name: UpdateUserName :one
 UPDATE users
 SET full_name = $2, updated_at = now()

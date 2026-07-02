@@ -25,7 +25,7 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, password_hash, full_name)
 VALUES ($1, $2, $3)
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications
 `
 
 type CreateUserParams struct {
@@ -57,6 +57,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Bio,
 		&i.IsActive,
 		&i.TwoFactorEnabled,
+		&i.EmailNotifications,
 	)
 	return i, err
 }
@@ -73,7 +74,7 @@ func (q *Queries) EmailExists(ctx context.Context, email string) (bool, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled FROM users
+SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications FROM users
 WHERE email = $1
 `
 
@@ -100,12 +101,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Bio,
 		&i.IsActive,
 		&i.TwoFactorEnabled,
+		&i.EmailNotifications,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled FROM users
+SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications FROM users
 WHERE id = $1
 `
 
@@ -132,6 +134,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.Bio,
 		&i.IsActive,
 		&i.TwoFactorEnabled,
+		&i.EmailNotifications,
 	)
 	return i, err
 }
@@ -196,7 +199,7 @@ const setUserAvatar = `-- name: SetUserAvatar :one
 UPDATE users
 SET avatar = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications
 `
 
 type SetUserAvatarParams struct {
@@ -227,15 +230,30 @@ func (q *Queries) SetUserAvatar(ctx context.Context, arg SetUserAvatarParams) (U
 		&i.Bio,
 		&i.IsActive,
 		&i.TwoFactorEnabled,
+		&i.EmailNotifications,
 	)
 	return i, err
+}
+
+const setUserEmailNotifications = `-- name: SetUserEmailNotifications :exec
+UPDATE users SET email_notifications = $1 WHERE id = $2
+`
+
+type SetUserEmailNotificationsParams struct {
+	Enabled bool  `json:"enabled"`
+	ID      int64 `json:"id"`
+}
+
+func (q *Queries) SetUserEmailNotifications(ctx context.Context, arg SetUserEmailNotificationsParams) error {
+	_, err := q.db.Exec(ctx, setUserEmailNotifications, arg.Enabled, arg.ID)
+	return err
 }
 
 const setUserRole = `-- name: SetUserRole :one
 UPDATE users
 SET role = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications
 `
 
 type SetUserRoleParams struct {
@@ -266,6 +284,7 @@ func (q *Queries) SetUserRole(ctx context.Context, arg SetUserRoleParams) (User,
 		&i.Bio,
 		&i.IsActive,
 		&i.TwoFactorEnabled,
+		&i.EmailNotifications,
 	)
 	return i, err
 }
@@ -307,7 +326,7 @@ const updateUserName = `-- name: UpdateUserName :one
 UPDATE users
 SET full_name = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications
 `
 
 type UpdateUserNameParams struct {
@@ -338,6 +357,7 @@ func (q *Queries) UpdateUserName(ctx context.Context, arg UpdateUserNameParams) 
 		&i.Bio,
 		&i.IsActive,
 		&i.TwoFactorEnabled,
+		&i.EmailNotifications,
 	)
 	return i, err
 }
@@ -352,7 +372,7 @@ SET full_name  = $2,
     bio        = $7,
     updated_at = now()
 WHERE id = $1
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications
 `
 
 type UpdateUserProfileParams struct {
@@ -396,6 +416,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.Bio,
 		&i.IsActive,
 		&i.TwoFactorEnabled,
+		&i.EmailNotifications,
 	)
 	return i, err
 }

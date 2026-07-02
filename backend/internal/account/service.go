@@ -196,6 +196,14 @@ func (s *Service) SetTwoFactor(ctx context.Context, userID int64, enabled bool) 
 	})
 }
 
+// SetEmailNotifications toggles whether the user also receives their in-app
+// notifications by email.
+func (s *Service) SetEmailNotifications(ctx context.Context, userID int64, enabled bool) error {
+	return s.q.SetUserEmailNotifications(ctx, db.SetUserEmailNotificationsParams{
+		ID: userID, Enabled: enabled,
+	})
+}
+
 // checkAllowedDomain rejects registration when the workspace restricts signup
 // to a set of email domains and the address is outside it. An empty list (the
 // default) allows any domain.
