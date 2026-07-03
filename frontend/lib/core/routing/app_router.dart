@@ -13,6 +13,7 @@ import '../../features/auth/reset_password_page.dart';
 import '../../features/auth/signup_page.dart';
 import '../../features/auth/verify_otp_page.dart';
 import '../../features/automation/automation_page.dart';
+import '../../features/budgets/budgets_page.dart';
 import '../../features/chat/chat_page.dart';
 import '../../features/dashboard/dashboard_page.dart';
 import '../../features/dashboard/dashboards_page.dart';
@@ -117,6 +118,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(path: '/assets', builder: (c, s) => const AssetsPage()),
           GoRoute(path: '/expenses', builder: (c, s) => const ExpensesPage()),
+          GoRoute(path: '/budgets', builder: (c, s) => const BudgetsPage()),
           GoRoute(path: '/reports', builder: (c, s) => const ReportsPage()),
           GoRoute(path: '/activity', builder: (c, s) => const ActivityPage()),
           GoRoute(

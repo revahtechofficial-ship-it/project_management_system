@@ -358,6 +358,16 @@ type Project struct {
 	FolderID    *int64             `json:"folder_id"`
 }
 
+type ProjectBudget struct {
+	ID              int64     `json:"id"`
+	ProjectID       int64     `json:"project_id"`
+	AmountCents     int64     `json:"amount_cents"`
+	HourlyRateCents int64     `json:"hourly_rate_cents"`
+	Notes           string    `json:"notes"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
 type ProjectShare struct {
 	Token     string    `json:"token"`
 	ProjectID int64     `json:"project_id"`
