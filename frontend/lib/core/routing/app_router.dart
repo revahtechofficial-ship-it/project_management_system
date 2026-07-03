@@ -26,6 +26,7 @@ import '../../features/pages/pages_page.dart';
 import '../../features/planning/planning_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/projects/projects_page.dart';
+import '../../features/projects/shared_project_page.dart';
 import '../../features/releases/releases_page.dart';
 import '../../features/reports/reports_page.dart';
 import '../../features/resources/resources_page.dart';
@@ -56,19 +57,28 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
           ref.read(authControllerProvider).asData?.value.isAuthenticated ??
           false;
       final String loc = state.matchedLocation;
-      final bool isPublic = loc == '/welcome' || _authPaths.contains(loc);
+      final bool isAuthPage = loc == '/welcome' || _authPaths.contains(loc);
+      // Public read-only share links are open to everyone, signed in or not.
+      final bool isShare = loc.startsWith('/share/');
       if (!authed) {
-        // Signed-out visitors get the landing page as the front door.
-        return isPublic ? null : '/welcome';
+        // Signed-out visitors get the landing page as the front door, but may
+        // still open a share link.
+        return (isAuthPage || isShare) ? null : '/welcome';
       }
-      // Signed-in users never see the landing or auth pages.
-      if (isPublic) {
+      // Signed-in users never see the landing or auth pages (but share links
+      // stay reachable).
+      if (isAuthPage) {
         return '/';
       }
       return null;
     },
     routes: <RouteBase>[
       GoRoute(path: '/welcome', builder: (c, s) => const LandingPage()),
+      GoRoute(
+        path: '/share/project/:token',
+        builder: (c, s) =>
+            SharedProjectPage(token: s.pathParameters['token'] ?? ''),
+      ),
       ShellRoute(
         builder: (c, s, Widget child) => AppShell(child: child),
         routes: <RouteBase>[

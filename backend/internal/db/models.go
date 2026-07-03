@@ -329,6 +329,13 @@ type Project struct {
 	FolderID    *int64             `json:"folder_id"`
 }
 
+type ProjectShare struct {
+	Token     string    `json:"token"`
+	ProjectID int64     `json:"project_id"`
+	CreatedBy *int64    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type ProjectTemplate struct {
 	ID          int64     `json:"id"`
 	Name        string    `json:"name"`

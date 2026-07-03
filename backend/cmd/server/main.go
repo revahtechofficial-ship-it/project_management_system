@@ -113,6 +113,10 @@ func main() {
 	r.Post("/api/v1/inbound/email",
 		handler.NewInboundHandler(queries, cfg.InboundEmailSecret).Handle)
 
+	// Public, read-only shared views reached via a share token (no auth).
+	r.Get("/api/v1/public/projects/{token}",
+		handler.NewPublicHandler(queries).SharedProject)
+
 	// Workspace API — all behind the app's own JWT (the Flutter web app).
 	if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
 		log.Printf("WARNING: could not create upload dir %s: %v", cfg.UploadDir, err)

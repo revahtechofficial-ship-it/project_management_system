@@ -21,6 +21,7 @@ import 'providers/project_templates_providers.dart';
 import 'providers/projects_providers.dart';
 import 'providers/spaces_providers.dart';
 import 'widgets/project_form_dialog.dart';
+import 'widgets/project_share_dialog.dart';
 
 /// The projects board: delivery status, progress and team per project — all
 /// backed by the live `/api/v1/projects` API.
@@ -722,11 +723,16 @@ class _ProjectCard extends ConsumerWidget {
                     child: Text('Edit'),
                   ),
                   if (ref.watch(authControllerProvider).asData?.value.isAdmin ??
-                      false)
+                      false) ...<PopupMenuEntry<String>>[
+                    const PopupMenuItem<String>(
+                      value: 'share',
+                      child: Text('Share link'),
+                    ),
                     const PopupMenuItem<String>(
                       value: 'delete',
                       child: Text('Delete'),
                     ),
+                  ],
                 ],
               ),
             ],
@@ -810,6 +816,10 @@ class _ProjectCard extends ConsumerWidget {
   ) async {
     if (action == 'edit') {
       await _openForm(context, ref, project: project);
+      return;
+    }
+    if (action == 'share') {
+      await showProjectShareDialog(context, project.id, project.name);
       return;
     }
     final bool confirm = await confirmDelete(
