@@ -196,6 +196,21 @@ type FormResponse struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type Incident struct {
+	ID          int64              `json:"id"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	Kind        string             `json:"kind"`
+	Severity    string             `json:"severity"`
+	Status      string             `json:"status"`
+	ProjectID   *int64             `json:"project_id"`
+	AssigneeID  *int64             `json:"assignee_id"`
+	ReporterID  *int64             `json:"reporter_id"`
+	Component   string             `json:"component"`
+	ResolvedAt  pgtype.Timestamptz `json:"resolved_at"`
+	CreatedAt   time.Time          `json:"created_at"`
+}
+
 type Integration struct {
 	Provider  string    `json:"provider"`
 	Connected bool      `json:"connected"`
