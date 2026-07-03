@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/date_format.dart';
 import '../../core/utils/feedback.dart';
+import '../../core/utils/money_format.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
@@ -11,21 +12,6 @@ import '../../data/enums/asset_kind.dart';
 import '../../data/models/asset.dart';
 import 'providers/assets_providers.dart';
 import 'widgets/asset_form_dialog.dart';
-
-/// Formats an amount in cents as `$1,250.00` (AGENTS.md §1 feature page).
-String _money(int cents) {
-  final String fixed = (cents / 100).toStringAsFixed(2);
-  final List<String> parts = fixed.split('.');
-  final String whole = parts[0];
-  final StringBuffer grouped = StringBuffer();
-  for (int i = 0; i < whole.length; i++) {
-    if (i > 0 && (whole.length - i) % 3 == 0) {
-      grouped.write(',');
-    }
-    grouped.write(whole[i]);
-  }
-  return '\$$grouped.${parts[1]}';
-}
 
 /// Inventory: the company's hardware, software and licenses, who holds them
 /// and when they expire.
@@ -126,7 +112,7 @@ class _Body extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: <Widget>[
             _Stat(label: '${all.length} items', icon: Icons.inventory_2_outlined),
-            _Stat(label: _money(totalValue), icon: Icons.payments_outlined),
+            _Stat(label: formatCents(totalValue), icon: Icons.payments_outlined),
             if (expiring > 0)
               _Stat(
                 label: '$expiring expiring soon',
@@ -327,7 +313,7 @@ class _AssetCard extends ConsumerWidget {
               const Spacer(),
               if (asset.costCents > 0)
                 Text(
-                  _money(asset.costCents),
+                  formatCents(asset.costCents),
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
             ],

@@ -156,6 +156,20 @@ type Dashboard struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+type Expense struct {
+	ID          int64       `json:"id"`
+	UserID      *int64      `json:"user_id"`
+	ProjectID   *int64      `json:"project_id"`
+	Category    string      `json:"category"`
+	AmountCents int64       `json:"amount_cents"`
+	SpentOn     pgtype.Date `json:"spent_on"`
+	Description string      `json:"description"`
+	Merchant    string      `json:"merchant"`
+	ReceiptUrl  string      `json:"receipt_url"`
+	Status      string      `json:"status"`
+	CreatedAt   time.Time   `json:"created_at"`
+}
+
 type Favorite struct {
 	ID        int64     `json:"id"`
 	UserID    int64     `json:"user_id"`

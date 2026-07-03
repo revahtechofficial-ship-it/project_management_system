@@ -16,6 +16,7 @@ import '../../features/automation/automation_page.dart';
 import '../../features/chat/chat_page.dart';
 import '../../features/dashboard/dashboard_page.dart';
 import '../../features/dashboard/dashboards_page.dart';
+import '../../features/expenses/expenses_page.dart';
 import '../../features/focus/focus_page.dart';
 import '../../features/goals/goals_page.dart';
 import '../../features/integrations/integrations_page.dart';
@@ -115,6 +116,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
             builder: (c, s) => const ApprovalsPage(),
           ),
           GoRoute(path: '/assets', builder: (c, s) => const AssetsPage()),
+          GoRoute(path: '/expenses', builder: (c, s) => const ExpensesPage()),
           GoRoute(path: '/reports', builder: (c, s) => const ReportsPage()),
           GoRoute(path: '/activity', builder: (c, s) => const ActivityPage()),
           GoRoute(

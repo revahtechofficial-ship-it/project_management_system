@@ -157,6 +157,7 @@ func main() {
 		api.Mount("/api/v1/leave", handler.NewLeaveHandler(queries).Routes())
 		api.Mount("/api/v1/approvals", handler.NewApprovalHandler(queries).Routes())
 		api.Mount("/api/v1/assets", handler.NewAssetHandler(queries).Routes())
+		api.Mount("/api/v1/expenses", handler.NewExpenseHandler(queries).Routes())
 		api.Mount("/api/v1/objectives", handler.NewObjectiveHandler(queries).Routes())
 		api.Mount("/api/v1/automations", handler.NewAutomationHandler(queries).Routes())
 		api.Mount("/api/v1/resources", handler.NewResourceHandler(queries).Routes())
