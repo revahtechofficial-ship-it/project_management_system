@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/activity/activity_page.dart';
 import '../../features/admin/admin_page.dart';
 import '../../features/approvals/approvals_page.dart';
+import '../../features/assets/assets_page.dart';
 import '../../features/ai/assistant_page.dart';
 import '../../features/auth/forgot_password_page.dart';
 import '../../features/auth/login_page.dart';
@@ -113,6 +114,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
             path: '/approvals',
             builder: (c, s) => const ApprovalsPage(),
           ),
+          GoRoute(path: '/assets', builder: (c, s) => const AssetsPage()),
           GoRoute(path: '/reports', builder: (c, s) => const ReportsPage()),
           GoRoute(path: '/activity', builder: (c, s) => const ActivityPage()),
           GoRoute(

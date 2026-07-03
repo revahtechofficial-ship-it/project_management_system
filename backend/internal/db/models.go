@@ -42,6 +42,21 @@ type Approval struct {
 	CreatedAt    time.Time          `json:"created_at"`
 }
 
+type Asset struct {
+	ID          int64       `json:"id"`
+	Name        string      `json:"name"`
+	Kind        string      `json:"kind"`
+	Status      string      `json:"status"`
+	Identifier  string      `json:"identifier"`
+	Vendor      string      `json:"vendor"`
+	AssigneeID  *int64      `json:"assignee_id"`
+	CostCents   int64       `json:"cost_cents"`
+	PurchasedOn pgtype.Date `json:"purchased_on"`
+	ExpiresOn   pgtype.Date `json:"expires_on"`
+	Notes       string      `json:"notes"`
+	CreatedAt   time.Time   `json:"created_at"`
+}
+
 type Attachment struct {
 	ID          int64     `json:"id"`
 	TaskID      int64     `json:"task_id"`

@@ -69,6 +69,9 @@ const List<_NavGroup> _navGroups = <_NavGroup>[
     _NavItem(Icons.beach_access_outlined, 'Leave', '/leave'),
     _NavItem(Icons.verified_outlined, 'Approvals', '/approvals'),
   ]),
+  _NavGroup('Operations', <_NavItem>[
+    _NavItem(Icons.inventory_2_outlined, 'Inventory', '/assets'),
+  ]),
   _NavGroup('Insights', <_NavItem>[
     _NavItem(Icons.map_outlined, 'Roadmap', '/roadmap'),
     _NavItem(Icons.space_dashboard_outlined, 'Dashboards', '/dashboards'),
