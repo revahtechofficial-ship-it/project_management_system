@@ -15,6 +15,7 @@ import '../tasks/providers/tasks_providers.dart';
 import '../tasks/widgets/task_board_view.dart';
 import '../tasks/widgets/task_form_dialog.dart';
 import 'providers/sprints_providers.dart';
+import 'widgets/retro_dialog.dart';
 import 'widgets/sprint_burndown.dart';
 import 'widgets/sprint_form_dialog.dart';
 import 'widgets/sprint_velocity.dart';
@@ -183,6 +184,8 @@ class _SprintsPageState extends ConsumerState<SprintsPage> {
                     onStart: () => _start(s),
                     onComplete: () => _complete(s),
                     onDelete: () => _delete(s),
+                    onRetro: () =>
+                        showSprintRetroDialog(context, s.id, s.name),
                   ),
                 ),
             ],
@@ -239,6 +242,7 @@ class _SprintCard extends StatelessWidget {
     required this.onStart,
     required this.onComplete,
     required this.onDelete,
+    required this.onRetro,
   });
 
   final Sprint sprint;
@@ -248,6 +252,7 @@ class _SprintCard extends StatelessWidget {
   final VoidCallback onStart;
   final VoidCallback onComplete;
   final VoidCallback onDelete;
+  final VoidCallback onRetro;
 
   @override
   Widget build(BuildContext context) {
@@ -292,6 +297,8 @@ class _SprintCard extends StatelessWidget {
                           onStart();
                         case 'complete':
                           onComplete();
+                        case 'retro':
+                          onRetro();
                         case 'edit':
                           onEdit();
                         case 'delete':
@@ -310,6 +317,10 @@ class _SprintCard extends StatelessWidget {
                               value: 'complete',
                               child: Text('Complete sprint'),
                             ),
+                          const PopupMenuItem<String>(
+                            value: 'retro',
+                            child: Text('Retrospective'),
+                          ),
                           const PopupMenuItem<String>(
                             value: 'edit',
                             child: Text('Edit'),

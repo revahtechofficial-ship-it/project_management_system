@@ -368,6 +368,16 @@ type Reminder struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type RetroItem struct {
+	ID        int64     `json:"id"`
+	SprintID  int64     `json:"sprint_id"`
+	Kind      string    `json:"kind"`
+	Body      string    `json:"body"`
+	AuthorID  *int64    `json:"author_id"`
+	Done      bool      `json:"done"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type SavedFilter struct {
 	ID        int64     `json:"id"`
 	UserID    int64     `json:"user_id"`

@@ -33,6 +33,10 @@ func (h *SprintHandler) Routes() http.Handler {
 	r.Post("/{id}/start", h.start)
 	r.Post("/{id}/complete", h.complete)
 	r.Delete("/{id}", h.delete)
+	r.Get("/{id}/retro", h.listRetro)
+	r.Post("/{id}/retro", h.addRetro)
+	r.Patch("/retro/{itemId}", h.updateRetro)
+	r.Delete("/retro/{itemId}", h.deleteRetro)
 	return r
 }
 
