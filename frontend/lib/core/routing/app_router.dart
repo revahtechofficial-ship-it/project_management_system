@@ -27,6 +27,7 @@ import '../../features/planning/planning_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/projects/projects_page.dart';
 import '../../features/projects/shared_project_page.dart';
+import '../../features/roadmap/roadmap_page.dart';
 import '../../features/releases/releases_page.dart';
 import '../../features/reports/reports_page.dart';
 import '../../features/resources/resources_page.dart';
@@ -95,6 +96,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
             builder: (c, s) => const DashboardsPage(),
           ),
           GoRoute(path: '/planning', builder: (c, s) => const PlanningPage()),
+          GoRoute(path: '/roadmap', builder: (c, s) => const RoadmapPage()),
           GoRoute(
             path: '/resources',
             builder: (c, s) => const ResourcesPage(),
