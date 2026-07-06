@@ -15,7 +15,7 @@ import (
 const createProject = `-- name: CreateProject :one
 INSERT INTO projects (name, description, status, due_date, created_by, space_id, folder_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, name, description, status, due_date, created_by, created_at, updated_at, space_id, folder_id
+RETURNING id, name, description, status, due_date, created_by, created_at, updated_at, space_id, folder_id, client_id
 `
 
 type CreateProjectParams struct {
@@ -50,6 +50,7 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		&i.UpdatedAt,
 		&i.SpaceID,
 		&i.FolderID,
+		&i.ClientID,
 	)
 	return i, err
 }
@@ -65,7 +66,7 @@ func (q *Queries) DeleteProject(ctx context.Context, id int64) error {
 }
 
 const getProject = `-- name: GetProject :one
-SELECT id, name, description, status, due_date, created_by, created_at, updated_at, space_id, folder_id FROM projects
+SELECT id, name, description, status, due_date, created_by, created_at, updated_at, space_id, folder_id, client_id FROM projects
 WHERE id = $1
 `
 
@@ -83,12 +84,13 @@ func (q *Queries) GetProject(ctx context.Context, id int64) (Project, error) {
 		&i.UpdatedAt,
 		&i.SpaceID,
 		&i.FolderID,
+		&i.ClientID,
 	)
 	return i, err
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT p.id, p.name, p.description, p.status, p.due_date, p.created_by, p.created_at, p.updated_at, p.space_id, p.folder_id,
+SELECT p.id, p.name, p.description, p.status, p.due_date, p.created_by, p.created_at, p.updated_at, p.space_id, p.folder_id, p.client_id,
        COALESCE(c.total, 0)::int          AS total_tasks,
        COALESCE(c.done, 0)::int           AS done_tasks,
        COALESCE(m.member_names, '{}')::text[] AS member_names
@@ -122,6 +124,7 @@ type ListProjectsRow struct {
 	UpdatedAt   time.Time          `json:"updated_at"`
 	SpaceID     *int64             `json:"space_id"`
 	FolderID    *int64             `json:"folder_id"`
+	ClientID    *int64             `json:"client_id"`
 	TotalTasks  int32              `json:"total_tasks"`
 	DoneTasks   int32              `json:"done_tasks"`
 	MemberNames []string           `json:"member_names"`
@@ -147,6 +150,7 @@ func (q *Queries) ListProjects(ctx context.Context) ([]ListProjectsRow, error) {
 			&i.UpdatedAt,
 			&i.SpaceID,
 			&i.FolderID,
+			&i.ClientID,
 			&i.TotalTasks,
 			&i.DoneTasks,
 			&i.MemberNames,
@@ -171,7 +175,7 @@ SET name        = $2,
     folder_id   = $7,
     updated_at  = now()
 WHERE id = $1
-RETURNING id, name, description, status, due_date, created_by, created_at, updated_at, space_id, folder_id
+RETURNING id, name, description, status, due_date, created_by, created_at, updated_at, space_id, folder_id, client_id
 `
 
 type UpdateProjectParams struct {
@@ -206,6 +210,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		&i.UpdatedAt,
 		&i.SpaceID,
 		&i.FolderID,
+		&i.ClientID,
 	)
 	return i, err
 }

@@ -15,6 +15,8 @@ import '../../features/auth/verify_otp_page.dart';
 import '../../features/automation/automation_page.dart';
 import '../../features/budgets/budgets_page.dart';
 import '../../features/chat/chat_page.dart';
+import '../../features/clients/clients_page.dart';
+import '../../features/clients/portal_page.dart';
 import '../../features/dashboard/dashboard_page.dart';
 import '../../features/dashboard/dashboards_page.dart';
 import '../../features/expenses/expenses_page.dart';
@@ -65,12 +67,14 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
           false;
       final String loc = state.matchedLocation;
       final bool isAuthPage = loc == '/welcome' || _authPaths.contains(loc);
-      // Public read-only share links are open to everyone, signed in or not.
+      // Public read-only share links and client portals are open to everyone,
+      // signed in or not.
       final bool isShare = loc.startsWith('/share/');
+      final bool isPortal = loc.startsWith('/portal/');
       if (!authed) {
         // Signed-out visitors get the landing page as the front door, but may
-        // still open a share link.
-        return (isAuthPage || isShare) ? null : '/welcome';
+        // still open a share link or client portal.
+        return (isAuthPage || isShare || isPortal) ? null : '/welcome';
       }
       // Signed-in users never see the landing or auth pages (but share links
       // stay reachable).
@@ -85,6 +89,10 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
         path: '/share/project/:token',
         builder: (c, s) =>
             SharedProjectPage(token: s.pathParameters['token'] ?? ''),
+      ),
+      GoRoute(
+        path: '/portal/:token',
+        builder: (c, s) => PortalPage(token: s.pathParameters['token'] ?? ''),
       ),
       ShellRoute(
         builder: (c, s, Widget child) => AppShell(child: child),
@@ -131,6 +139,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
             path: '/invoices',
             builder: (c, s) => const InvoicesPage(),
           ),
+          GoRoute(path: '/clients', builder: (c, s) => const ClientsPage()),
           GoRoute(path: '/reports', builder: (c, s) => const ReportsPage()),
           GoRoute(path: '/activity', builder: (c, s) => const ActivityPage()),
           GoRoute(

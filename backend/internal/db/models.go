@@ -110,6 +110,15 @@ type ChecklistItem struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Client struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Company     string    `json:"company"`
+	Email       string    `json:"email"`
+	PortalToken string    `json:"portal_token"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type Comment struct {
 	ID        int64     `json:"id"`
 	TaskID    int64     `json:"task_id"`
@@ -419,6 +428,7 @@ type Project struct {
 	UpdatedAt   time.Time          `json:"updated_at"`
 	SpaceID     *int64             `json:"space_id"`
 	FolderID    *int64             `json:"folder_id"`
+	ClientID    *int64             `json:"client_id"`
 }
 
 type ProjectBudget struct {

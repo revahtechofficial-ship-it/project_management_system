@@ -122,6 +122,11 @@ func main() {
 	r.Post("/api/v1/git-webhook/{token}",
 		handler.NewGitHandler(queries).Webhook)
 
+	// Client portal (public; the per-client token is the credential). Shows a
+	// client their projects and invoices read-only.
+	r.Get("/api/v1/portal/{token}",
+		handler.NewClientHandler(queries).Portal)
+
 	// Workspace API — all behind the app's own JWT (the Flutter web app).
 	if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
 		log.Printf("WARNING: could not create upload dir %s: %v", cfg.UploadDir, err)
@@ -167,6 +172,7 @@ func main() {
 		api.Mount("/api/v1/incidents", handler.NewIncidentHandler(queries).Routes())
 		api.Mount("/api/v1/git", handler.NewGitHandler(queries).Routes())
 		api.Mount("/api/v1/invoices", handler.NewInvoiceHandler(queries).Routes())
+		api.Mount("/api/v1/clients", handler.NewClientHandler(queries).Routes())
 		api.Mount("/api/v1/objectives", handler.NewObjectiveHandler(queries).Routes())
 		api.Mount("/api/v1/automations", handler.NewAutomationHandler(queries).Routes())
 		api.Mount("/api/v1/resources", handler.NewResourceHandler(queries).Routes())
