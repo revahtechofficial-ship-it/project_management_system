@@ -196,6 +196,31 @@ type FormResponse struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type GitCommit struct {
+	ID          int64     `json:"id"`
+	RepoID      int64     `json:"repo_id"`
+	Sha         string    `json:"sha"`
+	Message     string    `json:"message"`
+	AuthorName  string    `json:"author_name"`
+	AuthorEmail string    `json:"author_email"`
+	Url         string    `json:"url"`
+	Branch      string    `json:"branch"`
+	TaskRef     *int64    `json:"task_ref"`
+	CommittedAt time.Time `json:"committed_at"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type GitRepo struct {
+	ID            int64     `json:"id"`
+	Name          string    `json:"name"`
+	Provider      string    `json:"provider"`
+	Url           string    `json:"url"`
+	DefaultBranch string    `json:"default_branch"`
+	ProjectID     *int64    `json:"project_id"`
+	WebhookToken  string    `json:"webhook_token"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
 type Incident struct {
 	ID          int64              `json:"id"`
 	Title       string             `json:"title"`

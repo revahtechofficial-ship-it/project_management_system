@@ -117,6 +117,11 @@ func main() {
 	r.Get("/api/v1/public/projects/{token}",
 		handler.NewPublicHandler(queries).SharedProject)
 
+	// Git push webhook (public; the per-repo token is the credential). A
+	// GitHub/GitLab push posts here to record commits against the repo.
+	r.Post("/api/v1/git-webhook/{token}",
+		handler.NewGitHandler(queries).Webhook)
+
 	// Workspace API — all behind the app's own JWT (the Flutter web app).
 	if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
 		log.Printf("WARNING: could not create upload dir %s: %v", cfg.UploadDir, err)
@@ -160,6 +165,7 @@ func main() {
 		api.Mount("/api/v1/expenses", handler.NewExpenseHandler(queries).Routes())
 		api.Mount("/api/v1/budgets", handler.NewBudgetHandler(queries).Routes())
 		api.Mount("/api/v1/incidents", handler.NewIncidentHandler(queries).Routes())
+		api.Mount("/api/v1/git", handler.NewGitHandler(queries).Routes())
 		api.Mount("/api/v1/objectives", handler.NewObjectiveHandler(queries).Routes())
 		api.Mount("/api/v1/automations", handler.NewAutomationHandler(queries).Routes())
 		api.Mount("/api/v1/resources", handler.NewResourceHandler(queries).Routes())

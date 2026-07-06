@@ -53,6 +53,7 @@ const List<_NavGroup> _navGroups = <_NavGroup>[
     _NavItem(Icons.directions_run, 'Sprints', '/sprints'),
     _NavItem(Icons.rocket_launch_outlined, 'Releases', '/releases'),
     _NavItem(Icons.bug_report_outlined, 'Incidents', '/incidents'),
+    _NavItem(Icons.commit, 'Code', '/git'),
     _NavItem(Icons.folder_outlined, 'Projects', '/projects'),
   ]),
   _NavGroup('Plan', <_NavItem>[
