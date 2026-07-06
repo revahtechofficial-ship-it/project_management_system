@@ -18,6 +18,7 @@ const List<(String, String)> kTriggers = <(String, String)>[
   ('task_created', 'When a task is created'),
   ('status_changed', 'When the status changes'),
   ('task_completed', 'When a task is completed'),
+  ('assignee_changed', 'When the assignee changes'),
 ];
 
 const List<(String, String)> kFields = <(String, String)>[
@@ -25,8 +26,10 @@ const List<(String, String)> kFields = <(String, String)>[
   ('priority', 'Priority'),
   ('project', 'Project'),
   ('sprint', 'Sprint'),
+  ('assignee', 'Assignee'),
   ('has_assignee', 'Has assignee'),
   ('has_due', 'Has due date'),
+  ('is_overdue', 'Is overdue'),
 ];
 
 const List<(String, String)> kOps = <(String, String)>[
@@ -38,11 +41,14 @@ const List<(String, String)> kActions = <(String, String)>[
   ('set_status', 'Set status to'),
   ('set_priority', 'Set priority to'),
   ('assign', 'Assign to'),
+  ('reassign', 'Reassign to'),
+  ('unassign', 'Clear assignees'),
   ('add_tag', 'Add tag'),
   ('set_due_in_days', 'Set due date in N days'),
   ('move_to_sprint', 'Move to sprint'),
   ('clear_sprint', 'Remove from sprint'),
   ('notify_assignee', 'Notify the assignee'),
+  ('notify_user', 'Notify a person'),
 ];
 
 String condKind(String field) => switch (field) {
@@ -50,14 +56,15 @@ String condKind(String field) => switch (field) {
   'priority' => 'priority',
   'project' => 'project',
   'sprint' => 'sprint',
-  'has_assignee' || 'has_due' => 'yesno',
+  'assignee' => 'user',
+  'has_assignee' || 'has_due' || 'is_overdue' => 'yesno',
   _ => 'text',
 };
 
 String actKind(String type) => switch (type) {
   'set_status' => 'status',
   'set_priority' => 'priority',
-  'assign' => 'user',
+  'assign' || 'reassign' || 'notify_user' => 'user',
   'add_tag' => 'text',
   'set_due_in_days' => 'number',
   'move_to_sprint' => 'sprint',

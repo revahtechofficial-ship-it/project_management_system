@@ -566,10 +566,15 @@ func (h *TaskHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	logActivity(r.Context(), h.q, id, "updated", "")
+	assigneeAdded := false
 	for i := range assignees {
 		if !priorSet[assignees[i]] {
 			notifyAssigned(r.Context(), h.q, &assignees[i], task.Title)
+			assigneeAdded = true
 		}
+	}
+	if assigneeAdded {
+		runAutomations(r.Context(), h.q, id, "assignee_changed")
 	}
 	writeJSON(w, http.StatusOK, h.taskWithAssignees(r.Context(), task))
 }

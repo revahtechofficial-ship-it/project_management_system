@@ -87,6 +87,7 @@ class _RuleCard extends ConsumerWidget {
     'task_created': 'a task is created',
     'status_changed': 'the status changes',
     'task_completed': 'a task is completed',
+    'assignee_changed': 'the assignee changes',
   };
 
   Future<void> _toggle(WidgetRef ref, bool on) async {

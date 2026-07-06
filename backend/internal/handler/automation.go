@@ -55,6 +55,13 @@ func autoFieldValue(t db.Task, field string) string {
 			return "yes"
 		}
 		return "no"
+	case "is_overdue":
+		if t.DueDate.Valid && t.DueDate.Time.Before(time.Now()) {
+			return "yes"
+		}
+		return "no"
+	case "assignee":
+		return idStr(t.AssigneeID)
 	default:
 		return ""
 	}
@@ -111,6 +118,18 @@ func applyAutoActions(ctx context.Context, q *db.Queries, t db.Task, acts []auto
 		case "notify_assignee":
 			if t.AssigneeID != nil {
 				notifyUser(ctx, q, *t.AssigneeID, "task", "Task automation", t.Title, "/tasks")
+			}
+		case "reassign":
+			if uid, err := strconv.ParseInt(a.Value, 10, 64); err == nil {
+				_ = q.ClearTaskAssignees(ctx, t.ID)
+				_ = q.AddTaskAssignee(ctx, db.AddTaskAssigneeParams{TaskID: t.ID, UserID: uid})
+				notifyUser(ctx, q, uid, "assigned", "You were assigned a task", t.Title, "/tasks")
+			}
+		case "unassign":
+			_ = q.ClearTaskAssignees(ctx, t.ID)
+		case "notify_user":
+			if uid, err := strconv.ParseInt(a.Value, 10, 64); err == nil {
+				notifyUser(ctx, q, uid, "task", "Task automation", t.Title, "/tasks")
 			}
 		}
 	}
@@ -215,7 +234,7 @@ type ruleBody struct {
 
 func normTrigger(t string) string {
 	switch t {
-	case "task_created", "status_changed", "task_completed":
+	case "task_created", "status_changed", "task_completed", "assignee_changed":
 		return t
 	default:
 		return "task_created"
