@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../enums/page_type.dart';
 import '../models/form_response_entry.dart';
+import '../models/page_backlink.dart';
 import '../models/page_share.dart';
 import '../models/page_version.dart';
 import '../models/workspace_page.dart';
@@ -121,6 +122,17 @@ class PagesRepository {
   Future<void> restoreVersion(int id, int versionId) => _dio.post<void>(
         '/api/v1/pages/$id/versions/$versionId/restore',
       );
+
+  /// Lists the pages that link to this page via `[[wiki links]]`.
+  Future<List<PageBacklink>> backlinks(int id) async {
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/pages/$id/backlinks',
+    );
+    final List<dynamic> data = res.data ?? <dynamic>[];
+    return data
+        .map((dynamic e) => PageBacklink.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false);
+  }
 
   /// Sets a page's visibility: `'workspace'` (everyone) or `'private'`.
   Future<void> setVisibility(int id, String visibility) => _dio.patch<void>(

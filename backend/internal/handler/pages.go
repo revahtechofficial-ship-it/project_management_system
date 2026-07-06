@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -48,6 +49,32 @@ func (h *PageHandler) broadcastPageSaved(pageID int64, by *int64, byName string)
 	h.hub.broadcastAll(payload)
 }
 
+// wikiLinkRe matches `[[Page Title]]` references used to link pages together.
+var wikiLinkRe = regexp.MustCompile(`\[\[([^\]]+)\]\]`)
+
+// syncPageLinks rebuilds a page's outgoing wiki links from its body: it parses
+// `[[Title]]` references, resolves each to a page id and records the edge so
+// backlinks stay accurate. Titles that don't resolve are simply ignored.
+func (h *PageHandler) syncPageLinks(ctx context.Context, sourceID int64, body string) {
+	_ = h.q.ClearPageLinks(ctx, sourceID)
+	seen := map[int64]bool{}
+	for _, m := range wikiLinkRe.FindAllStringSubmatch(body, -1) {
+		title := strings.TrimSpace(m[1])
+		if title == "" {
+			continue
+		}
+		targetID, err := h.q.FindPageByTitle(ctx, title)
+		if err != nil || targetID == sourceID || seen[targetID] {
+			continue
+		}
+		seen[targetID] = true
+		_ = h.q.InsertPageLink(ctx, db.InsertPageLinkParams{
+			SourcePageID: sourceID,
+			TargetPageID: targetID,
+		})
+	}
+}
+
 // Routes builds the sub-router mounted at /api/v1/pages.
 func (h *PageHandler) Routes() http.Handler {
 	r := chi.NewRouter()
@@ -64,6 +91,7 @@ func (h *PageHandler) Routes() http.Handler {
 	r.Get("/{id}/responses", h.listResponses)
 	r.Get("/{id}/versions", h.listVersions)
 	r.Post("/{id}/versions/{versionId}/restore", h.restoreVersion)
+	r.Get("/{id}/backlinks", h.listBacklinks)
 	r.Delete("/{id}", h.delete)
 	return r
 }
@@ -282,6 +310,9 @@ func (h *PageHandler) create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	if !b.IsTemplate {
+		h.syncPageLinks(r.Context(), p.ID, b.Body)
+	}
 	// Reload with author names so the client gets a complete record.
 	row, err := h.q.GetPage(r.Context(), p.ID)
 	if err != nil {
@@ -289,6 +320,46 @@ func (h *PageHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, pageFromGet(row, "edit", true))
+}
+
+type backlinkResponse struct {
+	ID    int64  `json:"id"`
+	Title string `json:"title"`
+	Type  string `json:"type"`
+	Icon  string `json:"icon"`
+}
+
+func (h *PageHandler) listBacklinks(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	page, err := h.q.GetPage(r.Context(), id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, errors.New("page not found"))
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if h.access(r.Context(), page) == "" {
+		writeError(w, http.StatusForbidden, errors.New("no access"))
+		return
+	}
+	rows, err := h.q.ListBacklinks(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	out := make([]backlinkResponse, 0, len(rows))
+	for _, b := range rows {
+		out = append(out, backlinkResponse{
+			ID: b.ID, Title: b.Title, Type: b.Type, Icon: b.Icon,
+		})
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (h *PageHandler) update(w http.ResponseWriter, r *http.Request) {
@@ -351,6 +422,7 @@ func (h *PageHandler) update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	h.syncPageLinks(r.Context(), id, b.Body)
 	row, err := h.q.GetPage(r.Context(), id)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -453,6 +525,7 @@ func (h *PageHandler) restoreVersion(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	h.syncPageLinks(r.Context(), id, v.Body)
 	row, err := h.q.GetPage(r.Context(), id)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)

@@ -6,14 +6,17 @@ import '../../../core/utils/date_format.dart';
 import '../../../core/utils/feedback.dart';
 import '../../../core/widgets/markdown_view.dart';
 import '../../../data/enums/page_type.dart';
+import '../../../data/models/page_backlink.dart';
 import '../../../data/models/team_member.dart';
 import '../../../data/models/workspace_page.dart';
 import '../../../providers/auth_provider.dart';
 import '../../chat/providers/chat_providers.dart';
 import '../../team/providers/team_providers.dart';
 import '../providers/pages_providers.dart';
+import 'form_editor_screen.dart';
 import 'page_history_dialog.dart';
 import 'share_dialog.dart';
+import 'whiteboard_editor_screen.dart';
 
 /// A focused, full-screen editor for a single Doc. Loads the page body, lets
 /// the user edit the title and Markdown/plain-text body, and saves on demand
@@ -144,6 +147,34 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
         context.showSuccess('Version restored');
       }
     }
+  }
+
+  /// Opens another page in the right editor for its type.
+  void _openLinkedPage(int id, PageType type) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => switch (type) {
+          PageType.whiteboard => WhiteboardEditorScreen(pageId: id),
+          PageType.form => FormEditorScreen(pageId: id),
+          _ => DocEditorScreen(pageId: id),
+        },
+      ),
+    );
+  }
+
+  /// Resolves a `[[wiki link]]` title to a doc/SOP and opens it.
+  void _openWiki(String title) {
+    final List<WorkspacePage> pages = <WorkspacePage>[
+      ...?ref.read(pagesByTypeProvider(PageType.doc)).asData?.value,
+      ...?ref.read(pagesByTypeProvider(PageType.sop)).asData?.value,
+    ];
+    for (final WorkspacePage p in pages) {
+      if (p.title.toLowerCase() == title.toLowerCase()) {
+        _openLinkedPage(p.id, p.type);
+        return;
+      }
+    }
+    context.showError('No page titled "$title"');
   }
 
   static String _ymd(DateTime d) =>
@@ -603,7 +634,22 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
                         Expanded(
                           child: _preview
                               ? SingleChildScrollView(
-                                  child: MarkdownView(data: _body.text),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      _DocToc(body: _body.text),
+                                      MarkdownView(
+                                        data: _body.text,
+                                        onWikiLink: _openWiki,
+                                      ),
+                                      if (_page != null)
+                                        _BacklinksSection(
+                                          pageId: widget.pageId,
+                                          onOpen: _openLinkedPage,
+                                        ),
+                                    ],
+                                  ),
                                 )
                               : TextField(
                                   controller: _body,
@@ -710,6 +756,138 @@ class _Breadcrumb extends StatelessWidget {
       child: Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
         children: parts,
+      ),
+    );
+  }
+}
+
+/// An auto-generated table of contents built from the doc's Markdown headings.
+/// Shown above the preview when the doc has two or more headings.
+class _DocToc extends StatelessWidget {
+  const _DocToc({required this.body});
+  final String body;
+
+  static final RegExp _heading = RegExp(r'^(#{1,6})\s+(.+)$');
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final List<({int level, String text})> items =
+        <({int level, String text})>[];
+    for (final String line in body.replaceAll('\r\n', '\n').split('\n')) {
+      final RegExpMatch? m = _heading.firstMatch(line.trimRight());
+      if (m != null) {
+        items.add((level: m.group(1)!.length, text: m.group(2)!.trim()));
+      }
+    }
+    if (items.length < 2) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.toc, size: 16, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Text('Contents',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: scheme.onSurfaceVariant)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          for (final ({int level, String text}) h in items)
+            Padding(
+              padding: EdgeInsets.only(
+                  left: (h.level - 1) * 14.0, top: 2, bottom: 2),
+              child: Text(
+                h.text,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: scheme.onSurfaceVariant,
+                  fontWeight:
+                      h.level <= 1 ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The "Linked references" section: pages that link to this one via a
+/// `[[wiki link]]`. Renders nothing when there are no backlinks.
+class _BacklinksSection extends ConsumerWidget {
+  const _BacklinksSection({required this.pageId, required this.onOpen});
+  final int pageId;
+  final void Function(int id, PageType type) onOpen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final List<PageBacklink> links =
+        ref.watch(pageBacklinksProvider(pageId)).asData?.value ??
+        const <PageBacklink>[];
+    if (links.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: <Widget>[
+                Icon(Icons.link, size: 16, color: scheme.onSurfaceVariant),
+                const SizedBox(width: 6),
+                Text('Linked references',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          for (final PageBacklink b in links)
+            InkWell(
+              onTap: () => onOpen(b.id, b.type),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                child: Row(
+                  children: <Widget>[
+                    Icon(b.type.icon, size: 16, color: scheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        b.title.isEmpty ? 'Untitled' : b.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

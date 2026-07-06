@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/enums/page_type.dart';
+import '../../../data/models/page_backlink.dart';
 import '../../../data/models/page_share.dart';
 import '../../../data/models/page_version.dart';
 import '../../../data/models/workspace_page.dart';
@@ -45,4 +46,12 @@ final pageVersionsProvider = FutureProvider.family<List<PageVersion>, int>((
   int id,
 ) {
   return ref.watch(pagesRepositoryProvider).versions(id);
+});
+
+/// The pages that link to a page (backlinks), keyed by page id.
+final pageBacklinksProvider = FutureProvider.family<List<PageBacklink>, int>((
+  ref,
+  int id,
+) {
+  return ref.watch(pagesRepositoryProvider).backlinks(id);
 });

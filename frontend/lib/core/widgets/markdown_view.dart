@@ -9,9 +9,13 @@ import 'package:url_launcher/url_launcher.dart';
 /// It is intentionally small: it handles the syntax our Docs need (including
 /// embedded images and links) rather than the full CommonMark spec.
 class MarkdownView extends StatefulWidget {
-  const MarkdownView({super.key, required this.data});
+  const MarkdownView({super.key, required this.data, this.onWikiLink});
 
   final String data;
+
+  /// Called with the page title when a `[[Wiki link]]` is tapped. When null,
+  /// wiki links render as styled (but non-tappable) text.
+  final void Function(String title)? onWikiLink;
 
   @override
   State<MarkdownView> createState() => _MarkdownViewState();
@@ -25,7 +29,8 @@ class _MarkdownViewState extends State<MarkdownView> {
     r'|(\*([^*]+)\*)'
     r'|(`([^`]+)`)'
     r'|(!\[[^\]]*\]\(([^)]+)\))'
-    r'|(\[([^\]]+)\]\(([^)]+)\))',
+    r'|(\[([^\]]+)\]\(([^)]+)\))'
+    r'|(\[\[([^\]]+)\]\])',
   );
   static final RegExp _imageLine = RegExp(r'^!\[([^\]]*)\]\(([^)]+)\)\s*$');
   static final RegExp _heading = RegExp(r'^(#{1,6})\s+(.*)$');
@@ -329,6 +334,26 @@ class _MarkdownViewState extends State<MarkdownView> {
             style: TextStyle(
               color: scheme.primary,
               decoration: TextDecoration.underline,
+            ),
+            recognizer: recognizer,
+          ),
+        );
+      } else if (m.group(12) != null) {
+        // Wiki link: [[Page Title]] — renders the title and, when a handler is
+        // supplied, taps navigate to the linked page.
+        final String title = m.group(13)!;
+        TapGestureRecognizer? recognizer;
+        if (widget.onWikiLink != null) {
+          recognizer = TapGestureRecognizer()
+            ..onTap = () => widget.onWikiLink!(title);
+          _recognizers.add(recognizer);
+        }
+        spans.add(
+          TextSpan(
+            text: title,
+            style: TextStyle(
+              color: scheme.primary,
+              fontWeight: FontWeight.w600,
             ),
             recognizer: recognizer,
           ),

@@ -410,6 +410,13 @@ type Page struct {
 	Visibility string             `json:"visibility"`
 }
 
+type PageLink struct {
+	ID           int64     `json:"id"`
+	SourcePageID int64     `json:"source_page_id"`
+	TargetPageID int64     `json:"target_page_id"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
 type PageShare struct {
 	PageID     int64     `json:"page_id"`
 	UserID     int64     `json:"user_id"`
