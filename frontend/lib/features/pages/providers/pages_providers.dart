@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/enums/page_type.dart';
 import '../../../data/models/page_share.dart';
+import '../../../data/models/page_version.dart';
 import '../../../data/models/workspace_page.dart';
 import '../../../data/repositories/pages_repository.dart';
 import '../../../providers/dio_provider.dart';
@@ -36,4 +37,12 @@ final pageSharesProvider = FutureProvider.family<List<PageShare>, int>((
   int id,
 ) {
   return ref.watch(pagesRepositoryProvider).shares(id);
+});
+
+/// A page's saved revisions, keyed by page id. Invalidate after a restore.
+final pageVersionsProvider = FutureProvider.family<List<PageVersion>, int>((
+  ref,
+  int id,
+) {
+  return ref.watch(pagesRepositoryProvider).versions(id);
 });

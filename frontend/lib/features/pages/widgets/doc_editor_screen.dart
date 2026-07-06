@@ -12,6 +12,7 @@ import '../../../providers/auth_provider.dart';
 import '../../chat/providers/chat_providers.dart';
 import '../../team/providers/team_providers.dart';
 import '../providers/pages_providers.dart';
+import 'page_history_dialog.dart';
 import 'share_dialog.dart';
 
 /// A focused, full-screen editor for a single Doc. Loads the page body, lets
@@ -121,6 +122,27 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
         context.showError('Could not save: $e');
       }
       return false;
+    }
+  }
+
+  /// Opens version history. Persists any unsaved edits first (so they land in
+  /// history), then reloads the editor if a revision was restored.
+  Future<void> _openHistory() async {
+    if (_page == null) {
+      return;
+    }
+    if (_dirty && _canEdit) {
+      await _save(silent: true);
+    }
+    if (!mounted) {
+      return;
+    }
+    final bool? restored = await showPageHistoryDialog(context, widget.pageId);
+    if (restored == true) {
+      await _load();
+      if (mounted) {
+        context.showSuccess('Version restored');
+      }
     }
   }
 
@@ -497,6 +519,12 @@ class _DocEditorScreenState extends ConsumerState<DocEditorScreen> {
                 onPressed: _dirty ? () => _save() : null,
                 icon: const Icon(Icons.save_outlined, size: 18),
                 label: const Text('Save'),
+              ),
+            if (_page != null)
+              IconButton(
+                tooltip: 'Version history',
+                icon: const Icon(Icons.history),
+                onPressed: _openHistory,
               ),
             if (_canManage)
               IconButton(

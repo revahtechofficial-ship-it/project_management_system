@@ -417,6 +417,16 @@ type PageShare struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+type PageVersion struct {
+	ID        int64     `json:"id"`
+	PageID    int64     `json:"page_id"`
+	Title     string    `json:"title"`
+	Body      string    `json:"body"`
+	EditedBy  *int64    `json:"edited_by"`
+	EditedAt  time.Time `json:"edited_at"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Project struct {
 	ID          int64              `json:"id"`
 	Name        string             `json:"name"`

@@ -62,6 +62,8 @@ func (h *PageHandler) Routes() http.Handler {
 	r.Delete("/{id}/shares/{userId}", h.removeShare)
 	r.Post("/{id}/responses", h.submitResponse)
 	r.Get("/{id}/responses", h.listResponses)
+	r.Get("/{id}/versions", h.listVersions)
+	r.Post("/{id}/versions/{versionId}/restore", h.restoreVersion)
 	r.Delete("/{id}", h.delete)
 	return r
 }
@@ -318,6 +320,24 @@ func (h *PageHandler) update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, errors.New("you can't edit this page"))
 		return
 	}
+	// Snapshot the prior content into version history when it changed, but at
+	// most once every couple of minutes so autosaves don't flood the history.
+	if b.Body != existing.Body || strings.TrimSpace(b.Title) != existing.Title {
+		recent, _ := h.q.HasRecentPageVersion(r.Context(),
+			db.HasRecentPageVersionParams{
+				PageID: id,
+				Since:  time.Now().Add(-2 * time.Minute),
+			})
+		if !recent {
+			_ = h.q.SnapshotPageVersion(r.Context(), db.SnapshotPageVersionParams{
+				PageID:   id,
+				Title:    existing.Title,
+				Body:     existing.Body,
+				EditedBy: existing.UpdatedBy,
+				EditedAt: existing.UpdatedAt,
+			})
+		}
+	}
 	if err := h.q.UpdatePage(r.Context(), db.UpdatePageParams{
 		ID:        id,
 		Title:     strings.TrimSpace(b.Title),
@@ -326,6 +346,108 @@ func (h *PageHandler) update(w http.ResponseWriter, r *http.Request) {
 		Category:  strings.TrimSpace(b.Category),
 		OwnerID:   b.OwnerID,
 		ReviewAt:  review,
+		UpdatedBy: actorOf(r.Context()),
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	row, err := h.q.GetPage(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	h.broadcastPageSaved(id, actorOf(r.Context()), row.UpdatedByName)
+	writeJSON(w, http.StatusOK, pageFromGet(row, "edit", h.canManage(r.Context(), row)))
+}
+
+type pageVersionResponse struct {
+	ID         int64     `json:"id"`
+	Title      string    `json:"title"`
+	Body       string    `json:"body"`
+	EditorName string    `json:"editor_name"`
+	EditedAt   time.Time `json:"edited_at"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+func (h *PageHandler) listVersions(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	page, err := h.q.GetPage(r.Context(), id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, errors.New("page not found"))
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if h.access(r.Context(), page) == "" {
+		writeError(w, http.StatusForbidden, errors.New("no access"))
+		return
+	}
+	rows, err := h.q.ListPageVersions(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	out := make([]pageVersionResponse, 0, len(rows))
+	for _, v := range rows {
+		out = append(out, pageVersionResponse{
+			ID:         v.ID,
+			Title:      v.Title,
+			Body:       v.Body,
+			EditorName: v.EditorName,
+			EditedAt:   v.EditedAt,
+			CreatedAt:  v.CreatedAt,
+		})
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+func (h *PageHandler) restoreVersion(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	versionID, err := strconv.ParseInt(chi.URLParam(r, "versionId"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid version id"))
+		return
+	}
+	existing, err := h.q.GetPage(r.Context(), id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, errors.New("page not found"))
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if h.access(r.Context(), existing) != "edit" {
+		writeError(w, http.StatusForbidden, errors.New("you can't edit this page"))
+		return
+	}
+	v, err := h.q.GetPageVersion(r.Context(), versionID)
+	if err != nil || v.PageID != id {
+		writeError(w, http.StatusNotFound, errors.New("version not found"))
+		return
+	}
+	// Snapshot the current content first so a restore can itself be undone.
+	_ = h.q.SnapshotPageVersion(r.Context(), db.SnapshotPageVersionParams{
+		PageID:   id,
+		Title:    existing.Title,
+		Body:     existing.Body,
+		EditedBy: existing.UpdatedBy,
+		EditedAt: existing.UpdatedAt,
+	})
+	if err := h.q.RestorePageContent(r.Context(), db.RestorePageContentParams{
+		ID:        id,
+		Title:     v.Title,
+		Body:      v.Body,
 		UpdatedBy: actorOf(r.Context()),
 	}); err != nil {
 		writeError(w, http.StatusInternalServerError, err)

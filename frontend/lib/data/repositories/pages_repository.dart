@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../enums/page_type.dart';
 import '../models/form_response_entry.dart';
 import '../models/page_share.dart';
+import '../models/page_version.dart';
 import '../models/workspace_page.dart';
 
 /// Talks to /api/v1/pages — the Docs / Whiteboard / Form workspace pages
@@ -103,6 +104,23 @@ class PagesRepository {
 
   /// Deletes a page (its author or an admin only, enforced server-side).
   Future<void> delete(int id) => _dio.delete<void>('/api/v1/pages/$id');
+
+  /// Lists a page's saved revisions, newest first.
+  Future<List<PageVersion>> versions(int id) async {
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/pages/$id/versions',
+    );
+    final List<dynamic> data = res.data ?? <dynamic>[];
+    return data
+        .map((dynamic e) => PageVersion.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  /// Restores a page to an earlier revision (the current content is snapshotted
+  /// first, so the restore can itself be undone).
+  Future<void> restoreVersion(int id, int versionId) => _dio.post<void>(
+        '/api/v1/pages/$id/versions/$versionId/restore',
+      );
 
   /// Sets a page's visibility: `'workspace'` (everyone) or `'private'`.
   Future<void> setVisibility(int id, String visibility) => _dio.patch<void>(
