@@ -166,6 +166,7 @@ func main() {
 		api.Mount("/api/v1/budgets", handler.NewBudgetHandler(queries).Routes())
 		api.Mount("/api/v1/incidents", handler.NewIncidentHandler(queries).Routes())
 		api.Mount("/api/v1/git", handler.NewGitHandler(queries).Routes())
+		api.Mount("/api/v1/invoices", handler.NewInvoiceHandler(queries).Routes())
 		api.Mount("/api/v1/objectives", handler.NewObjectiveHandler(queries).Routes())
 		api.Mount("/api/v1/automations", handler.NewAutomationHandler(queries).Routes())
 		api.Mount("/api/v1/resources", handler.NewResourceHandler(queries).Routes())

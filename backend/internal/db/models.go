@@ -244,6 +244,29 @@ type Integration struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type Invoice struct {
+	ID          int64       `json:"id"`
+	Number      string      `json:"number"`
+	ProjectID   *int64      `json:"project_id"`
+	ClientName  string      `json:"client_name"`
+	ClientEmail string      `json:"client_email"`
+	Status      string      `json:"status"`
+	IssueDate   pgtype.Date `json:"issue_date"`
+	DueDate     pgtype.Date `json:"due_date"`
+	Notes       string      `json:"notes"`
+	CreatedAt   time.Time   `json:"created_at"`
+}
+
+type InvoiceLine struct {
+	ID              int64  `json:"id"`
+	InvoiceID       int64  `json:"invoice_id"`
+	Description     string `json:"description"`
+	QuantityMinutes int32  `json:"quantity_minutes"`
+	RateCents       int64  `json:"rate_cents"`
+	AmountCents     int64  `json:"amount_cents"`
+	Sort            int32  `json:"sort"`
+}
+
 type KeyResult struct {
 	ID           int64     `json:"id"`
 	ObjectiveID  int64     `json:"objective_id"`
@@ -571,6 +594,7 @@ type TimeEntry struct {
 	Description string             `json:"description"`
 	Billable    bool               `json:"billable"`
 	CreatedAt   time.Time          `json:"created_at"`
+	InvoiceID   *int64             `json:"invoice_id"`
 }
 
 type TimesheetSubmission struct {

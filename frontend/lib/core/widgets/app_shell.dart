@@ -75,6 +75,7 @@ const List<_NavGroup> _navGroups = <_NavGroup>[
     _NavItem(Icons.inventory_2_outlined, 'Inventory', '/assets'),
     _NavItem(Icons.receipt_long_outlined, 'Expenses', '/expenses'),
     _NavItem(Icons.account_balance_wallet_outlined, 'Budgets', '/budgets'),
+    _NavItem(Icons.request_quote_outlined, 'Invoices', '/invoices'),
   ]),
   _NavGroup('Insights', <_NavItem>[
     _NavItem(Icons.map_outlined, 'Roadmap', '/roadmap'),
