@@ -19,6 +19,7 @@ import '../../features/clients/clients_page.dart';
 import '../../features/clients/portal_page.dart';
 import '../../features/dashboard/dashboard_page.dart';
 import '../../features/dashboard/dashboards_page.dart';
+import '../../features/digest/digest_page.dart';
 import '../../features/expenses/expenses_page.dart';
 import '../../features/focus/focus_page.dart';
 import '../../features/git/git_page.dart';
@@ -162,6 +163,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
             path: '/notifications',
             builder: (c, s) => const NotificationsPage(),
           ),
+          GoRoute(path: '/digest', builder: (c, s) => const DigestPage()),
           GoRoute(
             path: '/vikunja',
             builder: (c, s) => const VikunjaProjectsPage(),

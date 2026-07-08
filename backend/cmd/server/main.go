@@ -155,6 +155,7 @@ func main() {
 		api.Mount("/api/v1/dependencies", handler.NewDependencyHandler(queries).Routes())
 		api.Mount("/api/v1/milestones", handler.NewMilestoneHandler(queries).Routes())
 		api.Mount("/api/v1/notifications", handler.NewNotificationHandler(queries).Routes())
+		api.Mount("/api/v1/digest", handler.NewDigestHandler(queries).Routes())
 		api.Get("/api/v1/search", handler.NewSearchHandler(queries).Search)
 		api.Get("/api/v1/link-preview", handler.LinkPreview)
 		api.Mount("/api/v1/custom-fields", handler.NewCustomFieldHandler(queries).Routes())

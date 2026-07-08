@@ -66,6 +66,7 @@ const List<_NavGroup> _navGroups = <_NavGroup>[
   _NavGroup('Collaborate', <_NavItem>[
     _NavItem(Icons.chat_bubble_outline, 'Chat', '/chat'),
     _NavItem(Icons.inbox_outlined, 'Inbox', '/notifications'),
+    _NavItem(Icons.summarize_outlined, 'Digest', '/digest'),
     _NavItem(Icons.description_outlined, 'Pages', '/pages'),
     _NavItem(Icons.groups_outlined, 'Team', '/team'),
     _NavItem(Icons.forum_outlined, '1:1s', '/one-on-ones'),
