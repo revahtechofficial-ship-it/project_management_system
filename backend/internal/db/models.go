@@ -569,6 +569,7 @@ type Task struct {
 	IssueType       string             `json:"issue_type"`
 	Severity        string             `json:"severity"`
 	ReleaseID       *int64             `json:"release_id"`
+	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
 }
 
 type TaskAssignee struct {

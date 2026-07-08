@@ -28,6 +28,7 @@ import '../../features/incidents/incidents_page.dart';
 import '../../features/integrations/integrations_page.dart';
 import '../../features/invoices/invoices_page.dart';
 import '../../features/leave/leave_page.dart';
+import '../../features/metrics/metrics_page.dart';
 import '../../features/one_on_ones/one_on_ones_page.dart';
 import '../../features/landing/landing_page.dart';
 import '../../features/notifications/notifications_page.dart';
@@ -124,6 +125,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(path: '/roadmap', builder: (c, s) => const RoadmapPage()),
           GoRoute(path: '/recap', builder: (c, s) => const RecapPage()),
+          GoRoute(path: '/metrics', builder: (c, s) => const MetricsPage()),
           GoRoute(
             path: '/resources',
             builder: (c, s) => const ResourcesPage(),

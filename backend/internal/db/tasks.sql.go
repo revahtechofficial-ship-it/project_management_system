@@ -74,6 +74,8 @@ const bulkSetTaskDone = `-- name: BulkSetTaskDone :exec
 UPDATE tasks
 SET done = $1,
     status = CASE WHEN $1 THEN 'done' ELSE 'todo' END,
+    completed_at = CASE WHEN $1 THEN COALESCE(completed_at, now())
+                       ELSE NULL END,
     reminder_sent = CASE WHEN $1 THEN reminder_sent ELSE FALSE END,
     updated_at = now()
 WHERE id = ANY($2::bigint[])
@@ -110,6 +112,8 @@ const bulkSetTaskStatus = `-- name: BulkSetTaskStatus :exec
 UPDATE tasks
 SET status = $1,
     done   = ($1 = 'done'),
+    completed_at = CASE WHEN ($1 = 'done')
+                       THEN COALESCE(completed_at, now()) ELSE NULL END,
     updated_at = now()
 WHERE id = ANY($2::bigint[])
 `
@@ -136,7 +140,7 @@ func (q *Queries) ClearTaskAssignees(ctx context.Context, taskID int64) error {
 const createTask = `-- name: CreateTask :one
 INSERT INTO tasks (title, description, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, priority, tags, estimate_minutes, sprint_id, points, issue_type, severity, release_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id
+RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id, completed_at
 `
 
 type CreateTaskParams struct {
@@ -205,6 +209,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		&i.IssueType,
 		&i.Severity,
 		&i.ReleaseID,
+		&i.CompletedAt,
 	)
 	return i, err
 }
@@ -261,7 +266,7 @@ func (q *Queries) DueReminders(ctx context.Context) ([]DueRemindersRow, error) {
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id FROM tasks
+SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id, completed_at FROM tasks
 WHERE id = $1
 `
 
@@ -293,12 +298,13 @@ func (q *Queries) GetTask(ctx context.Context, id int64) (Task, error) {
 		&i.IssueType,
 		&i.Severity,
 		&i.ReleaseID,
+		&i.CompletedAt,
 	)
 	return i, err
 }
 
 const listSubtasks = `-- name: ListSubtasks :many
-SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id FROM tasks
+SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id, completed_at FROM tasks
 WHERE parent_id = $1
 ORDER BY created_at ASC
 `
@@ -337,6 +343,7 @@ func (q *Queries) ListSubtasks(ctx context.Context, parentID *int64) ([]Task, er
 			&i.IssueType,
 			&i.Severity,
 			&i.ReleaseID,
+			&i.CompletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -382,7 +389,7 @@ func (q *Queries) ListTaskAssignees(ctx context.Context, taskID int64) ([]ListTa
 }
 
 const listTasks = `-- name: ListTasks :many
-SELECT t.id, t.title, t.description, t.done, t.created_at, t.updated_at, t.project_id, t.assignee_id, t.start_date, t.due_date, t.status, t.parent_id, t.recurrence, t.baseline_start, t.baseline_due, t.priority, t.tags, t.reminder_sent, t.estimate_minutes, t.sprint_id, t.points, t.issue_type, t.severity, t.release_id,
+SELECT t.id, t.title, t.description, t.done, t.created_at, t.updated_at, t.project_id, t.assignee_id, t.start_date, t.due_date, t.status, t.parent_id, t.recurrence, t.baseline_start, t.baseline_due, t.priority, t.tags, t.reminder_sent, t.estimate_minutes, t.sprint_id, t.points, t.issue_type, t.severity, t.release_id, t.completed_at,
        p.name      AS project_name,
        u.full_name AS assignee_name,
        COALESCE(st.total, 0)::int AS subtask_count,
@@ -437,6 +444,7 @@ type ListTasksRow struct {
 	IssueType        string             `json:"issue_type"`
 	Severity         string             `json:"severity"`
 	ReleaseID        *int64             `json:"release_id"`
+	CompletedAt      pgtype.Timestamptz `json:"completed_at"`
 	ProjectName      *string            `json:"project_name"`
 	AssigneeName     *string            `json:"assignee_name"`
 	SubtaskCount     int32              `json:"subtask_count"`
@@ -479,6 +487,7 @@ func (q *Queries) ListTasks(ctx context.Context) ([]ListTasksRow, error) {
 			&i.IssueType,
 			&i.Severity,
 			&i.ReleaseID,
+			&i.CompletedAt,
 			&i.ProjectName,
 			&i.AssigneeName,
 			&i.SubtaskCount,
@@ -497,7 +506,7 @@ func (q *Queries) ListTasks(ctx context.Context) ([]ListTasksRow, error) {
 }
 
 const listTasksRaw = `-- name: ListTasksRaw :many
-SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id FROM tasks
+SELECT id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id, completed_at FROM tasks
 `
 
 func (q *Queries) ListTasksRaw(ctx context.Context) ([]Task, error) {
@@ -534,6 +543,7 @@ func (q *Queries) ListTasksRaw(ctx context.Context) ([]Task, error) {
 			&i.IssueType,
 			&i.Severity,
 			&i.ReleaseID,
+			&i.CompletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -590,10 +600,12 @@ const setTaskDone = `-- name: SetTaskDone :one
 UPDATE tasks
 SET done = $2,
     status = CASE WHEN $2 THEN 'done' ELSE 'todo' END,
+    completed_at = CASE WHEN $2 THEN COALESCE(completed_at, now())
+                       ELSE NULL END,
     reminder_sent = CASE WHEN $2 THEN reminder_sent ELSE FALSE END,
     updated_at = now()
 WHERE id = $1
-RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id
+RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id, completed_at
 `
 
 type SetTaskDoneParams struct {
@@ -629,6 +641,7 @@ func (q *Queries) SetTaskDone(ctx context.Context, arg SetTaskDoneParams) (Task,
 		&i.IssueType,
 		&i.Severity,
 		&i.ReleaseID,
+		&i.CompletedAt,
 	)
 	return i, err
 }
@@ -683,9 +696,11 @@ const setTaskStatus = `-- name: SetTaskStatus :one
 UPDATE tasks
 SET status = $2,
     done   = ($2 = 'done'),
+    completed_at = CASE WHEN ($2 = 'done') THEN COALESCE(completed_at, now())
+                       ELSE NULL END,
     updated_at = now()
 WHERE id = $1
-RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id
+RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id, completed_at
 `
 
 type SetTaskStatusParams struct {
@@ -721,6 +736,7 @@ func (q *Queries) SetTaskStatus(ctx context.Context, arg SetTaskStatusParams) (T
 		&i.IssueType,
 		&i.Severity,
 		&i.ReleaseID,
+		&i.CompletedAt,
 	)
 	return i, err
 }
@@ -744,10 +760,12 @@ SET title       = $2,
     severity    = $16,
     release_id  = $17,
     done        = ($8 = 'done'),
+    completed_at = CASE WHEN ($8 = 'done') THEN COALESCE(completed_at, now())
+                       ELSE NULL END,
     reminder_sent = FALSE,
     updated_at  = now()
 WHERE id = $1
-RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id
+RETURNING id, title, description, done, created_at, updated_at, project_id, assignee_id, start_date, due_date, status, parent_id, recurrence, baseline_start, baseline_due, priority, tags, reminder_sent, estimate_minutes, sprint_id, points, issue_type, severity, release_id, completed_at
 `
 
 type UpdateTaskParams struct {
@@ -816,6 +834,7 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 		&i.IssueType,
 		&i.Severity,
 		&i.ReleaseID,
+		&i.CompletedAt,
 	)
 	return i, err
 }

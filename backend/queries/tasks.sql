@@ -104,6 +104,8 @@ SET title       = $2,
     severity    = sqlc.arg(severity),
     release_id  = sqlc.narg(release_id),
     done        = ($8 = 'done'),
+    completed_at = CASE WHEN ($8 = 'done') THEN COALESCE(completed_at, now())
+                       ELSE NULL END,
     reminder_sent = FALSE,
     updated_at  = now()
 WHERE id = $1
@@ -118,6 +120,8 @@ WHERE id = $1;
 UPDATE tasks
 SET status = $2,
     done   = ($2 = 'done'),
+    completed_at = CASE WHEN ($2 = 'done') THEN COALESCE(completed_at, now())
+                       ELSE NULL END,
     updated_at = now()
 WHERE id = $1
 RETURNING *;
@@ -138,6 +142,8 @@ WHERE id = sqlc.arg(id) AND NOT (sqlc.arg(tag) = ANY(tags));
 UPDATE tasks
 SET done = $2,
     status = CASE WHEN $2 THEN 'done' ELSE 'todo' END,
+    completed_at = CASE WHEN $2 THEN COALESCE(completed_at, now())
+                       ELSE NULL END,
     reminder_sent = CASE WHEN $2 THEN reminder_sent ELSE FALSE END,
     updated_at = now()
 WHERE id = $1
@@ -151,6 +157,8 @@ WHERE id = $1;
 UPDATE tasks
 SET done = sqlc.arg(done),
     status = CASE WHEN sqlc.arg(done) THEN 'done' ELSE 'todo' END,
+    completed_at = CASE WHEN sqlc.arg(done) THEN COALESCE(completed_at, now())
+                       ELSE NULL END,
     reminder_sent = CASE WHEN sqlc.arg(done) THEN reminder_sent ELSE FALSE END,
     updated_at = now()
 WHERE id = ANY(sqlc.arg(ids)::bigint[]);
@@ -159,6 +167,8 @@ WHERE id = ANY(sqlc.arg(ids)::bigint[]);
 UPDATE tasks
 SET status = sqlc.arg(status),
     done   = (sqlc.arg(status) = 'done'),
+    completed_at = CASE WHEN (sqlc.arg(status) = 'done')
+                       THEN COALESCE(completed_at, now()) ELSE NULL END,
     updated_at = now()
 WHERE id = ANY(sqlc.arg(ids)::bigint[]);
 
