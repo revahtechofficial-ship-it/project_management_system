@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_config.dart';
 import '../../core/utils/feedback.dart';
+import '../../core/utils/file_download.dart';
 import '../../core/widgets/avatar_crop_dialog.dart';
 import '../../core/widgets/dashboard_card.dart';
 import '../../core/widgets/page_header.dart';
@@ -24,6 +27,7 @@ import '../projects/providers/project_templates_providers.dart';
 import '../tasks/providers/custom_fields_providers.dart';
 import '../tasks/providers/statuses_providers.dart';
 import '../tasks/providers/task_templates_providers.dart';
+import 'providers/account_data_providers.dart';
 import 'providers/settings_providers.dart';
 import 'widgets/accent_picker_dialog.dart';
 import 'widgets/change_password_dialog.dart';
@@ -71,6 +75,8 @@ class SettingsPage extends ConsumerWidget {
             ],
             const SizedBox(height: 16),
             const _SecurityCard(),
+            const SizedBox(height: 16),
+            const _DataExportCard(),
             const SizedBox(height: 16),
             const _AboutCard(),
             const SizedBox(height: 16),
@@ -714,6 +720,76 @@ class _SettingTile extends StatelessWidget {
       subtitle: Text(subtitle),
       trailing: Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
       onTap: onTap,
+    );
+  }
+}
+
+/// GDPR-style "export my data": downloads the user's personal data as JSON.
+class _DataExportCard extends ConsumerStatefulWidget {
+  const _DataExportCard();
+
+  @override
+  ConsumerState<_DataExportCard> createState() => _DataExportCardState();
+}
+
+class _DataExportCardState extends ConsumerState<_DataExportCard> {
+  bool _busy = false;
+
+  Future<void> _export() async {
+    setState(() => _busy = true);
+    try {
+      final Map<String, dynamic> data =
+          await ref.read(accountDataRepositoryProvider).export();
+      downloadTextFile(
+        'revah-my-data.json',
+        const JsonEncoder.withIndent('  ').convert(data),
+        'application/json',
+      );
+      if (mounted) {
+        context.showSuccess('Your data was exported');
+      }
+    } catch (e) {
+      if (mounted) {
+        context.showError('Could not export: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return DashboardCard(
+      title: 'Your data',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Download a copy of your personal data — profile, notifications, '
+            'approvals, leave, 1:1s, skills and upcoming tasks — as a JSON '
+            'file.',
+            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.tonalIcon(
+              onPressed: _busy ? null : _export,
+              icon: _busy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.download_outlined, size: 18),
+              label: const Text('Export my data (JSON)'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
