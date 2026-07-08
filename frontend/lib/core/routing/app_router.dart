@@ -40,6 +40,7 @@ import '../../features/projects/shared_project_page.dart';
 import '../../features/recap/recap_page.dart';
 import '../../features/roadmap/roadmap_page.dart';
 import '../../features/releases/releases_page.dart';
+import '../../features/report_builder/report_builder_page.dart';
 import '../../features/reports/reports_page.dart';
 import '../../features/resources/resources_page.dart';
 import '../../features/settings/settings_page.dart';
@@ -126,6 +127,10 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/roadmap', builder: (c, s) => const RoadmapPage()),
           GoRoute(path: '/recap', builder: (c, s) => const RecapPage()),
           GoRoute(path: '/metrics', builder: (c, s) => const MetricsPage()),
+          GoRoute(
+            path: '/report-builder',
+            builder: (c, s) => const ReportBuilderPage(),
+          ),
           GoRoute(
             path: '/resources',
             builder: (c, s) => const ResourcesPage(),

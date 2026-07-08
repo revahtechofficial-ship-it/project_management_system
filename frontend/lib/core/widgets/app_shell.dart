@@ -86,6 +86,7 @@ const List<_NavGroup> _navGroups = <_NavGroup>[
     _NavItem(Icons.timeline_outlined, 'Metrics', '/metrics'),
     _NavItem(Icons.space_dashboard_outlined, 'Dashboards', '/dashboards'),
     _NavItem(Icons.bar_chart_outlined, 'Reports', '/reports'),
+    _NavItem(Icons.table_chart_outlined, 'Report builder', '/report-builder'),
     _NavItem(Icons.history, 'Activity', '/activity'),
   ]),
   _NavGroup('Automate', <_NavItem>[

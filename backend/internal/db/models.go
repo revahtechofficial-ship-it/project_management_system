@@ -524,6 +524,14 @@ type SavedFilter struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type SavedReport struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	Config    string    `json:"config"`
+	CreatedBy *int64    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Space struct {
 	ID        int64     `json:"id"`
 	Name      string    `json:"name"`
