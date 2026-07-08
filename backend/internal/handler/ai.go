@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -37,7 +38,95 @@ func (h *AIHandler) Routes() http.Handler {
 	r.Post("/search", h.search)
 	r.Post("/meeting-notes", h.meetingNotes)
 	r.Post("/meeting-summary", h.meetingSummary)
+	r.Post("/recap", h.recap)
 	return r
+}
+
+const recapSystem = "You write a concise, upbeat weekly recap (\"what " +
+	"happened this week\") for an internal team at Revah Tech. Use Markdown: a " +
+	"one-sentence intro, then a few grouped bullet highlights (e.g. completed " +
+	"work, new work, notable changes), and a short closing line. Base it ONLY " +
+	"on the activity data provided — never invent specifics or numbers. Keep " +
+	"it under about 200 words."
+
+// recap asks Claude to write a "what happened this week" summary from the
+// workspace activity log over the last N days (default 7).
+func (h *AIHandler) recap(w http.ResponseWriter, r *http.Request) {
+	if !h.ai.Configured() {
+		h.notConfigured(w)
+		return
+	}
+	var b struct {
+		Days int `json:"days"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&b)
+	days := b.Days
+	if days <= 0 || days > 31 {
+		days = 7
+	}
+	rows, err := h.q.ListRecentActivity(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	cutoff := time.Now().AddDate(0, 0, -days)
+	var activity strings.Builder
+	counts := map[string]int{}
+	contributors := map[string]bool{}
+	total, lines := 0, 0
+	for _, a := range rows {
+		if a.CreatedAt.Before(cutoff) {
+			continue
+		}
+		total++
+		counts[a.Action]++
+		if a.ActorName != "" {
+			contributors[a.ActorName] = true
+		}
+		if lines < 120 {
+			who := a.ActorName
+			if who == "" {
+				who = "someone"
+			}
+			title := a.TaskTitle
+			if title == "" {
+				title = "a task"
+			}
+			fmt.Fprintf(&activity, "- %s %s %q (%s)\n", who, a.Action, title,
+				a.CreatedAt.Format("Mon Jan 2"))
+			lines++
+		}
+	}
+	if total == 0 {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"recap": fmt.Sprintf(
+				"Nothing happened in the workspace in the last %d days.", days),
+			"activity_count": 0,
+			"contributors":   0,
+			"days":           days,
+		})
+		return
+	}
+	var stats strings.Builder
+	for action, c := range counts {
+		fmt.Fprintf(&stats, "%s: %d, ", action, c)
+	}
+	prompt := fmt.Sprintf(
+		"Write a weekly recap for the last %d days from this workspace activity.\n\n"+
+			"Totals by action — %s\nContributors: %d\n\nActivity:\n%s",
+		days, strings.TrimSuffix(stats.String(), ", "), len(contributors),
+		activity.String())
+	out, err := h.ai.Ask(r.Context(), recapSystem, prompt, 2048)
+	if err != nil {
+		h.aiError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"recap":          out,
+		"activity_count": total,
+		"contributors":   len(contributors),
+		"days":           days,
+	})
 }
 
 func (h *AIHandler) notConfigured(w http.ResponseWriter) {

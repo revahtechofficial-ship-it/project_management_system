@@ -33,11 +33,43 @@ class AiMeetingResult {
   );
 }
 
+/// An AI-written "what happened this week" recap plus the activity it drew on.
+class AiRecapResult {
+  const AiRecapResult({
+    this.recap = '',
+    this.activityCount = 0,
+    this.contributors = 0,
+    this.days = 7,
+  });
+
+  final String recap;
+  final int activityCount;
+  final int contributors;
+  final int days;
+
+  factory AiRecapResult.fromJson(Map<String, dynamic> json) => AiRecapResult(
+    recap: json['recap'] as String? ?? '',
+    activityCount: json['activity_count'] as int? ?? 0,
+    contributors: json['contributors'] as int? ?? 0,
+    days: json['days'] as int? ?? 7,
+  );
+}
+
 /// Talks to /api/v1/ai — the Claude-powered assistant (AGENTS.md §1).
 class AiRepository {
   const AiRepository(this._dio);
 
   final Dio _dio;
+
+  /// Generates a weekly recap of workspace activity over the last [days] days.
+  Future<AiRecapResult> recap({int days = 7}) async {
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/ai/recap',
+          data: <String, dynamic>{'days': days},
+        );
+    return AiRecapResult.fromJson(res.data ?? const <String, dynamic>{});
+  }
 
   Future<AiStatus> status() async {
     final Response<Map<String, dynamic>> res = await _dio

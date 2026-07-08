@@ -82,6 +82,7 @@ const List<_NavGroup> _navGroups = <_NavGroup>[
   ]),
   _NavGroup('Insights', <_NavItem>[
     _NavItem(Icons.map_outlined, 'Roadmap', '/roadmap'),
+    _NavItem(Icons.auto_awesome_outlined, 'Weekly recap', '/recap'),
     _NavItem(Icons.space_dashboard_outlined, 'Dashboards', '/dashboards'),
     _NavItem(Icons.bar_chart_outlined, 'Reports', '/reports'),
     _NavItem(Icons.history, 'Activity', '/activity'),
