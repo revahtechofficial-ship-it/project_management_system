@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_config.dart';
+import '../../core/services/pwa_install.dart';
 import '../../core/utils/feedback.dart';
 import '../../core/utils/file_download.dart';
 import '../../core/widgets/avatar_crop_dialog.dart';
@@ -58,6 +59,7 @@ class SettingsPage extends ConsumerWidget {
             const SizedBox(height: 20),
             _ProfileCard(user: user),
             const SizedBox(height: 16),
+            const _InstallAppCard(),
             _AppearanceCard(themeMode: themeMode, settings: settings),
             const SizedBox(height: 16),
             _NotificationsCard(settings: settings),
@@ -789,6 +791,83 @@ class _DataExportCardState extends ConsumerState<_DataExportCard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Offers to install the app (PWA). Renders only when the browser has made an
+/// install prompt available; hidden otherwise (e.g. already installed).
+class _InstallAppCard extends StatefulWidget {
+  const _InstallAppCard();
+
+  @override
+  State<_InstallAppCard> createState() => _InstallAppCardState();
+}
+
+class _InstallAppCardState extends State<_InstallAppCard> {
+  @override
+  void initState() {
+    super.initState();
+    setPwaChangeListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    setPwaChangeListener(null);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!pwaInstallAvailable()) {
+      return const SizedBox.shrink();
+    }
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DashboardCard(
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.install_desktop, color: scheme.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Text('Install the app',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 15)),
+                  Text(
+                    'Add Revah to your desktop or home screen for a '
+                    'full-screen, app-like experience.',
+                    style: TextStyle(
+                        fontSize: 12.5, color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            FilledButton.icon(
+              onPressed: promptPwaInstall,
+              icon: const Icon(Icons.download_outlined, size: 18),
+              label: const Text('Install'),
+            ),
+          ],
+        ),
       ),
     );
   }

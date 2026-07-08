@@ -3,10 +3,10 @@
     "short_name": "Revah MS",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Revah Tech management system",
-    "orientation": "portrait-primary",
+    "background_color": "#4F46E5",
+    "theme_color": "#4F46E5",
+    "description": "Projects, tasks, docs and collaboration for Revah Tech.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
