@@ -127,6 +127,11 @@ func main() {
 	r.Get("/api/v1/portal/{token}",
 		handler.NewClientHandler(queries).Portal)
 
+	// iCalendar feed (public; the per-user token is the credential). Calendar
+	// apps subscribe to this URL to see a user's due tasks.
+	r.Get("/api/v1/ics/{token}",
+		handler.NewCalendarHandler(queries).Feed)
+
 	// Workspace API — all behind the app's own JWT (the Flutter web app).
 	if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
 		log.Printf("WARNING: could not create upload dir %s: %v", cfg.UploadDir, err)
@@ -174,6 +179,7 @@ func main() {
 		api.Mount("/api/v1/git", handler.NewGitHandler(queries).Routes())
 		api.Mount("/api/v1/invoices", handler.NewInvoiceHandler(queries).Routes())
 		api.Mount("/api/v1/clients", handler.NewClientHandler(queries).Routes())
+		api.Mount("/api/v1/calendar", handler.NewCalendarHandler(queries).Routes())
 		api.Mount("/api/v1/objectives", handler.NewObjectiveHandler(queries).Routes())
 		api.Mount("/api/v1/automations", handler.NewAutomationHandler(queries).Routes())
 		api.Mount("/api/v1/resources", handler.NewResourceHandler(queries).Routes())

@@ -1,9 +1,11 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_config.dart';
 import '../../core/utils/feedback.dart';
 import '../../core/widgets/avatar_crop_dialog.dart';
 import '../../core/widgets/dashboard_card.dart';
@@ -17,6 +19,7 @@ import '../../data/models/task_template.dart';
 import '../../data/models/workflow_status.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../calendar/providers/calendar_providers.dart';
 import '../projects/providers/project_templates_providers.dart';
 import '../tasks/providers/custom_fields_providers.dart';
 import '../tasks/providers/statuses_providers.dart';
@@ -54,6 +57,8 @@ class SettingsPage extends ConsumerWidget {
             _AppearanceCard(themeMode: themeMode, settings: settings),
             const SizedBox(height: 16),
             _NotificationsCard(settings: settings),
+            const SizedBox(height: 16),
+            const _CalendarFeedCard(),
             const SizedBox(height: 16),
             const _TaskTemplatesCard(),
             const SizedBox(height: 16),
@@ -422,6 +427,120 @@ class _NotificationsCard extends ConsumerWidget {
             value: settings.weeklyDigest,
             onChanged: c.setWeeklyDigest,
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A read-only iCalendar feed of your due tasks, to subscribe to in Google,
+/// Outlook or Apple Calendar (one-way sync via an unguessable token URL).
+class _CalendarFeedCard extends ConsumerWidget {
+  const _CalendarFeedCard();
+
+  String _feedUrl(String token) => '${AppConfig.apiBaseUrl}/api/v1/ics/$token';
+
+  Future<void> _enable(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(calendarRepositoryProvider).rotate();
+      ref.invalidate(calendarTokenProvider);
+    } catch (e) {
+      if (context.mounted) {
+        context.showError('Could not enable: $e');
+      }
+    }
+  }
+
+  Future<void> _revoke(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(calendarRepositoryProvider).revoke();
+      ref.invalidate(calendarTokenProvider);
+      if (context.mounted) {
+        context.showSuccess('Calendar feed disabled');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        context.showError('Could not disable: $e');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final String token = ref.watch(calendarTokenProvider).asData?.value ?? '';
+    return DashboardCard(
+      title: 'Calendar feed',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Subscribe to your due tasks in Google, Outlook or Apple '
+            'Calendar. The link is private — anyone with it can see your '
+            'tasks, so keep it to yourself.',
+            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 12),
+          if (token.isEmpty)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.icon(
+                onPressed: () => _enable(context, ref),
+                icon: const Icon(Icons.event_available_outlined, size: 18),
+                label: const Text('Enable calendar feed'),
+              ),
+            )
+          else ...<Widget>[
+            Container(
+              padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: scheme.outlineVariant),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      _feedUrl(token),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 12, color: scheme.onSurfaceVariant),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Copy feed URL',
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.copy, size: 16),
+                    onPressed: () async {
+                      await Clipboard.setData(
+                          ClipboardData(text: _feedUrl(token)));
+                      if (context.mounted) {
+                        context.showSuccess('Feed URL copied');
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: <Widget>[
+                TextButton.icon(
+                  onPressed: () => _enable(context, ref),
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Regenerate'),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => _revoke(context, ref),
+                  child: Text('Disable',
+                      style: TextStyle(color: scheme.error)),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
