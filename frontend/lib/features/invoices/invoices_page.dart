@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/csv_export.dart';
 import '../../core/utils/date_format.dart';
+import '../../core/utils/feedback.dart';
 import '../../core/utils/money_format.dart';
 import '../../core/widgets/async_states.dart';
 import '../../core/widgets/dashboard_card.dart';
@@ -30,6 +32,35 @@ class _InvoicesPageState extends ConsumerState<InvoicesPage> {
     }
   }
 
+  void _export() {
+    final List<Invoice> items =
+        ref.read(invoicesProvider).asData?.value ?? const <Invoice>[];
+    if (items.isEmpty) {
+      context.showError('Nothing to export');
+      return;
+    }
+    exportCsv(
+      'invoices',
+      <String>[
+        'Number', 'Client', 'Project', 'Status', 'Issued', 'Due', 'Total',
+        'Lines',
+      ],
+      <List<String>>[
+        for (final Invoice i in items)
+          <String>[
+            i.number,
+            i.clientName,
+            i.projectName,
+            i.status.label,
+            dateParam(i.issueDate) ?? '',
+            dateParam(i.dueDate) ?? '',
+            (i.totalCents / 100).toStringAsFixed(2),
+            '${i.lineCount}',
+          ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final AsyncValue<List<Invoice>> async = ref.watch(invoicesProvider);
@@ -42,6 +73,11 @@ class _InvoicesPageState extends ConsumerState<InvoicesPage> {
             title: 'Invoices',
             subtitle: 'Bill time & track payments',
             actions: <Widget>[
+              OutlinedButton.icon(
+                onPressed: _export,
+                icon: const Icon(Icons.download_outlined, size: 18),
+                label: const Text('Export'),
+              ),
               FilledButton.icon(
                 onPressed: _create,
                 icon: const Icon(Icons.add),

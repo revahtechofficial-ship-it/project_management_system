@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/csv_export.dart';
 import '../../core/utils/date_format.dart';
 import '../../core/utils/feedback.dart';
 import '../../core/utils/money_format.dart';
@@ -29,6 +30,36 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
     await showAssetFormDialog(context);
   }
 
+  void _export() {
+    final List<Asset> items =
+        ref.read(assetsProvider).asData?.value ?? const <Asset>[];
+    if (items.isEmpty) {
+      context.showError('Nothing to export');
+      return;
+    }
+    exportCsv(
+      'inventory',
+      <String>[
+        'Name', 'Type', 'Status', 'Identifier', 'Vendor', 'Assignee', 'Cost',
+        'Purchased', 'Expires',
+      ],
+      <List<String>>[
+        for (final Asset a in items)
+          <String>[
+            a.name,
+            a.kind.label,
+            a.status.label,
+            a.identifier,
+            a.vendor,
+            a.assigneeName,
+            a.costCents == 0 ? '' : (a.costCents / 100).toStringAsFixed(2),
+            dateParam(a.purchasedOn) ?? '',
+            dateParam(a.expiresOn) ?? '',
+          ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final AsyncValue<List<Asset>> async = ref.watch(assetsProvider);
@@ -41,6 +72,11 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
             title: 'Inventory',
             subtitle: 'Hardware, software & licenses',
             actions: <Widget>[
+              OutlinedButton.icon(
+                onPressed: _export,
+                icon: const Icon(Icons.download_outlined, size: 18),
+                label: const Text('Export'),
+              ),
               FilledButton.icon(
                 onPressed: _add,
                 icon: const Icon(Icons.add),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/csv_export.dart';
 import '../../core/utils/date_format.dart';
 import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
@@ -27,6 +28,36 @@ class _IncidentsPageState extends ConsumerState<IncidentsPage> {
     await showIncidentFormDialog(context);
   }
 
+  void _export() {
+    final List<Incident> items =
+        ref.read(incidentsProvider).asData?.value ?? const <Incident>[];
+    if (items.isEmpty) {
+      context.showError('Nothing to export');
+      return;
+    }
+    exportCsv(
+      'incidents',
+      <String>[
+        'Title', 'Type', 'Severity', 'Status', 'Assignee', 'Reporter',
+        'Project', 'Component', 'Created',
+      ],
+      <List<String>>[
+        for (final Incident i in items)
+          <String>[
+            i.title,
+            i.kind.label,
+            i.severity.label,
+            i.status.label,
+            i.assigneeName,
+            i.reporterName,
+            i.projectName,
+            i.component,
+            dateParam(i.createdAt) ?? '',
+          ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final AsyncValue<List<Incident>> async = ref.watch(incidentsProvider);
@@ -39,6 +70,11 @@ class _IncidentsPageState extends ConsumerState<IncidentsPage> {
             title: 'Incidents',
             subtitle: 'Bugs & incidents',
             actions: <Widget>[
+              OutlinedButton.icon(
+                onPressed: _export,
+                icon: const Icon(Icons.download_outlined, size: 18),
+                label: const Text('Export'),
+              ),
               FilledButton.icon(
                 onPressed: _report,
                 icon: const Icon(Icons.add),

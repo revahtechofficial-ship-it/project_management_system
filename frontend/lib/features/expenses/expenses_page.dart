@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/csv_export.dart';
 import '../../core/utils/date_format.dart';
 import '../../core/utils/feedback.dart';
 import '../../core/utils/money_format.dart';
@@ -27,6 +28,35 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     await showExpenseFormDialog(context);
   }
 
+  void _export() {
+    final List<Expense> items =
+        ref.read(expensesProvider).asData?.value ?? const <Expense>[];
+    if (items.isEmpty) {
+      context.showError('Nothing to export');
+      return;
+    }
+    exportCsv(
+      'expenses',
+      <String>[
+        'Date', 'Category', 'Merchant', 'Description', 'Amount', 'Status',
+        'Project', 'Submitter',
+      ],
+      <List<String>>[
+        for (final Expense e in items)
+          <String>[
+            dateParam(e.spentOn) ?? '',
+            e.category.label,
+            e.merchant,
+            e.description,
+            (e.amountCents / 100).toStringAsFixed(2),
+            e.status.label,
+            e.projectName,
+            e.submitterName,
+          ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final AsyncValue<List<Expense>> async = ref.watch(expensesProvider);
@@ -39,6 +69,11 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
             title: 'Expenses',
             subtitle: 'Claims & reimbursements',
             actions: <Widget>[
+              OutlinedButton.icon(
+                onPressed: _export,
+                icon: const Icon(Icons.download_outlined, size: 18),
+                label: const Text('Export'),
+              ),
               FilledButton.icon(
                 onPressed: _add,
                 icon: const Icon(Icons.add),
