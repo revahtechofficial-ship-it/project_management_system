@@ -110,6 +110,15 @@ type ChecklistItem struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type ChecklistTemplate struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	Category  string    `json:"category"`
+	Items     string    `json:"items"`
+	CreatedBy *int64    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Client struct {
 	ID          int64     `json:"id"`
 	Name        string    `json:"name"`

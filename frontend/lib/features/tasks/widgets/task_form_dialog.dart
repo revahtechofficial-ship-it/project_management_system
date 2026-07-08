@@ -30,6 +30,7 @@ import '../../../data/models/workflow_status.dart';
 import '../../projects/providers/projects_providers.dart';
 import '../../sprints/providers/sprints_providers.dart';
 import '../../team/providers/team_providers.dart';
+import '../../templates/widgets/apply_checklist_template_dialog.dart';
 import '../providers/dependencies_providers.dart';
 import '../providers/statuses_providers.dart';
 import '../providers/subtask_providers.dart';
@@ -1445,6 +1446,17 @@ class _ChecklistSectionState extends ConsumerState<_ChecklistSection> {
     _refresh();
   }
 
+  Future<void> _applyTemplate() async {
+    final int? added =
+        await showApplyChecklistTemplateDialog(context, widget.taskId);
+    if (added != null) {
+      _refresh();
+      if (mounted && added > 0) {
+        context.showSuccess('Added $added items');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
@@ -1527,6 +1539,14 @@ class _ChecklistSectionState extends ConsumerState<_ChecklistSection> {
               onPressed: _busy ? null : _add,
             ),
           ],
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _applyTemplate,
+            icon: const Icon(Icons.playlist_add_check, size: 18),
+            label: const Text('Apply template'),
+          ),
         ),
       ],
     );

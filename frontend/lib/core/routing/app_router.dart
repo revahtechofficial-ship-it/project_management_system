@@ -43,6 +43,7 @@ import '../../features/settings/settings_page.dart';
 import '../../features/sprints/sprints_page.dart';
 import '../../features/tasks/tasks_page.dart';
 import '../../features/team/team_page.dart';
+import '../../features/templates/templates_page.dart';
 import '../../features/time/time_page.dart';
 import '../../features/vikunja/vikunja_projects_page.dart';
 import '../../providers/auth_provider.dart';
@@ -115,6 +116,10 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
             builder: (c, s) => const DashboardsPage(),
           ),
           GoRoute(path: '/planning', builder: (c, s) => const PlanningPage()),
+          GoRoute(
+            path: '/checklists',
+            builder: (c, s) => const TemplatesPage(),
+          ),
           GoRoute(path: '/roadmap', builder: (c, s) => const RoadmapPage()),
           GoRoute(
             path: '/resources',
