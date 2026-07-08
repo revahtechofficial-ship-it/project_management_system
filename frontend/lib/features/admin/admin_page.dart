@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/csv_export.dart';
 import '../../core/utils/date_format.dart';
 import '../../core/utils/feedback.dart';
 import '../../core/widgets/async_states.dart';
@@ -223,8 +224,23 @@ class _MemberRow extends ConsumerWidget {
 
 // --- Audit log -------------------------------------------------------------
 
-class _AuditView extends ConsumerWidget {
+class _AuditView extends ConsumerStatefulWidget {
   const _AuditView();
+
+  @override
+  ConsumerState<_AuditView> createState() => _AuditViewState();
+}
+
+class _AuditViewState extends ConsumerState<_AuditView> {
+  final TextEditingController _search = TextEditingController();
+  String _query = '';
+  String _action = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
   static (IconData, Color) _visual(String action) {
     if (action.startsWith('role')) {
@@ -248,8 +264,39 @@ class _AuditView extends ConsumerWidget {
     return (Icons.history, AppColors.slate);
   }
 
+  bool _matches(AuditEvent e) {
+    if (_action.isNotEmpty && e.action != _action) {
+      return false;
+    }
+    if (_query.isEmpty) {
+      return true;
+    }
+    final String q = _query.toLowerCase();
+    return e.actorName.toLowerCase().contains(q) ||
+        e.action.toLowerCase().contains(q) ||
+        e.target.toLowerCase().contains(q) ||
+        e.detail.toLowerCase().contains(q);
+  }
+
+  void _export(List<AuditEvent> events) {
+    exportCsv(
+      'audit-log',
+      <String>['Time', 'Actor', 'Action', 'Target', 'Detail'],
+      <List<String>>[
+        for (final AuditEvent e in events)
+          <String>[
+            e.createdAt.toIso8601String(),
+            e.actorName,
+            e.action,
+            e.target,
+            e.detail,
+          ],
+      ],
+    );
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final AsyncValue<List<AuditEvent>> async = ref.watch(auditLogProvider);
     return async.when(
@@ -265,37 +312,107 @@ class _AuditView extends ConsumerWidget {
             message: 'No audit events recorded yet.',
           );
         }
-        return ListView.separated(
-          itemCount: events.length,
-          separatorBuilder: (_, _) => const Divider(height: 1),
-          itemBuilder: (BuildContext context, int i) {
-            final AuditEvent e = events[i];
-            final (IconData icon, Color color) = _visual(e.action);
-            return ListTile(
-              leading: Icon(icon, color: color),
-              title: Text.rich(
-                TextSpan(
-                  children: <InlineSpan>[
-                    TextSpan(
-                      text: e.actorName.isEmpty ? 'Someone' : e.actorName,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    TextSpan(text: '  ${e.action}'),
-                    if (e.target.isNotEmpty)
-                      TextSpan(
-                        text: '  ${e.target}',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+        final List<String> actions = <String>{
+          for (final AuditEvent e in events) e.action,
+        }.toList()
+          ..sort();
+        final List<AuditEvent> filtered =
+            <AuditEvent>[for (final AuditEvent e in events) if (_matches(e)) e];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextField(
+                      controller: _search,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        prefixIcon: Icon(Icons.search, size: 18),
+                        hintText: 'Search actor, action, target or detail',
                       ),
-                  ],
-                ),
+                      onChanged: (String v) => setState(() => _query = v),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 200,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _action.isEmpty ? null : _action,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                          isDense: true, hintText: 'All actions'),
+                      items: <DropdownMenuItem<String>>[
+                        const DropdownMenuItem<String>(
+                            value: '', child: Text('All actions')),
+                        for (final String a in actions)
+                          DropdownMenuItem<String>(value: a, child: Text(a)),
+                      ],
+                      onChanged: (String? v) =>
+                          setState(() => _action = v ?? ''),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton.icon(
+                    onPressed: () => _export(filtered),
+                    icon: const Icon(Icons.download_outlined, size: 18),
+                    label: const Text('Export'),
+                  ),
+                ],
               ),
-              subtitle: e.detail.isEmpty ? null : Text(e.detail),
-              trailing: Text(
-                relativeTime(e.createdAt),
-                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
-              ),
-            );
-          },
+            ),
+            Text(
+              '${filtered.length} of ${events.length} events',
+              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 6),
+            Expanded(
+              child: filtered.isEmpty
+                  ? const EmptyState(
+                      icon: Icons.search_off,
+                      message: 'No events match your search.',
+                    )
+                  : ListView.separated(
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (BuildContext context, int i) {
+                        final AuditEvent e = filtered[i];
+                        final (IconData icon, Color color) = _visual(e.action);
+                        return ListTile(
+                          leading: Icon(icon, color: color),
+                          title: Text.rich(
+                            TextSpan(
+                              children: <InlineSpan>[
+                                TextSpan(
+                                  text: e.actorName.isEmpty
+                                      ? 'Someone'
+                                      : e.actorName,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700),
+                                ),
+                                TextSpan(text: '  ${e.action}'),
+                                if (e.target.isNotEmpty)
+                                  TextSpan(
+                                    text: '  ${e.target}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          subtitle: e.detail.isEmpty ? null : Text(e.detail),
+                          trailing: Text(
+                            relativeTime(e.createdAt),
+                            style: TextStyle(
+                                fontSize: 11, color: scheme.onSurfaceVariant),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         );
       },
     );
