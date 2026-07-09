@@ -184,6 +184,81 @@ void main() {
     });
   });
 
+  group('isoWeekNumber', () {
+    test('1 Jan 2026 is a Thursday, so it opens week 1', () {
+      expect(DateTime(2026, 1, 1).weekday, DateTime.thursday);
+      expect(isoWeekNumber(DateTime(2026, 1, 1)), 1);
+    });
+
+    test('a week belongs to the year holding its Thursday', () {
+      // 2026 starts on a Thursday and so runs to 53 weeks; 1 Jan 2027 (a
+      // Friday) still belongs to that 53rd week, not to week 1 of 2027.
+      expect(isoWeekNumber(DateTime(2026, 12, 31)), 53);
+      expect(isoWeekNumber(DateTime(2027, 1, 1)), 53);
+      expect(isoWeekNumber(DateTime(2027, 1, 4)), 1); // the Monday after
+    });
+
+    test('a late-December Monday can already be week 1 of the next year', () {
+      expect(DateTime(2024, 12, 30).weekday, DateTime.monday);
+      expect(isoWeekNumber(DateTime(2024, 12, 30)), 1);
+    });
+
+    test('weeks advance by one every seven days', () {
+      for (int i = 0; i < 7; i++) {
+        expect(isoWeekNumber(DateTime(2026, 3, 2 + i)), 10);
+      }
+      expect(isoWeekNumber(DateTime(2026, 3, 9)), 11);
+    });
+  });
+
+  group('bsWeekOfYear', () {
+    test('Baishakh 1 always falls in week 1', () {
+      for (final int year in <int>[2081, 2082, 2083, 2084]) {
+        expect(bsWeekOfYear(bsToAd(year, 1, 1)), 1, reason: 'BS $year');
+      }
+    });
+
+    test('increments on Sunday, never mid-week', () {
+      final DateTime start = bsToAd(2083, 1, 1);
+      int previous = bsWeekOfYear(start);
+      for (int i = 1; i < 60; i++) {
+        final DateTime day = DateTime(start.year, start.month, start.day + i);
+        final int week = bsWeekOfYear(day);
+        if (sundayFirstIndex(day) == 0) {
+          expect(week, previous + 1, reason: 'should tick over on $day');
+        } else {
+          expect(week, previous, reason: 'should hold steady on $day');
+        }
+        previous = week;
+      }
+    });
+
+    // A BS year ends in week 53 at the earliest — 365 days from a Sunday is
+    // 52 full weeks plus one day. It reaches 54 when the year is 366 days and
+    // opens on a Saturday, so week 1 holds a single day: BS 2081 does exactly
+    // that. Neither is an off-by-one.
+    test('the last day of a BS year lands in week 53 or 54', () {
+      for (final int year in <int>[2081, 2082, 2083]) {
+        final DateTime lastDay = bsToAd(year, 12, bsMonthLength(year, 12));
+        expect(
+          bsWeekOfYear(lastDay),
+          inInclusiveRange(53, 54),
+          reason: 'BS $year ends in week ${bsWeekOfYear(lastDay)}',
+        );
+      }
+    });
+
+    test('BS 2081 needs 54 weeks: 366 days opening on a Saturday', () {
+      expect(sundayFirstIndex(bsToAd(2081, 1, 1)), 6);
+      int total = 0;
+      for (int month = 1; month <= 12; month++) {
+        total += bsMonthLength(2081, month);
+      }
+      expect(total, 366);
+      expect(bsWeekOfYear(bsToAd(2081, 12, bsMonthLength(2081, 12))), 54);
+    });
+  });
+
   group('Nepal time', () {
     test('is UTC+05:45', () {
       expect(kNepalOffset, const Duration(hours: 5, minutes: 45));

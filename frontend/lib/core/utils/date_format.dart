@@ -62,6 +62,9 @@ String shortDate(DateTime d) => '${d.day} ${_monthsShort[d.month - 1]}';
 /// Short month + year, e.g. `Jun 2026`.
 String monthYear(DateTime d) => '${_monthsLong[d.month - 1]} ${d.year}';
 
+/// Full month name for a 1-based month, e.g. `July`.
+String monthLong(int month) => _monthsLong[month - 1];
+
 /// `YYYY-MM-DD` for sending date-only values to the API; null passes through.
 String? dateParam(DateTime? d) {
   if (d == null) {

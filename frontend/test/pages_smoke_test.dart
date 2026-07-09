@@ -71,9 +71,11 @@ void main() {
   // Never hit the network for fonts during tests; fall back to the default.
   GoogleFonts.config.allowRuntimeFetching = false;
   // Mark onboarding seen so the dashboard doesn't auto-open the first-run tour.
-  setUp(() => SharedPreferences.setMockInitialValues(
-        <String, Object>{'onboarding_seen': true},
-      ));
+  setUp(
+    () => SharedPreferences.setMockInitialValues(<String, Object>{
+      'onboarding_seen': true,
+    }),
+  );
 
   testWidgets('Dashboard renders', (WidgetTester tester) async {
     await _pump(tester, const DashboardPage());
@@ -144,8 +146,9 @@ void main() {
     expect(find.text('Tasks'), findsOneWidget);
   });
 
-  testWidgets('Kanban board renders status columns',
-      (WidgetTester tester) async {
+  testWidgets('Kanban board renders status columns', (
+    WidgetTester tester,
+  ) async {
     await _pump(
       tester,
       TaskBoardView(tasks: _sampleTasks(), onTapTask: (_) {}),
@@ -155,8 +158,7 @@ void main() {
     expect(find.text('Done'), findsOneWidget);
   });
 
-  testWidgets('Calendar view renders dated tasks',
-      (WidgetTester tester) async {
+  testWidgets('Calendar view renders dated tasks', (WidgetTester tester) async {
     await _pump(
       tester,
       TaskCalendarView(tasks: _sampleTasks(), onTapTask: (_) {}),
@@ -164,8 +166,7 @@ void main() {
     expect(find.byType(TaskCalendarView), findsOneWidget);
   });
 
-  testWidgets('Gantt view renders dated tasks',
-      (WidgetTester tester) async {
+  testWidgets('Gantt view renders dated tasks', (WidgetTester tester) async {
     await _pump(
       tester,
       TaskGanttView(tasks: _sampleTasks(), onTapTask: (_) {}),
@@ -174,8 +175,9 @@ void main() {
     expect(find.text('Milestones'), findsOneWidget);
   });
 
-  testWidgets('Gantt highlights the critical path',
-      (WidgetTester tester) async {
+  testWidgets('Gantt highlights the critical path', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1440, 1024);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);

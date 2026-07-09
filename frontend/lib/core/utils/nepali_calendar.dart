@@ -342,6 +342,34 @@ String formatClock(DateTime time, {required bool nepali}) {
   return '${toNepaliDigits(clock)} ${nepaliMeridiem(time.hour)}';
 }
 
+/// A BS date as text, e.g. `असार २५, २०८३` or `Ashar 25, 2083`.
+String bsDateText(BsDate bs, {required bool nepali}) => nepali
+    ? '${kBsMonthsNe[bs.month]} ${toNepaliDigits(bs.day)}, '
+          '${toNepaliDigits(bs.year)}'
+    : '${kBsMonthsEn[bs.month]} ${bs.day}, ${bs.year}';
+
+/// Which week of the Bikram Sambat year a date falls in, counting the week
+/// that contains Baishakh 1 as week 1. Weeks run Sunday to Saturday, so the
+/// first week is a short one unless Baishakh 1 is itself a Sunday.
+int bsWeekOfYear(DateTime ad) {
+  final BsDate bs = adToBs(ad);
+  final DateTime yearStart = bsToAd(bs.year, 1, 1);
+  final int leading = sundayFirstIndex(yearStart);
+  return (daysBetween(yearStart, dateOnly(ad)) + leading) ~/ 7 + 1;
+}
+
+/// The ISO-8601 week number of a Gregorian date.
+///
+/// ISO weeks run Monday to Sunday, and a week belongs to whichever year holds
+/// its Thursday — so 1 January 2027 is week 53 of 2026, not week 1 of 2027.
+/// Computed in UTC so a daylight-saving jump cannot shift a day.
+int isoWeekNumber(DateTime date) {
+  final DateTime day = DateTime.utc(date.year, date.month, date.day);
+  final DateTime thursday = day.add(Duration(days: 4 - day.weekday));
+  final DateTime janFirst = DateTime.utc(thursday.year, 1, 1);
+  return thursday.difference(janFirst).inDays ~/ 7 + 1;
+}
+
 /// A one-line date for an event list, e.g. `Fri, 28 Aug 2026` in English or
 /// `शुक्र, १२ भदौ २०८३` in Nepali (which counts in the BS calendar).
 String eventDateLine(DateTime ad, {required bool nepali}) {
@@ -358,11 +386,7 @@ String eventDateLine(DateTime ad, {required bool nepali}) {
 /// A full date line in both calendars, e.g.
 /// `असार २५, २०८३ · बिही, 9 Jul 2026`.
 String fullDualDate(DateTime ad, {required bool nepali}) {
-  final BsDate bs = adToBs(ad);
-  final String bsPart = nepali
-      ? '${kBsMonthsNe[bs.month]} ${toNepaliDigits(bs.day)}, '
-            '${toNepaliDigits(bs.year)}'
-      : '${kBsMonthsEn[bs.month]} ${bs.day}, ${bs.year}';
+  final String bsPart = bsDateText(adToBs(ad), nepali: nepali);
   final int col = sundayFirstIndex(ad);
   final String weekday = nepali ? kWeekdaysNe[col] : kWeekdaysEn[col];
   return '$bsPart · $weekday, ${ad.day} ${kAdMonthsShort[ad.month]} ${ad.year}';

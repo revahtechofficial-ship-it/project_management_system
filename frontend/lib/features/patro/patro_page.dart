@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/date_format.dart';
 import '../../core/utils/feedback.dart';
 import '../../core/utils/nepali_calendar.dart';
 import '../../core/widgets/page_header.dart';
@@ -835,6 +836,9 @@ class _SelectedDayCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final BsDate bs = adToBs(selected);
+    final int col = sundayFirstIndex(selected);
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -849,11 +853,6 @@ class _SelectedDayCard extends ConsumerWidget {
             Text(
               fullDualDate(selected, nepali: nepali),
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              fullDualDate(selected, nepali: !nepali),
-              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
             ),
             if (isWeekend(selected)) ...<Widget>[
               const SizedBox(height: 8),
@@ -873,7 +872,52 @@ class _SelectedDayCard extends ConsumerWidget {
                 ),
               ),
             ],
-            const Divider(height: 24),
+            const Divider(height: 20),
+            _DetailRow(
+              label: nepali ? 'नेपाली मिति' : 'Nepali date',
+              value: bsDateText(bs, nepali: nepali),
+            ),
+            _DetailRow(
+              label: nepali ? 'अंग्रेजी मिति' : 'English date',
+              value: formatLongDate(selected),
+            ),
+            _DetailRow(
+              label: nepali ? 'वार' : 'Day of week',
+              value: '${kWeekdaysNeLong[col]} · ${kWeekdaysEnLong[col]}',
+            ),
+            _DetailRow(
+              label: nepali ? 'नेपाली महिना' : 'Nepali month',
+              value:
+                  '${nepali ? kBsMonthsNe[bs.month] : kBsMonthsEn[bs.month]} '
+                  '(${localDigits(bs.month, nepali: nepali)}/'
+                  '${localDigits(12, nepali: nepali)})',
+            ),
+            _DetailRow(
+              label: nepali ? 'अंग्रेजी महिना' : 'English month',
+              value: '${monthLong(selected.month)} (${selected.month}/12)',
+            ),
+            _DetailRow(
+              label: nepali ? 'विक्रम संवत्' : 'BS year',
+              value: localDigits(bs.year, nepali: nepali),
+            ),
+            _DetailRow(
+              label: nepali ? 'ईस्वी संवत्' : 'AD year',
+              value: '${selected.year}',
+            ),
+            _DetailRow(
+              label: nepali ? 'गते' : 'Day number',
+              value:
+                  'BS ${localDigits(bs.day, nepali: nepali)} · '
+                  'AD ${selected.day}',
+            ),
+            _DetailRow(
+              label: nepali ? 'हप्ता' : 'Week number',
+              value:
+                  '${nepali ? 'वि.सं.' : 'BS'} '
+                  '${localDigits(bsWeekOfYear(selected), nepali: nepali)} · '
+                  'ISO ${localDigits(isoWeekNumber(selected), nepali: nepali)}',
+            ),
+            const Divider(height: 20),
             if (events.isEmpty)
               Text(
                 nepali ? 'यो दिन केही छैन।' : 'Nothing on this day.',
@@ -890,6 +934,45 @@ class _SelectedDayCard extends ConsumerWidget {
                 ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// One labelled fact about the selected day.
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          SizedBox(
+            width: 108,
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
