@@ -52,71 +52,82 @@ class _PatroPageState extends ConsumerState<PatroPage> {
     final List<DateTime> days = bsMonthDays(_month.year, _month.month);
 
     return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: <Widget>[
-          PageHeader(
-            title: _nepali ? 'पात्रो' : 'Calendar',
-            subtitle: _nepali
-                ? 'नेपाली र अंग्रेजी पात्रो — बिदा, काम र छुट्टी सहित'
-                : 'Bikram Sambat and Gregorian, with holidays, '
-                      'due tasks and leave',
-            actions: <Widget>[
-              _LanguageToggle(
-                nepali: _nepali,
-                onChanged: (bool value) => setState(() => _nepali = value),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1240),
+          child: ListView(
+            padding: const EdgeInsets.all(24),
+            children: <Widget>[
+              PageHeader(
+                title: _nepali ? 'पात्रो' : 'Calendar',
+                subtitle: _nepali
+                    ? 'नेपाली र अंग्रेजी पात्रो — बिदा, काम र छुट्टी सहित'
+                    : 'Bikram Sambat and Gregorian, with holidays, '
+                          'due tasks and leave',
+                actions: <Widget>[
+                  _LanguageToggle(
+                    nepali: _nepali,
+                    onChanged: (bool value) => setState(() => _nepali = value),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: _goToToday,
+                    icon: const Icon(Icons.today_outlined, size: 18),
+                    label: Text(_nepali ? 'आज' : 'Today'),
+                  ),
+                  if (isAdmin) ...<Widget>[
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      onPressed: _addHoliday,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add holiday'),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: _goToToday,
-                icon: const Icon(Icons.today_outlined, size: 18),
-                label: Text(_nepali ? 'आज' : 'Today'),
+              const SizedBox(height: 20),
+              LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final Widget grid = _MonthCard(
+                    month: _month,
+                    days: days,
+                    selected: _selected,
+                    nepali: _nepali,
+                    events: events,
+                    onPrevious: () => _shiftMonth(-1),
+                    onNext: () => _shiftMonth(1),
+                    onSelect: (DateTime day) => setState(() => _selected = day),
+                  );
+                  final Widget side = _SidePanel(
+                    selected: _selected,
+                    nepali: _nepali,
+                    events: events,
+                    isAdmin: isAdmin,
+                  );
+                  if (constraints.maxWidth < 900) {
+                    return Column(
+                      children: <Widget>[
+                        grid,
+                        const SizedBox(height: 20),
+                        side,
+                      ],
+                    );
+                  }
+                  // The panel is a fixed column, so the grid keeps a sane width
+                  // instead of stretching its cells across the whole screen.
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(child: grid),
+                      const SizedBox(width: 20),
+                      SizedBox(width: 340, child: side),
+                    ],
+                  );
+                },
               ),
-              if (isAdmin) ...<Widget>[
-                const SizedBox(width: 8),
-                FilledButton.icon(
-                  onPressed: _addHoliday,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add holiday'),
-                ),
-              ],
             ],
           ),
-          const SizedBox(height: 20),
-          LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              final Widget grid = _MonthCard(
-                month: _month,
-                days: days,
-                selected: _selected,
-                nepali: _nepali,
-                events: events,
-                onPrevious: () => _shiftMonth(-1),
-                onNext: () => _shiftMonth(1),
-                onSelect: (DateTime day) => setState(() => _selected = day),
-              );
-              final Widget side = _SidePanel(
-                selected: _selected,
-                nepali: _nepali,
-                events: events,
-                isAdmin: isAdmin,
-              );
-              if (constraints.maxWidth < 900) {
-                return Column(
-                  children: <Widget>[grid, const SizedBox(height: 20), side],
-                );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(flex: 3, child: grid),
-                  const SizedBox(width: 20),
-                  Expanded(flex: 2, child: side),
-                ],
-              );
-            },
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -184,13 +195,15 @@ class _MonthCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 IconButton(
                   onPressed: onPrevious,
                   icon: const Icon(Icons.chevron_left),
                   tooltip: nepali ? 'अघिल्लो महिना' : 'Previous month',
                 ),
-                Expanded(
+                SizedBox(
+                  width: 200,
                   child: Column(
                     children: <Widget>[
                       Text(
@@ -220,48 +233,62 @@ class _MonthCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Row(
               children: <Widget>[
                 for (int col = 0; col < 7; col++)
                   Expanded(
-                    child: Text(
-                      nepali ? kWeekdaysNe[col] : kWeekdaysEn[col],
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: col == 6
-                            ? scheme.error
-                            : scheme.onSurfaceVariant,
+                    // Matches the grid's crossAxisSpacing so the labels sit
+                    // exactly over their columns.
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      child: Text(
+                        nepali ? kWeekdaysNe[col] : kWeekdaysEn[col],
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: col == 6
+                              ? scheme.error
+                              : scheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 6),
-            GridView.count(
-              crossAxisCount: 7,
+            const SizedBox(height: 8),
+            // A fixed cell height, not an aspect ratio: on a wide screen an
+            // aspect ratio makes every cell as tall as the column is wide.
+            GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 0.92,
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
-              children: <Widget>[
-                for (int i = 0; i < leading; i++) const SizedBox.shrink(),
-                for (int i = 0; i < days.length; i++)
-                  _DayCell(
-                    date: days[i],
-                    bsDay: i + 1,
-                    nepali: nepali,
-                    isToday: isSameDay(days[i], today),
-                    isSelected: isSameDay(days[i], selected),
-                    events: events[dayKey(days[i])] ?? const <CalendarEvent>[],
-                    onTap: () => onSelect(days[i]),
-                  ),
-              ],
+              padding: EdgeInsets.zero,
+              itemCount: leading + days.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 7,
+                mainAxisExtent: 72,
+                mainAxisSpacing: 6,
+                crossAxisSpacing: 6,
+              ),
+              itemBuilder: (BuildContext context, int index) {
+                if (index < leading) {
+                  return const SizedBox.shrink();
+                }
+                final int i = index - leading;
+                final DateTime date = days[i];
+                return _DayCell(
+                  date: date,
+                  bsDay: i + 1,
+                  nepali: nepali,
+                  isToday: isSameDay(date, today),
+                  isSelected: isSameDay(date, selected),
+                  events: events[dayKey(date)] ?? const <CalendarEvent>[],
+                  onTap: () => onSelect(date),
+                );
+              },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _Legend(nepali: nepali),
           ],
         ),
@@ -310,49 +337,74 @@ class _DayCell extends StatelessWidget {
         if (events.any((CalendarEvent e) => e.kind == kind)) kind,
     ];
 
+    // The 1st of a Gregorian month carries its month name, so the AD calendar
+    // stays readable as it drifts across the BS grid.
+    final String adLabel = date.day == 1
+        ? '${date.day} ${kAdMonthsShort[date.month]}'
+        : '${date.day}';
+
+    final Color border = isSelected
+        ? Colors.transparent
+        : isToday
+        ? scheme.primary
+        : isPublicHoliday
+        ? scheme.error.withValues(alpha: 0.35)
+        : scheme.outlineVariant.withValues(alpha: 0.55);
+
+    final BorderRadius radius = BorderRadius.circular(10);
+
     return Material(
       color: isSelected
           ? scheme.primary
           : isPublicHoliday
-          ? scheme.error.withValues(alpha: 0.08)
+          ? scheme.error.withValues(alpha: 0.07)
           : Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: radius,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: radius,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: isToday && !isSelected
-                ? Border.all(color: scheme.primary, width: 1.5)
-                : null,
+            borderRadius: radius,
+            border: Border.all(
+              color: border,
+              width: isToday && !isSelected ? 1.5 : 1,
+            ),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Stack(
             children: <Widget>[
-              Text(
-                localDigits(bsDay, nepali: nepali),
-                style: TextStyle(
-                  fontSize: 17,
-                  height: 1.1,
-                  fontWeight: FontWeight.w700,
-                  color: foreground,
+              Positioned(
+                top: 4,
+                right: 6,
+                child: Text(
+                  adLabel,
+                  style: TextStyle(
+                    fontSize: 10,
+                    height: 1,
+                    color: isSelected
+                        ? scheme.onPrimary.withValues(alpha: 0.85)
+                        : scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
-              Text(
-                '${date.day}',
-                style: TextStyle(
-                  fontSize: 10,
-                  height: 1.3,
-                  color: isSelected
-                      ? scheme.onPrimary.withValues(alpha: 0.85)
-                      : scheme.onSurfaceVariant,
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    localDigits(bsDay, nepali: nepali),
+                    style: TextStyle(
+                      fontSize: 19,
+                      height: 1,
+                      fontWeight: FontWeight.w700,
+                      color: foreground,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 3),
-              SizedBox(
-                height: 5,
+              Positioned(
+                bottom: 7,
+                left: 0,
+                right: 0,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
@@ -360,7 +412,7 @@ class _DayCell extends StatelessWidget {
                       Container(
                         width: 5,
                         height: 5,
-                        margin: const EdgeInsets.symmetric(horizontal: 1),
+                        margin: const EdgeInsets.symmetric(horizontal: 1.5),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: isSelected ? scheme.onPrimary : kind.color,
@@ -387,8 +439,9 @@ class _Legend extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Wrap(
-      spacing: 14,
+      spacing: 16,
       runSpacing: 6,
+      alignment: WrapAlignment.center,
       children: <Widget>[
         for (final CalendarEventKind kind in CalendarEventKind.values)
           Row(
