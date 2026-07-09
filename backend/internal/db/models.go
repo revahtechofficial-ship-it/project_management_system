@@ -239,6 +239,15 @@ type GitRepo struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
+type Holiday struct {
+	ID          int64       `json:"id"`
+	HolidayDate pgtype.Date `json:"holiday_date"`
+	NameEn      string      `json:"name_en"`
+	NameNe      string      `json:"name_ne"`
+	IsPublic    bool        `json:"is_public"`
+	CreatedAt   time.Time   `json:"created_at"`
+}
+
 type Incident struct {
 	ID          int64              `json:"id"`
 	Title       string             `json:"title"`

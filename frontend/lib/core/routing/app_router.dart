@@ -33,6 +33,7 @@ import '../../features/one_on_ones/one_on_ones_page.dart';
 import '../../features/landing/landing_page.dart';
 import '../../features/notifications/notifications_page.dart';
 import '../../features/pages/pages_page.dart';
+import '../../features/patro/patro_page.dart';
 import '../../features/planning/planning_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/projects/projects_page.dart';
@@ -136,6 +137,7 @@ final Provider<GoRouter> goRouterProvider = Provider<GoRouter>((ref) {
             builder: (c, s) => const ResourcesPage(),
           ),
           GoRoute(path: '/time', builder: (c, s) => const TimePage()),
+          GoRoute(path: '/patro', builder: (c, s) => const PatroPage()),
           GoRoute(path: '/goals', builder: (c, s) => const GoalsPage()),
           GoRoute(path: '/team', builder: (c, s) => const TeamPage()),
           GoRoute(

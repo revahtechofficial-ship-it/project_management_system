@@ -57,6 +57,7 @@ const List<_NavGroup> _navGroups = <_NavGroup>[
     _NavItem(Icons.folder_outlined, 'Projects', '/projects'),
   ]),
   _NavGroup('Plan', <_NavItem>[
+    _NavItem(Icons.calendar_month_outlined, 'Calendar', '/patro'),
     _NavItem(Icons.insights_outlined, 'Planning', '/planning'),
     _NavItem(Icons.flag_outlined, 'Goals', '/goals'),
     _NavItem(Icons.event_available_outlined, 'Resources', '/resources'),
