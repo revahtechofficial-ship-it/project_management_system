@@ -467,6 +467,13 @@ type ProjectBudget struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
+type ProjectMember struct {
+	ProjectID int64     `json:"project_id"`
+	UserID    int64     `json:"user_id"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type ProjectShare struct {
 	Token     string    `json:"token"`
 	ProjectID int64     `json:"project_id"`

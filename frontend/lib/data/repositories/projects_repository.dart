@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../core/utils/api_exception.dart';
 import '../enums/project_status.dart';
 import '../models/project.dart';
+import '../models/project_member.dart';
 
 /// Talks to the backend's /api/v1/projects endpoints (AGENTS.md §1
 /// `data/repositories`, §9 data abstraction).
@@ -73,6 +74,23 @@ class ProjectsRepository {
 
   /// Deletes the project identified by [id].
   Future<void> delete(int id) => _dio.delete<void>('/api/v1/projects/$id');
+
+  /// The project's members and the caller's effective role on it.
+  Future<ProjectMembership> members(int id) async {
+    final Response<Map<String, dynamic>> res = await _dio
+        .get<Map<String, dynamic>>('/api/v1/projects/$id/members');
+    return ProjectMembership.fromJson(res.data ?? <String, dynamic>{});
+  }
+
+  /// Adds a member or changes their role (`viewer`, `editor` or `manager`).
+  Future<void> setMember(int id, int userId, String role) => _dio.put<void>(
+        '/api/v1/projects/$id/members/$userId',
+        data: <String, dynamic>{'role': role},
+      );
+
+  /// Removes a member from the project.
+  Future<void> removeMember(int id, int userId) =>
+      _dio.delete<void>('/api/v1/projects/$id/members/$userId');
 }
 
 String? _dateOnly(DateTime? d) {

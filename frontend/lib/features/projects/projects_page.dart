@@ -21,6 +21,7 @@ import 'providers/project_templates_providers.dart';
 import 'providers/projects_providers.dart';
 import 'providers/spaces_providers.dart';
 import 'widgets/project_form_dialog.dart';
+import 'widgets/project_members_dialog.dart';
 import 'widgets/project_share_dialog.dart';
 
 /// The projects board: delivery status, progress and team per project — all
@@ -718,9 +719,15 @@ class _ProjectCard extends ConsumerWidget {
                 ),
                 onSelected: (String v) => _onAction(context, ref, v),
                 itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  // Editing project settings needs the manager role.
+                  if (project.canManage)
+                    const PopupMenuItem<String>(
+                      value: 'edit',
+                      child: Text('Edit'),
+                    ),
                   const PopupMenuItem<String>(
-                    value: 'edit',
-                    child: Text('Edit'),
+                    value: 'members',
+                    child: Text('Members & roles'),
                   ),
                   if (ref.watch(authControllerProvider).asData?.value.isAdmin ??
                       false) ...<PopupMenuEntry<String>>[
@@ -816,6 +823,10 @@ class _ProjectCard extends ConsumerWidget {
   ) async {
     if (action == 'edit') {
       await _openForm(context, ref, project: project);
+      return;
+    }
+    if (action == 'members') {
+      await showProjectMembersDialog(context, project.id, project.name);
       return;
     }
     if (action == 'share') {

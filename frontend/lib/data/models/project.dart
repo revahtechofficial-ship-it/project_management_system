@@ -13,6 +13,10 @@ class Project {
   final int? spaceId;
   final int? folderId;
 
+  /// The caller's effective role on this project: `viewer`, `editor` or
+  /// `manager`. Defaults to `manager` so an older response stays permissive.
+  final String myRole;
+
   const Project({
     required this.id,
     required this.status,
@@ -24,10 +28,14 @@ class Project {
     this.memberNames = const <String>[],
     this.spaceId,
     this.folderId,
+    this.myRole = 'manager',
   });
 
   /// Fraction of this project's tasks that are complete, in `0.0`–`1.0`.
   double get progress => totalTasks == 0 ? 0 : doneTasks / totalTasks;
+
+  /// Whether the caller administers this project (settings, membership).
+  bool get canManage => myRole == 'manager';
 
   factory Project.fromJson(Map<String, dynamic> json) => Project(
     id: json['id'] as int,
@@ -46,6 +54,7 @@ class Project {
         const <String>[],
     spaceId: json['space_id'] as int?,
     folderId: json['folder_id'] as int?,
+    myRole: json['my_role'] as String? ?? 'manager',
   );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -59,6 +68,7 @@ class Project {
     'member_names': memberNames,
     'space_id': spaceId,
     'folder_id': folderId,
+    'my_role': myRole,
   };
 
   @override
@@ -81,6 +91,7 @@ class Project {
           other.dueDate == dueDate &&
           other.spaceId == spaceId &&
           other.folderId == folderId &&
+          other.myRole == myRole &&
           _sameList(other.memberNames, memberNames);
 
   @override
@@ -94,6 +105,7 @@ class Project {
     dueDate,
     spaceId,
     folderId,
+    myRole,
     Object.hashAll(memberNames),
   );
 }

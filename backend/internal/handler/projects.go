@@ -35,6 +35,9 @@ func (h *ProjectHandler) Routes() http.Handler {
 	r.Get("/{id}/share", h.getShare)
 	r.Post("/{id}/share", h.createShare)
 	r.Delete("/{id}/share", h.revokeShare)
+	r.Get("/{id}/members", h.listMembers)
+	r.Put("/{id}/members/{userId}", h.setMember)
+	r.Delete("/{id}/members/{userId}", h.removeMember)
 	return r
 }
 
@@ -121,10 +124,11 @@ type projectResponse struct {
 	MemberNames []string   `json:"member_names"`
 	SpaceID     *int64     `json:"space_id"`
 	FolderID    *int64     `json:"folder_id"`
+	MyRole      string     `json:"my_role"`
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
-func projectFromRow(r db.ListProjectsRow) projectResponse {
+func projectFromRow(r db.ListProjectsRow, myRole string) projectResponse {
 	return projectResponse{
 		ID:          r.ID,
 		Name:        r.Name,
@@ -136,11 +140,12 @@ func projectFromRow(r db.ListProjectsRow) projectResponse {
 		MemberNames: r.MemberNames,
 		SpaceID:     r.SpaceID,
 		FolderID:    r.FolderID,
+		MyRole:      myRole,
 		CreatedAt:   r.CreatedAt,
 	}
 }
 
-func projectFromModel(p db.Project) projectResponse {
+func projectFromModel(p db.Project, myRole string) projectResponse {
 	return projectResponse{
 		ID:          p.ID,
 		Name:        p.Name,
@@ -152,6 +157,7 @@ func projectFromModel(p db.Project) projectResponse {
 		MemberNames: []string{},
 		SpaceID:     p.SpaceID,
 		FolderID:    p.FolderID,
+		MyRole:      myRole,
 		CreatedAt:   p.CreatedAt,
 	}
 }
@@ -162,9 +168,41 @@ func (h *ProjectHandler) list(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	// Resolve every project's effective role for the caller in one query rather
+	// than one lookup per project.
+	admin := isAdmin(r.Context())
+	actor := actorOf(r.Context())
+	scoped := !admin && actor != nil
+	roles := map[int64]string{}
+	if scoped {
+		access, aerr := h.q.ListProjectAccess(r.Context(), *actor)
+		if aerr != nil {
+			writeError(w, http.StatusInternalServerError, aerr)
+			return
+		}
+		for _, a := range access {
+			switch {
+			case a.MyRole != "":
+				roles[a.ProjectID] = validProjectRole(a.MyRole)
+			case a.MemberCount == 0:
+				roles[a.ProjectID] = roleManager
+			default:
+				roles[a.ProjectID] = roleViewer
+			}
+		}
+	}
 	out := make([]projectResponse, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, projectFromRow(row))
+		// Admins (and callers we can't identify) keep the pre-roles behaviour.
+		role := roleManager
+		if scoped {
+			if resolved, ok := roles[row.ID]; ok {
+				role = resolved
+			} else {
+				role = roleViewer
+			}
+		}
+		out = append(out, projectFromRow(row, role))
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -212,13 +250,17 @@ func (h *ProjectHandler) create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, projectFromModel(p))
+	// A brand-new project has no members yet, so its creator manages it.
+	writeJSON(w, http.StatusCreated, projectFromModel(p, roleManager))
 }
 
 func (h *ProjectHandler) update(w http.ResponseWriter, r *http.Request) {
 	id, err := idParam(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	if !h.requireProjectManager(w, r, id) {
 		return
 	}
 	var b projectBody
@@ -253,7 +295,7 @@ func (h *ProjectHandler) update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, projectFromModel(p))
+	writeJSON(w, http.StatusOK, projectFromModel(p, roleManager))
 }
 
 func (h *ProjectHandler) delete(w http.ResponseWriter, r *http.Request) {
