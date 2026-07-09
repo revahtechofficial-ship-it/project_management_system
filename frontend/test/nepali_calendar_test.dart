@@ -106,6 +106,35 @@ void main() {
     });
   });
 
+  group('weekend', () {
+    test('both Saturday and Sunday rest', () {
+      expect(isWeekend(DateTime(2026, 7, 11)), isTrue); // Saturday
+      expect(isWeekend(DateTime(2026, 7, 12)), isTrue); // Sunday
+    });
+
+    test('midweek days do not', () {
+      for (int day = 6; day <= 10; day++) {
+        expect(
+          isWeekend(DateTime(2026, 7, day)),
+          isFalse,
+          reason: '2026-07-$day should be a working day',
+        );
+      }
+    });
+
+    test('only the first and last columns rest', () {
+      expect(<bool>[for (int c = 0; c < 7; c++) isWeekendColumn(c)], <bool>[
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+      ]);
+    });
+  });
+
   group('formatting', () {
     test('month label in both languages', () {
       expect(bsMonthLabel(2083, 3, nepali: true), 'असार २०८३');

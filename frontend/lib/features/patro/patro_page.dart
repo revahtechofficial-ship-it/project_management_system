@@ -80,7 +80,10 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                     FilledButton.icon(
                       onPressed: _addHoliday,
                       icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Add holiday'),
+                      label: Text(
+                        _nepali ? 'बिदा थप्नुहोस्' : 'Add holiday',
+                        softWrap: false,
+                      ),
                     ),
                   ],
                 ],
@@ -136,6 +139,11 @@ class _PatroPageState extends ConsumerState<PatroPage> {
 }
 
 /// नेपाली / English switch.
+///
+/// Hand-rolled rather than a [SegmentedButton]: that widget sizes every
+/// segment to one shared intrinsic width, which it mismeasures on the web
+/// when a Devanagari label falls back to a font that has not loaded yet —
+/// so "English" wrapped mid-word.
 class _LanguageToggle extends StatelessWidget {
   const _LanguageToggle({required this.nepali, required this.onChanged});
 
@@ -144,15 +152,67 @@ class _LanguageToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<bool>(
-      showSelectedIcon: false,
-      style: const ButtonStyle(visualDensity: VisualDensity.compact),
-      segments: const <ButtonSegment<bool>>[
-        ButtonSegment<bool>(value: true, label: Text('नेपाली')),
-        ButtonSegment<bool>(value: false, label: Text('English')),
-      ],
-      selected: <bool>{nepali},
-      onSelectionChanged: (Set<bool> value) => onChanged(value.first),
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          _LanguageChip(
+            label: 'नेपाली',
+            selected: nepali,
+            onTap: () => onChanged(true),
+          ),
+          _LanguageChip(
+            label: 'English',
+            selected: !nepali,
+            onTap: () => onChanged(false),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LanguageChip extends StatelessWidget {
+  const _LanguageChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: selected ? scheme.primary : Colors.transparent,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          child: Text(
+            label,
+            softWrap: false,
+            overflow: TextOverflow.visible,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: selected ? scheme.onPrimary : scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -268,7 +328,7 @@ class _MonthCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: col == 6
+                                color: isWeekendColumn(col)
                                     ? scheme.error
                                     : scheme.onSurface,
                               ),
@@ -302,9 +362,9 @@ class _MonthCard extends StatelessWidget {
               itemCount: leading + days.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 7,
-                mainAxisExtent: 92,
-                mainAxisSpacing: 6,
-                crossAxisSpacing: 6,
+                mainAxisExtent: 84,
+                mainAxisSpacing: 5,
+                crossAxisSpacing: 5,
               ),
               itemBuilder: (BuildContext context, int index) {
                 if (index < leading) {
@@ -437,11 +497,10 @@ class _DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final bool isSaturday = sundayFirstIndex(date) == 6;
     final bool isPublicHoliday = events.any(
       (CalendarEvent e) => e.isPublicHoliday,
     );
-    final bool restDay = isSaturday || isPublicHoliday;
+    final bool restDay = isWeekend(date) || isPublicHoliday;
 
     final Color foreground = isSelected
         ? scheme.onPrimary
@@ -449,9 +508,12 @@ class _DayCell extends StatelessWidget {
         ? scheme.error
         : scheme.onSurface;
 
+    // Holidays are named in the cell, so they need no dot of their own.
     final List<CalendarEventKind> kinds = <CalendarEventKind>[
       for (final CalendarEventKind kind in CalendarEventKind.values)
-        if (events.any((CalendarEvent e) => e.kind == kind)) kind,
+        if (kind != CalendarEventKind.holiday &&
+            events.any((CalendarEvent e) => e.kind == kind))
+          kind,
     ];
 
     // The 1st of a Gregorian month carries its month name, so the AD calendar
@@ -469,9 +531,9 @@ class _DayCell extends StatelessWidget {
         : scheme.outlineVariant.withValues(alpha: 0.55);
 
     final BorderRadius radius = BorderRadius.circular(10);
-    final CalendarEvent? headline = headlineEvent(events);
+    final CalendarEvent? holiday = cellHoliday(events);
 
-    return Material(
+    final Widget cell = Material(
       color: isSelected
           ? scheme.primary
           : isPublicHoliday
@@ -531,26 +593,24 @@ class _DayCell extends StatelessWidget {
                   ),
                 ),
               ),
-              // A printed patro names the day rather than dotting it; the dots
-              // above only cover the kinds this line has no room for.
+              // A printed patro names its holidays. Everything else stays a
+              // dot — a task title would never fit.
               SizedBox(
-                height: 22,
-                child: headline == null
+                height: 20,
+                child: holiday == null
                     ? null
                     : Text(
-                        headline.name(nepali: nepali),
+                        holiday.name(nepali: nepali),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 8.5,
-                          height: 1.25,
+                          height: 1.2,
                           fontWeight: FontWeight.w600,
                           color: isSelected
                               ? scheme.onPrimary.withValues(alpha: 0.9)
-                              : headline.kind == CalendarEventKind.holiday
-                              ? scheme.error
-                              : scheme.onSurfaceVariant,
+                              : scheme.error,
                         ),
                       ),
               ),
@@ -559,10 +619,22 @@ class _DayCell extends StatelessWidget {
         ),
       ),
     );
+
+    if (events.isEmpty) {
+      return cell;
+    }
+    // A bare dot says nothing; hovering names everything on the day.
+    return Tooltip(
+      waitDuration: const Duration(milliseconds: 400),
+      message: <String>[
+        for (final CalendarEvent event in events) event.name(nepali: nepali),
+      ].join('\n'),
+      child: cell,
+    );
   }
 }
 
-/// What the dots mean.
+/// What the marks in the grid mean.
 class _Legend extends StatelessWidget {
   const _Legend({required this.nepali});
 
@@ -580,14 +652,29 @@ class _Legend extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: kind.color,
+              // Holidays are named in red rather than dotted, so their swatch
+              // shows the tint a holiday cell actually gets.
+              if (kind == CalendarEventKind.holiday)
+                Container(
+                  width: 14,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: scheme.error.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(3),
+                    border: Border.all(
+                      color: scheme.error.withValues(alpha: 0.35),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: kind.color,
+                  ),
                 ),
-              ),
               const SizedBox(width: 6),
               Text(
                 nepali ? kind.labelNe : kind.label,
@@ -595,6 +682,24 @@ class _Legend extends StatelessWidget {
               ),
             ],
           ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              nepali ? 'शनि/आइत' : 'Sat/Sun',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: scheme.error,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              nepali ? 'साप्ताहिक बिदा' : 'Weekend',
+              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -830,9 +935,9 @@ class _EventTile extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (event.subtitle.isNotEmpty)
+                if (event.detail(nepali: nepali).isNotEmpty)
                   Text(
-                    event.subtitle,
+                    event.detail(nepali: nepali),
                     style: TextStyle(
                       fontSize: 11,
                       color: scheme.onSurfaceVariant,

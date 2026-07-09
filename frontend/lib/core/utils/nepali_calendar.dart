@@ -233,6 +233,15 @@ BsDate addBsMonths(int year, int month, int delta) {
 /// The zero-based column (Sunday = 0) a Gregorian date falls in.
 int sundayFirstIndex(DateTime date) => date.weekday % 7;
 
+/// Whether a column of the week is a non-working day at Revah.
+///
+/// Nepal's traditional single weekly holiday is Saturday; Revah rests on
+/// Sunday too, so both columns read as holidays.
+bool isWeekendColumn(int column) => column == 0 || column == 6;
+
+/// Whether a date falls on the weekend. See [isWeekendColumn].
+bool isWeekend(DateTime date) => isWeekendColumn(sundayFirstIndex(date));
+
 /// The BS month label, e.g. `असार २०८३` or `Ashar 2083`.
 String bsMonthLabel(int year, int month, {required bool nepali}) => nepali
     ? '${kBsMonthsNe[month]} ${toNepaliDigits(year)}'

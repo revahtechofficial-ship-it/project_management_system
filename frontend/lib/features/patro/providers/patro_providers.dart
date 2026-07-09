@@ -31,6 +31,7 @@ class CalendarEvent {
     required this.title,
     this.titleNe = '',
     this.subtitle = '',
+    this.subtitleNe = '',
     this.holidayId,
     this.isPublicHoliday = false,
   });
@@ -41,12 +42,13 @@ class CalendarEvent {
   final String title;
   final String titleNe;
   final String subtitle;
+  final String subtitleNe;
 
   /// Set only for holidays, so admins can delete them from the day panel.
   final int? holidayId;
 
   /// A public holiday tints its whole day cell red; a non-public one only
-  /// shows a dot.
+  /// shows its name.
   final bool isPublicHoliday;
 
   /// The title in the requested language, falling back to the other.
@@ -55,6 +57,14 @@ class CalendarEvent {
       return titleNe;
     }
     return title.isNotEmpty ? title : titleNe;
+  }
+
+  /// The supporting line in the requested language, falling back to the other.
+  String detail({required bool nepali}) {
+    if (nepali && subtitleNe.isNotEmpty) {
+      return subtitleNe;
+    }
+    return subtitle.isNotEmpty ? subtitle : subtitleNe;
   }
 
   @override
@@ -69,6 +79,7 @@ class CalendarEvent {
           other.title == title &&
           other.titleNe == titleNe &&
           other.subtitle == subtitle &&
+          other.subtitleNe == subtitleNe &&
           other.holidayId == holidayId &&
           other.isPublicHoliday == isPublicHoliday;
 
@@ -79,6 +90,7 @@ class CalendarEvent {
     title,
     titleNe,
     subtitle,
+    subtitleNe,
     holidayId,
     isPublicHoliday,
   );
@@ -113,6 +125,7 @@ calendarEventsProvider = Provider<Map<String, List<CalendarEvent>>>((ref) {
         title: holiday.nameEn,
         titleNe: holiday.nameNe,
         subtitle: holiday.isPublic ? 'Public holiday' : 'Observance',
+        subtitleNe: holiday.isPublic ? 'सार्वजनिक बिदा' : 'पर्व',
         holidayId: holiday.id,
         isPublicHoliday: holiday.isPublic,
       ),
@@ -147,6 +160,9 @@ calendarEventsProvider = Provider<Map<String, List<CalendarEvent>>>((ref) {
           kind: CalendarEventKind.leave,
           title: '${request.userName} — ${request.type.label}',
           subtitle: span == 0 ? '' : 'Day ${i + 1} of ${span + 1}',
+          subtitleNe: span == 0
+              ? ''
+              : 'दिन ${toNepaliDigits(i + 1)} / ${toNepaliDigits(span + 1)}',
         ),
       );
     }
@@ -191,18 +207,21 @@ List<CalendarEvent> pastEvents(
   return all.length <= limit ? all : all.sublist(0, limit);
 }
 
-/// The event whose name a day cell should print. Holidays win over tasks and
-/// leave, mirroring how a printed patro labels its days.
-CalendarEvent? headlineEvent(List<CalendarEvent> events) {
-  if (events.isEmpty) {
-    return null;
-  }
-  for (final CalendarEventKind kind in CalendarEventKind.values) {
-    for (final CalendarEvent event in events) {
-      if (event.kind == kind) {
-        return event;
-      }
+/// The holiday a day cell should print, if any.
+///
+/// Only holidays get their name spelled out in the grid. Task titles and
+/// leave lines are far too long for a 100px cell — those stay as dots and are
+/// read in the day panel. A public holiday outranks an observance.
+CalendarEvent? cellHoliday(List<CalendarEvent> events) {
+  CalendarEvent? found;
+  for (final CalendarEvent event in events) {
+    if (event.kind != CalendarEventKind.holiday) {
+      continue;
     }
+    if (event.isPublicHoliday) {
+      return event;
+    }
+    found ??= event;
   }
-  return events.first;
+  return found;
 }
