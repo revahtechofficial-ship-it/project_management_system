@@ -8,6 +8,7 @@ import '../../data/enums/calendar_event_kind.dart';
 import '../../providers/auth_provider.dart';
 import 'providers/patro_providers.dart';
 import 'widgets/add_holiday_dialog.dart';
+import 'widgets/pill_toggle.dart';
 
 /// A dual Bikram Sambat + Gregorian calendar, in the spirit of Hamro Patro:
 /// a BS month grid with the AD day in each cell, holidays, task due dates and
@@ -28,10 +29,13 @@ class _PatroPageState extends ConsumerState<PatroPage> {
     setState(() => _month = addBsMonths(_month.year, _month.month, delta));
   }
 
-  void _goToToday() {
+  /// Selects [day] and brings its BS month into view. Used by the grid, by the
+  /// greyed days of the neighbouring months, and by the event lists.
+  void _openDate(DateTime day) {
+    final BsDate bs = adToBs(day);
     setState(() {
-      _month = bsToday();
-      _selected = dateOnly(DateTime.now());
+      _selected = dateOnly(day);
+      _month = BsDate(bs.year, bs.month, 1);
     });
   }
 
@@ -49,7 +53,13 @@ class _PatroPageState extends ConsumerState<PatroPage> {
     final Map<String, List<CalendarEvent>> events = ref.watch(
       calendarEventsProvider,
     );
-    final List<DateTime> days = bsMonthDays(_month.year, _month.month);
+    final bool holidaysFailed = ref.watch(holidaysProvider).hasError;
+    final DateTime today = dateOnly(DateTime.now());
+    final BsDate bsNow = bsToday();
+    final bool alreadyOnToday =
+        isSameDay(_selected, today) &&
+        _month.year == bsNow.year &&
+        _month.month == bsNow.month;
 
     return Scaffold(
       body: Center(
@@ -65,15 +75,16 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                     : 'Bikram Sambat and Gregorian, with holidays, '
                           'due tasks and leave',
                 actions: <Widget>[
-                  _LanguageToggle(
-                    nepali: _nepali,
-                    onChanged: (bool value) => setState(() => _nepali = value),
+                  PillToggle(
+                    labels: const <String>['नेपाली', 'English'],
+                    selected: _nepali ? 0 : 1,
+                    onChanged: (int i) => setState(() => _nepali = i == 0),
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton.icon(
-                    onPressed: _goToToday,
+                    onPressed: alreadyOnToday ? null : () => _openDate(today),
                     icon: const Icon(Icons.today_outlined, size: 18),
-                    label: Text(_nepali ? 'आज' : 'Today'),
+                    label: Text(_nepali ? 'आज' : 'Today', softWrap: false),
                   ),
                   if (isAdmin) ...<Widget>[
                     const SizedBox(width: 8),
@@ -88,18 +99,26 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                   ],
                 ],
               ),
+              // Holidays are the point of this page, so a silent empty grid
+              // would be worse than saying the fetch failed.
+              if (holidaysFailed) ...<Widget>[
+                const SizedBox(height: 16),
+                _HolidaysUnavailable(
+                  nepali: _nepali,
+                  onRetry: () => ref.invalidate(holidaysProvider),
+                ),
+              ],
               const SizedBox(height: 20),
               LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
                   final Widget grid = _MonthCard(
                     month: _month,
-                    days: days,
                     selected: _selected,
                     nepali: _nepali,
                     events: events,
                     onPrevious: () => _shiftMonth(-1),
                     onNext: () => _shiftMonth(1),
-                    onSelect: (DateTime day) => setState(() => _selected = day),
+                    onOpenDate: _openDate,
                     onJump: (int year, int month) =>
                         setState(() => _month = BsDate(year, month, 1)),
                   );
@@ -108,6 +127,7 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                     nepali: _nepali,
                     events: events,
                     isAdmin: isAdmin,
+                    onOpenDate: _openDate,
                   );
                   if (constraints.maxWidth < 900) {
                     return Column(
@@ -138,40 +158,41 @@ class _PatroPageState extends ConsumerState<PatroPage> {
   }
 }
 
-/// नेपाली / English switch.
-///
-/// Hand-rolled rather than a [SegmentedButton]: that widget sizes every
-/// segment to one shared intrinsic width, which it mismeasures on the web
-/// when a Devanagari label falls back to a font that has not loaded yet —
-/// so "English" wrapped mid-word.
-class _LanguageToggle extends StatelessWidget {
-  const _LanguageToggle({required this.nepali, required this.onChanged});
+/// Shown when `/api/v1/holidays` cannot be reached — otherwise the grid just
+/// looks like a year with no festivals in it.
+class _HolidaysUnavailable extends StatelessWidget {
+  const _HolidaysUnavailable({required this.nepali, required this.onRetry});
 
   final bool nepali;
-  final ValueChanged<bool> onChanged;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(3),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: scheme.outlineVariant),
+        color: scheme.errorContainer.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.error.withValues(alpha: 0.4)),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _LanguageChip(
-            label: 'नेपाली',
-            selected: nepali,
-            onTap: () => onChanged(true),
+          Icon(Icons.cloud_off_outlined, size: 18, color: scheme.error),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              nepali
+                  ? 'बिदाहरू लोड गर्न सकिएन। पात्रो बाँकी सबै देखाउँदैछ।'
+                  : 'Holidays could not be loaded. The rest of the calendar '
+                        'still works.',
+              style: const TextStyle(fontSize: 13),
+            ),
           ),
-          _LanguageChip(
-            label: 'English',
-            selected: !nepali,
-            onTap: () => onChanged(false),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: onRetry,
+            child: Text(nepali ? 'फेरि प्रयास' : 'Retry'),
           ),
         ],
       ),
@@ -179,73 +200,67 @@ class _LanguageToggle extends StatelessWidget {
   }
 }
 
-class _LanguageChip extends StatelessWidget {
-  const _LanguageChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+/// One square of the grid: a date, its BS day, and whether it belongs to the
+/// month on screen or to a neighbour.
+class _GridDay {
+  const _GridDay(this.date, this.bsDay, {required this.outside});
 
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: selected ? scheme.primary : Colors.transparent,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-          child: Text(
-            label,
-            softWrap: false,
-            overflow: TextOverflow.visible,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: selected ? scheme.onPrimary : scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ),
+  /// Places [date] against the month on screen, greying it when it belongs to
+  /// a neighbouring BS month.
+  factory _GridDay.of(DateTime date, BsDate month) {
+    final BsDate bs = adToBs(date);
+    return _GridDay(
+      date,
+      bs.day,
+      outside: bs.month != month.month || bs.year != month.year,
     );
   }
+
+  final DateTime date;
+  final int bsDay;
+  final bool outside;
 }
 
 /// The month header, weekday strip and day grid.
 class _MonthCard extends StatelessWidget {
   const _MonthCard({
     required this.month,
-    required this.days,
     required this.selected,
     required this.nepali,
     required this.events,
     required this.onPrevious,
     required this.onNext,
-    required this.onSelect,
+    required this.onOpenDate,
     required this.onJump,
   });
 
   final BsDate month;
-  final List<DateTime> days;
   final DateTime selected;
   final bool nepali;
   final Map<String, List<CalendarEvent>> events;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
-  final ValueChanged<DateTime> onSelect;
+  final ValueChanged<DateTime> onOpenDate;
   final void Function(int year, int month) onJump;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final DateTime today = dateOnly(DateTime.now());
-    final int leading = days.isEmpty ? 0 : sundayFirstIndex(days.first);
+    final List<DateTime> days = bsMonthDays(month.year, month.month);
+    final List<_GridDay> cells = <_GridDay>[
+      for (final DateTime date in bsMonthGrid(month.year, month.month))
+        _GridDay.of(date, month),
+    ];
+
+    // Reserve the name line for every cell or for none, so the BS numerals
+    // stay on one baseline across a row. Most months have no holiday at all,
+    // and reserving the line there would just leave dead space.
+    final bool reserveNameLine = cells.any(
+      (_GridDay c) =>
+          cellHoliday(events[dayKey(c.date)] ?? const <CalendarEvent>[]) !=
+          null,
+    );
 
     return Card(
       elevation: 0,
@@ -340,8 +355,8 @@ class _MonthCard extends StatelessWidget {
                               textAlign: TextAlign.center,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 9,
-                                height: 1.4,
+                                fontSize: 10,
+                                height: 1.3,
                                 color: scheme.onSurfaceVariant,
                               ),
                             ),
@@ -359,27 +374,25 @@ class _MonthCard extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               padding: EdgeInsets.zero,
-              itemCount: leading + days.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              itemCount: cells.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 7,
-                mainAxisExtent: 84,
+                mainAxisExtent: reserveNameLine ? 84 : 66,
                 mainAxisSpacing: 5,
                 crossAxisSpacing: 5,
               ),
               itemBuilder: (BuildContext context, int index) {
-                if (index < leading) {
-                  return const SizedBox.shrink();
-                }
-                final int i = index - leading;
-                final DateTime date = days[i];
+                final _GridDay cell = cells[index];
                 return _DayCell(
-                  date: date,
-                  bsDay: i + 1,
+                  date: cell.date,
+                  bsDay: cell.bsDay,
+                  outside: cell.outside,
+                  reserveNameLine: reserveNameLine,
                   nepali: nepali,
-                  isToday: isSameDay(date, today),
-                  isSelected: isSameDay(date, selected),
-                  events: events[dayKey(date)] ?? const <CalendarEvent>[],
-                  onTap: () => onSelect(date),
+                  isToday: isSameDay(cell.date, today),
+                  isSelected: isSameDay(cell.date, selected),
+                  events: events[dayKey(cell.date)] ?? const <CalendarEvent>[],
+                  onTap: () => onOpenDate(cell.date),
                 );
               },
             ),
@@ -474,11 +487,14 @@ class _BsMonthPicker extends StatelessWidget {
   }
 }
 
-/// One day: the BS day large, the AD day small, and a dot per event kind.
+/// One day: the BS day large, the AD day small, holidays named, everything
+/// else dotted.
 class _DayCell extends StatelessWidget {
   const _DayCell({
     required this.date,
     required this.bsDay,
+    required this.outside,
+    required this.reserveNameLine,
     required this.nepali,
     required this.isToday,
     required this.isSelected,
@@ -488,6 +504,10 @@ class _DayCell extends StatelessWidget {
 
   final DateTime date;
   final int bsDay;
+
+  /// True for the neighbouring months' days that pad the rectangle out.
+  final bool outside;
+  final bool reserveNameLine;
   final bool nepali;
   final bool isToday;
   final bool isSelected;
@@ -504,6 +524,8 @@ class _DayCell extends StatelessWidget {
 
     final Color foreground = isSelected
         ? scheme.onPrimary
+        : outside
+        ? scheme.onSurfaceVariant.withValues(alpha: 0.4)
         : restDay
         ? scheme.error
         : scheme.onSurface;
@@ -526,17 +548,20 @@ class _DayCell extends StatelessWidget {
         ? Colors.transparent
         : isToday
         ? scheme.primary
+        : outside
+        ? scheme.outlineVariant.withValues(alpha: 0.25)
         : isPublicHoliday
         ? scheme.error.withValues(alpha: 0.35)
         : scheme.outlineVariant.withValues(alpha: 0.55);
 
     final BorderRadius radius = BorderRadius.circular(10);
     final CalendarEvent? holiday = cellHoliday(events);
+    final double dim = outside ? 0.45 : 1;
 
     final Widget cell = Material(
       color: isSelected
           ? scheme.primary
-          : isPublicHoliday
+          : isPublicHoliday && !outside
           ? scheme.error.withValues(alpha: 0.07)
           : Colors.transparent,
       borderRadius: radius,
@@ -564,7 +589,9 @@ class _DayCell extends StatelessWidget {
                       margin: const EdgeInsets.only(right: 2, top: 3),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isSelected ? scheme.onPrimary : kind.color,
+                        color: isSelected
+                            ? scheme.onPrimary
+                            : kind.color.withValues(alpha: dim),
                       ),
                     ),
                   const Spacer(),
@@ -575,7 +602,7 @@ class _DayCell extends StatelessWidget {
                       height: 1,
                       color: isSelected
                           ? scheme.onPrimary.withValues(alpha: 0.85)
-                          : scheme.onSurfaceVariant,
+                          : scheme.onSurfaceVariant.withValues(alpha: dim),
                     ),
                   ),
                 ],
@@ -595,25 +622,26 @@ class _DayCell extends StatelessWidget {
               ),
               // A printed patro names its holidays. Everything else stays a
               // dot — a task title would never fit.
-              SizedBox(
-                height: 20,
-                child: holiday == null
-                    ? null
-                    : Text(
-                        holiday.name(nepali: nepali),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 8.5,
-                          height: 1.2,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected
-                              ? scheme.onPrimary.withValues(alpha: 0.9)
-                              : scheme.error,
+              if (reserveNameLine)
+                SizedBox(
+                  height: 22,
+                  child: holiday == null
+                      ? null
+                      : Text(
+                          holiday.name(nepali: nepali),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            height: 1.15,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected
+                                ? scheme.onPrimary.withValues(alpha: 0.9)
+                                : scheme.error.withValues(alpha: dim),
+                          ),
                         ),
-                      ),
-              ),
+                ),
             ],
           ),
         ),
@@ -712,12 +740,14 @@ class _SidePanel extends StatelessWidget {
     required this.nepali,
     required this.events,
     required this.isAdmin,
+    required this.onOpenDate,
   });
 
   final DateTime selected;
   final bool nepali;
   final Map<String, List<CalendarEvent>> events;
   final bool isAdmin;
+  final ValueChanged<DateTime> onOpenDate;
 
   @override
   Widget build(BuildContext context) {
@@ -731,7 +761,7 @@ class _SidePanel extends StatelessWidget {
           isAdmin: isAdmin,
         ),
         const SizedBox(height: 16),
-        _UpcomingCard(nepali: nepali, events: events),
+        _UpcomingCard(nepali: nepali, events: events, onOpenDate: onOpenDate),
       ],
     );
   }
@@ -791,6 +821,24 @@ class _SelectedDayCard extends ConsumerWidget {
               fullDualDate(selected, nepali: !nepali),
               style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
             ),
+            if (isWeekend(selected)) ...<Widget>[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: scheme.error.withValues(alpha: 0.09),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  nepali ? 'साप्ताहिक बिदा' : 'Weekend',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.error,
+                  ),
+                ),
+              ),
+            ],
             const Divider(height: 24),
             if (events.isEmpty)
               Text(
@@ -816,10 +864,15 @@ class _SelectedDayCard extends ConsumerWidget {
 /// Upcoming and past events, one at a time — the two lists Hamro Patro shows
 /// beside its grid.
 class _UpcomingCard extends StatefulWidget {
-  const _UpcomingCard({required this.nepali, required this.events});
+  const _UpcomingCard({
+    required this.nepali,
+    required this.events,
+    required this.onOpenDate,
+  });
 
   final bool nepali;
   final Map<String, List<CalendarEvent>> events;
+  final ValueChanged<DateTime> onOpenDate;
 
   @override
   State<_UpcomingCard> createState() => _UpcomingCardState();
@@ -847,22 +900,16 @@ class _UpcomingCardState extends State<_UpcomingCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            SegmentedButton<bool>(
-              showSelectedIcon: false,
-              style: const ButtonStyle(visualDensity: VisualDensity.compact),
-              segments: <ButtonSegment<bool>>[
-                ButtonSegment<bool>(
-                  value: false,
-                  label: Text(nepali ? 'आउँदा दिनहरू' : 'Upcoming'),
-                ),
-                ButtonSegment<bool>(
-                  value: true,
-                  label: Text(nepali ? 'बितेका' : 'Past'),
-                ),
-              ],
-              selected: <bool>{_past},
-              onSelectionChanged: (Set<bool> value) =>
-                  setState(() => _past = value.first),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: PillToggle(
+                labels: <String>[
+                  nepali ? 'आउँदा' : 'Upcoming',
+                  nepali ? 'बितेका' : 'Past',
+                ],
+                selected: _past ? 1 : 0,
+                onChanged: (int i) => setState(() => _past = i == 1),
+              ),
             ),
             const SizedBox(height: 14),
             if (shown.isEmpty)
@@ -874,7 +921,12 @@ class _UpcomingCardState extends State<_UpcomingCard> {
               )
             else
               for (final CalendarEvent event in shown)
-                _EventTile(event: event, nepali: nepali, showDate: true),
+                _EventTile(
+                  event: event,
+                  nepali: nepali,
+                  showDate: true,
+                  onTap: () => widget.onOpenDate(event.date),
+                ),
           ],
         ),
       ),
@@ -882,26 +934,29 @@ class _UpcomingCardState extends State<_UpcomingCard> {
   }
 }
 
-/// A single event line: coloured icon, title, and where it came from.
+/// A single event line: coloured icon, the date, the name, and its detail.
 class _EventTile extends StatelessWidget {
   const _EventTile({
     required this.event,
     required this.nepali,
     this.showDate = false,
+    this.onTap,
     this.onDelete,
   });
 
   final CalendarEvent event;
   final bool nepali;
   final bool showDate;
+  final VoidCallback? onTap;
   final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final String detail = event.detail(nepali: nepali);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    final Widget row = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -935,9 +990,9 @@ class _EventTile extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (event.detail(nepali: nepali).isNotEmpty)
+                if (detail.isNotEmpty)
                   Text(
-                    event.detail(nepali: nepali),
+                    detail,
                     style: TextStyle(
                       fontSize: 11,
                       color: scheme.onSurfaceVariant,
@@ -955,6 +1010,15 @@ class _EventTile extends StatelessWidget {
             ),
         ],
       ),
+    );
+
+    if (onTap == null) {
+      return row;
+    }
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: row,
     );
   }
 }

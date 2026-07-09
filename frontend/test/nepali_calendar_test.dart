@@ -59,8 +59,11 @@ void main() {
     test('every day maps back to the requested BS month, in order', () {
       for (int month = 1; month <= 12; month++) {
         final List<DateTime> days = bsMonthDays(2081, month);
-        expect(days.length, inInclusiveRange(29, 32),
-            reason: 'implausible length for month $month');
+        expect(
+          days.length,
+          inInclusiveRange(29, 32),
+          reason: 'implausible length for month $month',
+        );
         for (int i = 0; i < days.length; i++) {
           final BsDate bs = adToBs(days[i]);
           expect(bs, BsDate(2081, month, i + 1));
@@ -82,6 +85,57 @@ void main() {
       final List<DateTime> ashar = bsMonthDays(2083, 3);
       final DateTime nextMonthFirst = bsToAd(2083, 4, 1);
       expect(daysBetween(ashar.last, nextMonthFirst), 1);
+    });
+  });
+
+  group('bsMonthGrid', () {
+    test('always fills whole weeks, starting on a Sunday', () {
+      for (int month = 1; month <= 12; month++) {
+        final List<DateTime> grid = bsMonthGrid(2083, month);
+        expect(grid.length % 7, 0, reason: 'month $month is not whole weeks');
+        expect(sundayFirstIndex(grid.first), 0, reason: 'month $month');
+        expect(sundayFirstIndex(grid.last), 6, reason: 'month $month');
+      }
+    });
+
+    test('is contiguous and contains the whole month', () {
+      final List<DateTime> grid = bsMonthGrid(2083, 3);
+      for (int i = 1; i < grid.length; i++) {
+        expect(daysBetween(grid[i - 1], grid[i]), 1);
+      }
+      for (final DateTime day in bsMonthDays(2083, 3)) {
+        expect(grid, contains(day));
+      }
+    });
+
+    test('pads with the neighbouring months, never the same month', () {
+      final List<DateTime> month = bsMonthDays(2083, 1);
+      final List<DateTime> grid = bsMonthGrid(2083, 1);
+      final List<DateTime> padding = <DateTime>[
+        for (final DateTime day in grid)
+          if (!month.contains(day)) day,
+      ];
+      for (final DateTime day in padding) {
+        expect(adToBs(day).month, isNot(1));
+      }
+      expect(grid.length - padding.length, month.length);
+    });
+
+    test('a month starting on a Sunday needs no leading padding', () {
+      BsDate? sundayStart;
+      for (int year = 2080; year <= 2085 && sundayStart == null; year++) {
+        for (int month = 1; month <= 12; month++) {
+          if (sundayFirstIndex(bsToAd(year, month, 1)) == 0) {
+            sundayStart = BsDate(year, month, 1);
+            break;
+          }
+        }
+      }
+      expect(sundayStart, isNotNull, reason: 'no BS month starts on a Sunday?');
+
+      final BsDate bs = sundayStart!;
+      final List<DateTime> grid = bsMonthGrid(bs.year, bs.month);
+      expect(grid.first, bsToAd(bs.year, bs.month, 1));
     });
   });
 
@@ -123,15 +177,10 @@ void main() {
     });
 
     test('only the first and last columns rest', () {
-      expect(<bool>[for (int c = 0; c < 7; c++) isWeekendColumn(c)], <bool>[
-        true,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-      ]);
+      expect(
+        <bool>[for (int c = 0; c < 7; c++) isWeekendColumn(c)],
+        <bool>[true, false, false, false, false, false, true],
+      );
     });
   });
 
@@ -148,10 +197,7 @@ void main() {
     test('eventDateLine reads Gregorian in English, BS in Nepali', () {
       // Raksha Bandhan 2026, from the seeded holiday table.
       final DateTime rakshaBandhan = DateTime(2026, 8, 28);
-      expect(
-        eventDateLine(rakshaBandhan, nepali: false),
-        'Fri, 28 Aug 2026',
-      );
+      expect(eventDateLine(rakshaBandhan, nepali: false), 'Fri, 28 Aug 2026');
       final BsDate bs = adToBs(rakshaBandhan);
       expect(
         eventDateLine(rakshaBandhan, nepali: true),

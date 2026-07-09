@@ -215,6 +215,26 @@ List<DateTime> bsMonthDays(int year, int month) {
   ];
 }
 
+/// The dates filling a Sunday-first, 7-column grid of a BS month: the month
+/// itself, padded with the tail of the previous BS month and the head of the
+/// next so that no week has holes in it.
+///
+/// The length is always a multiple of seven, and the dates are contiguous.
+List<DateTime> bsMonthGrid(int year, int month) {
+  final List<DateTime> days = bsMonthDays(year, month);
+  final DateTime first = days.first;
+  final DateTime last = days.last;
+  final int leading = sundayFirstIndex(first);
+  final int trailing = (7 - (leading + days.length) % 7) % 7;
+  return <DateTime>[
+    for (int i = leading; i > 0; i--)
+      DateTime(first.year, first.month, first.day - i),
+    ...days,
+    for (int i = 1; i <= trailing; i++)
+      DateTime(last.year, last.month, last.day + i),
+  ];
+}
+
 /// The BS month [delta] months away from `(year, month)`.
 BsDate addBsMonths(int year, int month, int delta) {
   int y = year;
