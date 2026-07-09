@@ -18,6 +18,7 @@ import '../../core/widgets/user_avatar.dart';
 import '../../data/enums/custom_field_type.dart';
 import '../../data/models/auth_user.dart';
 import '../../data/models/custom_field.dart';
+import '../../data/models/notification_prefs.dart';
 import '../../data/models/project_template.dart';
 import '../../data/models/task_template.dart';
 import '../../data/models/workflow_status.dart';
@@ -29,6 +30,7 @@ import '../tasks/providers/custom_fields_providers.dart';
 import '../tasks/providers/statuses_providers.dart';
 import '../tasks/providers/task_templates_providers.dart';
 import 'providers/account_data_providers.dart';
+import 'providers/notification_prefs_providers.dart';
 import 'providers/settings_providers.dart';
 import 'widgets/accent_picker_dialog.dart';
 import 'widgets/change_password_dialog.dart';
@@ -63,6 +65,8 @@ class SettingsPage extends ConsumerWidget {
             _AppearanceCard(themeMode: themeMode, settings: settings),
             const SizedBox(height: 16),
             _NotificationsCard(settings: settings),
+            const SizedBox(height: 16),
+            const _NotificationMatrixCard(),
             const SizedBox(height: 16),
             const _CalendarFeedCard(),
             const SizedBox(height: 16),
@@ -439,6 +443,138 @@ class _NotificationsCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// The per-category, per-channel notification matrix. In-app and email can be
+/// toggled per category; email additionally requires the global switch above.
+class _NotificationMatrixCard extends ConsumerStatefulWidget {
+  const _NotificationMatrixCard();
+
+  @override
+  ConsumerState<_NotificationMatrixCard> createState() =>
+      _NotificationMatrixCardState();
+}
+
+class _NotificationMatrixCardState
+    extends ConsumerState<_NotificationMatrixCard> {
+  static const List<(String, String)> _categories = <(String, String)>[
+    ('assignments', 'Assignments'),
+    ('approvals', 'Approvals'),
+    ('comments', 'Comments & mentions'),
+    ('tasks', 'Task updates'),
+    ('incidents', 'Bugs & incidents'),
+    ('finance', 'Expenses'),
+    ('hr', 'Leave & HR'),
+  ];
+
+  NotificationPrefs? _prefs;
+  bool _seeded = false;
+
+  Future<void> _save() async {
+    final NotificationPrefs? prefs = _prefs;
+    if (prefs == null) {
+      return;
+    }
+    try {
+      await ref.read(notificationPrefsRepositoryProvider).set(prefs);
+    } catch (e) {
+      if (mounted) {
+        context.showError('Could not save preferences: $e');
+      }
+    }
+  }
+
+  void _toggle(String category, {bool? inApp, bool? email}) {
+    final ChannelPref current = _prefs!.of(category);
+    setState(() {
+      _prefs = _prefs!.set(
+        category,
+        current.copyWith(inApp: inApp, email: email),
+      );
+    });
+    _save();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final NotificationPrefs? loaded =
+        ref.watch(notificationPrefsProvider).asData?.value;
+    if (loaded != null && !_seeded) {
+      _prefs = loaded;
+      _seeded = true;
+    }
+    final NotificationPrefs prefs = _prefs ?? const NotificationPrefs();
+    return DashboardCard(
+      title: 'Notification categories',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Choose how you\'re notified for each kind of event. Email also '
+            'needs the switch above turned on.',
+            style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              const Expanded(child: SizedBox()),
+              _colHeader('In-app', scheme),
+              _colHeader('Email', scheme),
+              _colHeader('Push', scheme),
+            ],
+          ),
+          const Divider(),
+          for (final (String key, String label) in _categories)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: <Widget>[
+                  Expanded(child: Text(label)),
+                  SizedBox(
+                    width: 64,
+                    child: Switch(
+                      value: prefs.of(key).inApp,
+                      onChanged: _prefs == null
+                          ? null
+                          : (bool v) => _toggle(key, inApp: v),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 64,
+                    child: Switch(
+                      value: prefs.of(key).email,
+                      onChanged: _prefs == null
+                          ? null
+                          : (bool v) => _toggle(key, email: v),
+                    ),
+                  ),
+                  const SizedBox(
+                    width: 64,
+                    child: Tooltip(
+                      message: 'Browser push — coming soon',
+                      child: Icon(Icons.notifications_off_outlined, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _colHeader(String text, ColorScheme scheme) => SizedBox(
+        width: 64,
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurfaceVariant),
+        ),
+      );
 }
 
 /// A read-only iCalendar feed of your due tasks, to subscribe to in Google,

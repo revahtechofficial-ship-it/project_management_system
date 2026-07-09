@@ -676,6 +676,7 @@ type User struct {
 	TwoFactorEnabled   bool               `json:"two_factor_enabled"`
 	EmailNotifications bool               `json:"email_notifications"`
 	CalendarToken      *string            `json:"calendar_token"`
+	NotificationPrefs  string             `json:"notification_prefs"`
 }
 
 type UserSkill struct {

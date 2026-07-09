@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -137,26 +138,80 @@ func recipientOf(ctx context.Context) (*int64, bool) {
 	return nil, false
 }
 
+type channelPref struct {
+	InApp *bool `json:"in_app"`
+	Email *bool `json:"email"`
+}
+
+// notifCategory groups a notification type into a user-facing preference
+// category. Unknown types fall back to "tasks".
+func notifCategory(typ string) string {
+	switch typ {
+	case "assigned":
+		return "assignments"
+	case "approval":
+		return "approvals"
+	case "comment", "mention":
+		return "comments"
+	case "incident":
+		return "incidents"
+	case "expense":
+		return "finance"
+	case "leave", "one_on_one", "timesheet":
+		return "hr"
+	default:
+		return "tasks"
+	}
+}
+
+// channelPrefs resolves whether in-app and email delivery are enabled for an
+// event type from a user's stored preferences JSON. Both default to true so a
+// user with no preferences (or an unknown category) still gets everything.
+func channelPrefs(rawJSON, typ string) (inApp bool, email bool) {
+	inApp, email = true, true
+	prefs := map[string]channelPref{}
+	if json.Unmarshal([]byte(rawJSON), &prefs) != nil {
+		return
+	}
+	if p, ok := prefs[notifCategory(typ)]; ok {
+		if p.InApp != nil {
+			inApp = *p.InApp
+		}
+		if p.Email != nil {
+			email = *p.Email
+		}
+	}
+	return
+}
+
 // notifyUser delivers an in-app notification to one recipient on a best-effort
 // basis; failures are swallowed so they never break the triggering action.
-// Recipients in Do Not Disturb mode are skipped.
+// Recipients in Do Not Disturb mode are skipped, and per-user, per-category
+// preferences decide which channels fire (defaulting to all on).
 func notifyUser(ctx context.Context, q *db.Queries, userID int64,
 	typ, title, body, link string) {
 	user, err := q.GetUserByID(ctx, userID)
 	if err == nil && user.Status == "dnd" {
 		return
 	}
-	uid := userID
-	_, _ = q.CreateNotification(ctx, db.CreateNotificationParams{
-		UserID: &uid,
-		Type:   typ,
-		Title:  title,
-		Body:   body,
-		Link:   link,
-	})
-	// Also deliver by email when the recipient opted in and the address looks
-	// deliverable. Best-effort and off the request path so it never blocks.
-	if err == nil && user.EmailNotifications && notifyMailer != nil &&
+	inApp, emailPref := true, true
+	if err == nil {
+		inApp, emailPref = channelPrefs(user.NotificationPrefs, typ)
+	}
+	if inApp {
+		uid := userID
+		_, _ = q.CreateNotification(ctx, db.CreateNotificationParams{
+			UserID: &uid,
+			Type:   typ,
+			Title:  title,
+			Body:   body,
+			Link:   link,
+		})
+	}
+	// Also deliver by email when enabled for this category, the recipient opted
+	// in globally and the address looks deliverable. Best-effort and off the
+	// request path so it never blocks.
+	if err == nil && emailPref && user.EmailNotifications && notifyMailer != nil &&
 		deliverable(user.Email) {
 		to, subject, msg := user.Email, title, body
 		go func() { _ = notifyMailer.Notify(to, subject, msg) }()

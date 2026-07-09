@@ -25,7 +25,7 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, password_hash, full_name)
 VALUES ($1, $2, $3)
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token, notification_prefs
 `
 
 type CreateUserParams struct {
@@ -59,6 +59,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.TwoFactorEnabled,
 		&i.EmailNotifications,
 		&i.CalendarToken,
+		&i.NotificationPrefs,
 	)
 	return i, err
 }
@@ -75,7 +76,7 @@ func (q *Queries) EmailExists(ctx context.Context, email string) (bool, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token FROM users
+SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token, notification_prefs FROM users
 WHERE email = $1
 `
 
@@ -104,12 +105,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.TwoFactorEnabled,
 		&i.EmailNotifications,
 		&i.CalendarToken,
+		&i.NotificationPrefs,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token FROM users
+SELECT id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token, notification_prefs FROM users
 WHERE id = $1
 `
 
@@ -138,6 +140,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.TwoFactorEnabled,
 		&i.EmailNotifications,
 		&i.CalendarToken,
+		&i.NotificationPrefs,
 	)
 	return i, err
 }
@@ -202,7 +205,7 @@ const setUserAvatar = `-- name: SetUserAvatar :one
 UPDATE users
 SET avatar = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token, notification_prefs
 `
 
 type SetUserAvatarParams struct {
@@ -235,6 +238,7 @@ func (q *Queries) SetUserAvatar(ctx context.Context, arg SetUserAvatarParams) (U
 		&i.TwoFactorEnabled,
 		&i.EmailNotifications,
 		&i.CalendarToken,
+		&i.NotificationPrefs,
 	)
 	return i, err
 }
@@ -257,7 +261,7 @@ const setUserRole = `-- name: SetUserRole :one
 UPDATE users
 SET role = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token, notification_prefs
 `
 
 type SetUserRoleParams struct {
@@ -290,6 +294,7 @@ func (q *Queries) SetUserRole(ctx context.Context, arg SetUserRoleParams) (User,
 		&i.TwoFactorEnabled,
 		&i.EmailNotifications,
 		&i.CalendarToken,
+		&i.NotificationPrefs,
 	)
 	return i, err
 }
@@ -331,7 +336,7 @@ const updateUserName = `-- name: UpdateUserName :one
 UPDATE users
 SET full_name = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token, notification_prefs
 `
 
 type UpdateUserNameParams struct {
@@ -364,6 +369,7 @@ func (q *Queries) UpdateUserName(ctx context.Context, arg UpdateUserNameParams) 
 		&i.TwoFactorEnabled,
 		&i.EmailNotifications,
 		&i.CalendarToken,
+		&i.NotificationPrefs,
 	)
 	return i, err
 }
@@ -378,7 +384,7 @@ SET full_name  = $2,
     bio        = $7,
     updated_at = now()
 WHERE id = $1
-RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token
+RETURNING id, email, password_hash, full_name, email_verified, created_at, updated_at, role, avatar, status, status_message, last_seen_at, phone, job_title, department, location, bio, is_active, two_factor_enabled, email_notifications, calendar_token, notification_prefs
 `
 
 type UpdateUserProfileParams struct {
@@ -424,6 +430,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.TwoFactorEnabled,
 		&i.EmailNotifications,
 		&i.CalendarToken,
+		&i.NotificationPrefs,
 	)
 	return i, err
 }
