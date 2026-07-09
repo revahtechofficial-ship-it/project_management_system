@@ -10,9 +10,9 @@ class SkillsRepository {
   final Dio _dio;
 
   List<Skill> _parse(Response<List<dynamic>> res) => <Skill>[
-        for (final dynamic e in res.data ?? <dynamic>[])
-          Skill.fromJson(e as Map<String, dynamic>),
-      ];
+    for (final dynamic e in res.data ?? <dynamic>[])
+      Skill.fromJson(e as Map<String, dynamic>),
+  ];
 
   /// Every member's skills (for the matrix).
   Future<List<Skill>> all() async =>
@@ -24,9 +24,9 @@ class SkillsRepository {
 
   /// Adds or updates one of the current user's skills.
   Future<void> upsert(String skill, int level) => _dio.post<void>(
-        '/api/v1/skills',
-        data: <String, dynamic>{'skill': skill, 'level': level},
-      );
+    '/api/v1/skills',
+    data: <String, dynamic>{'skill': skill, 'level': level},
+  );
 
   /// Removes one of the current user's skills.
   Future<void> delete(int id) => _dio.delete<void>('/api/v1/skills/$id');

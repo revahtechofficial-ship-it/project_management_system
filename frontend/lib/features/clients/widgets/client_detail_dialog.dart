@@ -61,7 +61,9 @@ class _ClientDetailDialogState extends ConsumerState<_ClientDetailDialog> {
   Future<void> _saveDetails() async {
     setState(() => _busy = true);
     try {
-      await ref.read(clientsRepositoryProvider).update(
+      await ref
+          .read(clientsRepositoryProvider)
+          .update(
             widget.clientId,
             name: _name.text.trim(),
             company: _company.text.trim(),
@@ -105,12 +107,14 @@ class _ClientDetailDialogState extends ConsumerState<_ClientDetailDialog> {
   }
 
   Future<void> _delete() async {
-    final bool ok = await showDialog<bool>(
+    final bool ok =
+        await showDialog<bool>(
           context: context,
           builder: (BuildContext ctx) => AlertDialog(
             title: const Text('Delete client?'),
             content: const Text(
-                'Their projects are unassigned but not deleted.'),
+              'Their projects are unassigned but not deleted.',
+            ),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
@@ -163,9 +167,13 @@ class _ClientDetailDialogState extends ConsumerState<_ClientDetailDialog> {
                     padding: const EdgeInsets.fromLTRB(20, 16, 8, 8),
                     child: Row(
                       children: <Widget>[
-                        Text(client.displayName,
-                            style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.w800)),
+                        Text(
+                          client.displayName,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                         const Spacer(),
                         IconButton(
                           tooltip: 'Close',
@@ -185,20 +193,26 @@ class _ClientDetailDialogState extends ConsumerState<_ClientDetailDialog> {
                           TextField(
                             controller: _company,
                             decoration: const InputDecoration(
-                                labelText: 'Company', isDense: true),
+                              labelText: 'Company',
+                              isDense: true,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           TextField(
                             controller: _name,
                             decoration: const InputDecoration(
-                                labelText: 'Contact name', isDense: true),
+                              labelText: 'Contact name',
+                              isDense: true,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           TextField(
                             controller: _email,
                             keyboardType: TextInputType.emailAddress,
                             decoration: const InputDecoration(
-                                labelText: 'Email', isDense: true),
+                              labelText: 'Email',
+                              isDense: true,
+                            ),
                           ),
                           const SizedBox(height: 8),
                           Align(
@@ -211,12 +225,15 @@ class _ClientDetailDialogState extends ConsumerState<_ClientDetailDialog> {
                           const SizedBox(height: 8),
                           _PortalLink(token: client.portalToken),
                           const SizedBox(height: 16),
-                          Text('Projects the client can see',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant)),
+                          Text(
+                            'Projects the client can see',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
                           const SizedBox(height: 4),
                           _ProjectPicker(
                             clientId: widget.clientId,
@@ -248,8 +265,10 @@ class _ClientDetailDialogState extends ConsumerState<_ClientDetailDialog> {
                       children: <Widget>[
                         IconButton(
                           tooltip: 'Delete client',
-                          icon: Icon(Icons.delete_outline,
-                              color: Theme.of(context).colorScheme.error),
+                          icon: Icon(
+                            Icons.delete_outline,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                           onPressed: _delete,
                         ),
                         const Spacer(),
@@ -291,8 +310,7 @@ class _PortalLink extends StatelessWidget {
               url,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style:
-                  TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
             ),
           ),
           IconButton(
@@ -333,8 +351,9 @@ class _ProjectPicker extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<ClientProjectFlag>> async =
-        ref.watch(clientProjectsProvider(clientId));
+    final AsyncValue<List<ClientProjectFlag>> async = ref.watch(
+      clientProjectsProvider(clientId),
+    );
     return async.when(
       loading: () => const Padding(
         padding: EdgeInsets.all(16),
@@ -349,9 +368,12 @@ class _ProjectPicker extends ConsumerWidget {
         if (flags.isEmpty) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text('No projects to assign yet.',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            child: Text(
+              'No projects to assign yet.',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           );
         }
         return Column(

@@ -18,8 +18,9 @@ class SharedProjectPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<SharedProject> async =
-        ref.watch(sharedProjectProvider(token));
+    final AsyncValue<SharedProject> async = ref.watch(
+      sharedProjectProvider(token),
+    );
     return Scaffold(
       body: AppBackground(
         child: SafeArea(
@@ -64,12 +65,19 @@ class _Header extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Icon(Icons.visibility_outlined,
-                    size: 14, color: scheme.onSurfaceVariant),
+                Icon(
+                  Icons.visibility_outlined,
+                  size: 14,
+                  color: scheme.onSurfaceVariant,
+                ),
                 const SizedBox(width: 6),
-                Text('Read-only shared view',
-                    style: TextStyle(
-                        fontSize: 12, color: scheme.onSurfaceVariant)),
+                Text(
+                  'Read-only shared view',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
           ),
@@ -101,8 +109,10 @@ class _Body extends StatelessWidget {
             ),
             if (project.description.isNotEmpty) ...<Widget>[
               const SizedBox(height: 6),
-              Text(project.description,
-                  style: TextStyle(color: scheme.onSurfaceVariant)),
+              Text(
+                project.description,
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
             ],
             const SizedBox(height: 16),
             DashboardCard(
@@ -113,9 +123,10 @@ class _Body extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        Text('${project.doneCount} of $total tasks done',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w700)),
+                        Text(
+                          '${project.doneCount} of $total tasks done',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
                         const SizedBox(height: 8),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(4),
@@ -130,9 +141,13 @@ class _Body extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Text('${(progress * 100).round()}%',
-                      style: const TextStyle(
-                          fontSize: 22, fontWeight: FontWeight.w800)),
+                  Text(
+                    '${(progress * 100).round()}%',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -147,8 +162,7 @@ class _Body extends StatelessWidget {
                 title: 'Tasks',
                 child: Column(
                   children: <Widget>[
-                    for (final SharedTask t in project.tasks)
-                      _TaskRow(task: t),
+                    for (final SharedTask t in project.tasks) _TaskRow(task: t),
                   ],
                 ),
               ),
@@ -171,9 +185,7 @@ class _TaskRow extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       dense: true,
       leading: Icon(
-        task.done
-            ? Icons.check_circle_rounded
-            : Icons.radio_button_unchecked,
+        task.done ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
         color: task.done ? AppColors.green : scheme.onSurfaceVariant,
         size: 20,
       ),
@@ -186,9 +198,10 @@ class _TaskRow extends StatelessWidget {
       ),
       trailing: task.dueDate == null
           ? null
-          : Text(shortDate(task.dueDate!.toLocal()),
-              style:
-                  TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+          : Text(
+              shortDate(task.dueDate!.toLocal()),
+              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            ),
     );
   }
 }

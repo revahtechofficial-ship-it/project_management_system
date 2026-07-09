@@ -6,11 +6,7 @@ import 'motion.dart';
 /// the user scrolls past [threshold]. The builder must attach the supplied
 /// [ScrollController] to its scroll view.
 class BackToTop extends StatefulWidget {
-  const BackToTop({
-    super.key,
-    required this.builder,
-    this.threshold = 400,
-  });
+  const BackToTop({super.key, required this.builder, this.threshold = 400});
 
   final Widget Function(ScrollController controller) builder;
   final double threshold;
@@ -30,8 +26,8 @@ class _BackToTopState extends State<BackToTop> {
   }
 
   void _onScroll() {
-    final bool show = _controller.hasClients &&
-        _controller.offset > widget.threshold;
+    final bool show =
+        _controller.hasClients && _controller.offset > widget.threshold;
     if (show != _visible) {
       setState(() => _visible = show);
     }

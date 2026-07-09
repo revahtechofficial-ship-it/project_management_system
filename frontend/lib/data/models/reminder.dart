@@ -18,9 +18,8 @@ class Reminder {
   });
 
   /// The text to show for this reminder.
-  String get label => note.isNotEmpty
-      ? note
-      : (taskTitle.isNotEmpty ? taskTitle : 'Reminder');
+  String get label =>
+      note.isNotEmpty ? note : (taskTitle.isNotEmpty ? taskTitle : 'Reminder');
 
   factory Reminder.fromJson(Map<String, dynamic> json) => Reminder(
     id: json['id'] as int,

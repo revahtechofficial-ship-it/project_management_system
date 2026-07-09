@@ -14,20 +14,20 @@ class ProjectHit {
   });
 
   factory ProjectHit.fromJson(Map<String, dynamic> json) => ProjectHit(
-        id: json['id'] as int,
-        name: json['name'] as String? ?? '',
-        status: json['status'] as String? ?? '',
-        dueDate: json['due_date'] == null
-            ? null
-            : DateTime.parse(json['due_date'] as String),
-      );
+    id: json['id'] as int,
+    name: json['name'] as String? ?? '',
+    status: json['status'] as String? ?? '',
+    dueDate: json['due_date'] == null
+        ? null
+        : DateTime.parse(json['due_date'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'name': name,
-        'status': status,
-        'due_date': dueDate?.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'status': status,
+    'due_date': dueDate?.toIso8601String(),
+  };
 
   @override
   String toString() => 'ProjectHit(id: $id, name: $name)';

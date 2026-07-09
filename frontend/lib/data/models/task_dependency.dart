@@ -15,23 +15,23 @@ class TaskDependency {
     this.type = DependencyType.finishToStart,
   });
 
-  factory TaskDependency.fromJson(Map<String, dynamic> json) =>
-      TaskDependency(
-        id: json['id'] as int,
-        predecessorId: json['predecessor_id'] as int,
-        successorId: json['successor_id'] as int,
-        type: DependencyType.fromJson(json['type'] as String? ?? ''),
-      );
+  factory TaskDependency.fromJson(Map<String, dynamic> json) => TaskDependency(
+    id: json['id'] as int,
+    predecessorId: json['predecessor_id'] as int,
+    successorId: json['successor_id'] as int,
+    type: DependencyType.fromJson(json['type'] as String? ?? ''),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'predecessor_id': predecessorId,
-        'successor_id': successorId,
-        'type': type.toJson(),
-      };
+    'id': id,
+    'predecessor_id': predecessorId,
+    'successor_id': successorId,
+    'type': type.toJson(),
+  };
 
   @override
-  String toString() => 'TaskDependency('
+  String toString() =>
+      'TaskDependency('
       'id: $id, predecessorId: $predecessorId, '
       'successorId: $successorId, type: $type)';
 
@@ -45,6 +45,5 @@ class TaskDependency {
           other.type == type;
 
   @override
-  int get hashCode =>
-      Object.hash(id, predecessorId, successorId, type);
+  int get hashCode => Object.hash(id, predecessorId, successorId, type);
 }

@@ -12,18 +12,18 @@ enum MemberRole {
   guest;
 
   String get label => switch (this) {
-        MemberRole.owner => 'Owner',
-        MemberRole.admin => 'Admin',
-        MemberRole.member => 'Member',
-        MemberRole.guest => 'Guest',
-      };
+    MemberRole.owner => 'Owner',
+    MemberRole.admin => 'Admin',
+    MemberRole.member => 'Member',
+    MemberRole.guest => 'Guest',
+  };
 
   Color get color => switch (this) {
-        MemberRole.owner => AppColors.amber,
-        MemberRole.admin => AppColors.violet,
-        MemberRole.member => AppColors.slate,
-        MemberRole.guest => AppColors.teal,
-      };
+    MemberRole.owner => AppColors.amber,
+    MemberRole.admin => AppColors.violet,
+    MemberRole.member => AppColors.slate,
+    MemberRole.guest => AppColors.teal,
+  };
 
   /// Whether this role may perform admin-only actions (manage roles, delete
   /// projects/milestones, set baselines).
@@ -33,20 +33,23 @@ enum MemberRole {
   bool get isGuest => this == MemberRole.guest;
 
   String toJson() => switch (this) {
-        MemberRole.owner => 'owner',
-        MemberRole.admin => 'admin',
-        MemberRole.member => 'member',
-        MemberRole.guest => 'guest',
-      };
+    MemberRole.owner => 'owner',
+    MemberRole.admin => 'admin',
+    MemberRole.member => 'member',
+    MemberRole.guest => 'guest',
+  };
 
   factory MemberRole.fromJson(String value) => switch (value) {
-        'owner' => MemberRole.owner,
-        'admin' => MemberRole.admin,
-        'guest' => MemberRole.guest,
-        _ => MemberRole.member,
-      };
+    'owner' => MemberRole.owner,
+    'admin' => MemberRole.admin,
+    'guest' => MemberRole.guest,
+    _ => MemberRole.member,
+  };
 
   /// Roles an admin can assign via the API (the owner is fixed).
-  static List<MemberRole> get assignable =>
-      <MemberRole>[MemberRole.admin, MemberRole.member, MemberRole.guest];
+  static List<MemberRole> get assignable => <MemberRole>[
+    MemberRole.admin,
+    MemberRole.member,
+    MemberRole.guest,
+  ];
 }

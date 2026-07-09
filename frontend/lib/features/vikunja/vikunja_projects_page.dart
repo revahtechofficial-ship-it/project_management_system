@@ -11,8 +11,9 @@ class VikunjaProjectsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<VikunjaProject>> projects =
-        ref.watch(vikunjaProjectsProvider);
+    final AsyncValue<List<VikunjaProject>> projects = ref.watch(
+      vikunjaProjectsProvider,
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -23,15 +24,15 @@ class VikunjaProjectsPage extends ConsumerWidget {
           children: <Widget>[
             Row(
               children: <Widget>[
-                const Text('Projects',
-                    style: TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.w800)),
+                const Text(
+                  'Projects',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                ),
                 const Spacer(),
                 IconButton(
                   tooltip: 'Refresh',
                   icon: const Icon(Icons.refresh),
-                  onPressed: () =>
-                      ref.invalidate(vikunjaProjectsProvider),
+                  onPressed: () => ref.invalidate(vikunjaProjectsProvider),
                 ),
               ],
             ),
@@ -53,8 +54,7 @@ class VikunjaProjectsPage extends ConsumerWidget {
                           );
                         },
                       ),
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (Object err, _) => _NotConnected(error: '$err'),
               ),
             ),

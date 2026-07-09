@@ -11,22 +11,23 @@ class AssetsRepository {
   final Dio _dio;
 
   Map<String, dynamic> _body(Asset a) => <String, dynamic>{
-        'name': a.name,
-        'kind': a.kind.toJson(),
-        'status': a.status.toJson(),
-        'identifier': a.identifier,
-        'vendor': a.vendor,
-        'assignee_id': a.assigneeId,
-        'cost_cents': a.costCents,
-        'purchased_on': dateParam(a.purchasedOn) ?? '',
-        'expires_on': dateParam(a.expiresOn) ?? '',
-        'notes': a.notes,
-      };
+    'name': a.name,
+    'kind': a.kind.toJson(),
+    'status': a.status.toJson(),
+    'identifier': a.identifier,
+    'vendor': a.vendor,
+    'assignee_id': a.assigneeId,
+    'cost_cents': a.costCents,
+    'purchased_on': dateParam(a.purchasedOn) ?? '',
+    'expires_on': dateParam(a.expiresOn) ?? '',
+    'notes': a.notes,
+  };
 
   /// The full inventory, ordered by name.
   Future<List<Asset>> list() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/assets');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/assets',
+    );
     return <Asset>[
       for (final dynamic e in res.data ?? <dynamic>[])
         Asset.fromJson(e as Map<String, dynamic>),

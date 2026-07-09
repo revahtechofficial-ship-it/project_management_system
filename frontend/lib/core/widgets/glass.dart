@@ -70,7 +70,8 @@ class GlassSurface extends StatelessWidget {
       decoration: BoxDecoration(
         color: base,
         borderRadius: radius,
-        border: border ??
+        border:
+            border ??
             Border.all(
               color: scheme.outlineVariant.withValues(alpha: dark ? 0.5 : 0.8),
               width: 1,

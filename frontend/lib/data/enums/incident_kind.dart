@@ -9,27 +9,27 @@ enum IncidentKind {
   incident;
 
   String get label => switch (this) {
-        IncidentKind.bug => 'Bug',
-        IncidentKind.incident => 'Incident',
-      };
+    IncidentKind.bug => 'Bug',
+    IncidentKind.incident => 'Incident',
+  };
 
   Color get color => switch (this) {
-        IncidentKind.bug => AppColors.violet,
-        IncidentKind.incident => AppColors.orange,
-      };
+    IncidentKind.bug => AppColors.violet,
+    IncidentKind.incident => AppColors.orange,
+  };
 
   IconData get icon => switch (this) {
-        IncidentKind.bug => Icons.bug_report_outlined,
-        IncidentKind.incident => Icons.crisis_alert_outlined,
-      };
+    IncidentKind.bug => Icons.bug_report_outlined,
+    IncidentKind.incident => Icons.crisis_alert_outlined,
+  };
 
   String toJson() => switch (this) {
-        IncidentKind.bug => 'bug',
-        IncidentKind.incident => 'incident',
-      };
+    IncidentKind.bug => 'bug',
+    IncidentKind.incident => 'incident',
+  };
 
   factory IncidentKind.fromJson(String value) => switch (value) {
-        'incident' => IncidentKind.incident,
-        _ => IncidentKind.bug,
-      };
+    'incident' => IncidentKind.incident,
+    _ => IncidentKind.bug,
+  };
 }

@@ -24,24 +24,24 @@ class Client {
       name.isNotEmpty ? name : (company.isNotEmpty ? company : 'Client');
 
   factory Client.fromJson(Map<String, dynamic> json) => Client(
-        id: json['id'] as int,
-        name: json['name'] as String? ?? '',
-        company: json['company'] as String? ?? '',
-        email: json['email'] as String? ?? '',
-        portalToken: json['portal_token'] as String? ?? '',
-        projectCount: json['project_count'] as int? ?? 0,
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    name: json['name'] as String? ?? '',
+    company: json['company'] as String? ?? '',
+    email: json['email'] as String? ?? '',
+    portalToken: json['portal_token'] as String? ?? '',
+    projectCount: json['project_count'] as int? ?? 0,
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'name': name,
-        'company': company,
-        'email': email,
-        'portal_token': portalToken,
-        'project_count': projectCount,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'company': company,
+    'email': email,
+    'portal_token': portalToken,
+    'project_count': projectCount,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'Client(id: $id, name: $name)';
@@ -60,12 +60,12 @@ class Client {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        name,
-        company,
-        email,
-        portalToken,
-        projectCount,
-        createdAt,
-      );
+    id,
+    name,
+    company,
+    email,
+    portalToken,
+    projectCount,
+    createdAt,
+  );
 }

@@ -46,7 +46,9 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
       _error = null;
     });
     try {
-      await ref.read(authServiceProvider).resetPassword(
+      await ref
+          .read(authServiceProvider)
+          .resetPassword(
             email: widget.email,
             code: _code.text.trim(),
             newPassword: _password.text,
@@ -115,7 +117,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
             if (_error != null) AuthError(_error!),
             const SizedBox(height: 16),
             SubmitButton(
-                label: 'Reset password', busy: _busy, onPressed: _submit),
+              label: 'Reset password',
+              busy: _busy,
+              onPressed: _submit,
+            ),
             const SizedBox(height: 8),
             Wrap(
               alignment: WrapAlignment.center,

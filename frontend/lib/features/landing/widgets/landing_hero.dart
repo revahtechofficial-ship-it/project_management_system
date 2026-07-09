@@ -39,8 +39,11 @@ class _LandingHeroState extends State<LandingHero>
     final double start = (0.09 * i).clamp(0.0, 0.55);
     return CurvedAnimation(
       parent: _in,
-      curve: Interval(start, (start + 0.5).clamp(0.0, 1.0),
-          curve: Curves.easeOutCubic),
+      curve: Interval(
+        start,
+        (start + 0.5).clamp(0.0, 1.0),
+        curve: Curves.easeOutCubic,
+      ),
     );
   }
 
@@ -50,8 +53,9 @@ class _LandingHeroState extends State<LandingHero>
       opacity: a,
       child: SlideTransition(
         position: Tween<Offset>(
-                begin: const Offset(0, 0.16), end: Offset.zero)
-            .animate(a),
+          begin: const Offset(0, 0.16),
+          end: Offset.zero,
+        ).animate(a),
         child: child,
       ),
     );
@@ -113,11 +117,16 @@ class _LandingHeroState extends State<LandingHero>
           Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(Icons.lock_outline, size: 15, color: scheme.onSurfaceVariant),
+              Icon(
+                Icons.lock_outline,
+                size: 15,
+                color: scheme.onSurfaceVariant,
+              ),
               const SizedBox(width: 6),
-              Text('For the Revah Tech team · email verification built in',
-                  style: TextStyle(
-                      fontSize: 13, color: scheme.onSurfaceVariant)),
+              Text(
+                'For the Revah Tech team · email verification built in',
+                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+              ),
             ],
           ),
         ),
@@ -171,11 +180,14 @@ class _Eyebrow extends StatelessWidget {
         children: <Widget>[
           const Icon(Icons.auto_awesome, size: 14, color: AppColors.brand),
           const SizedBox(width: 7),
-          Text('Project & task management, in-house',
-              style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurface)),
+          Text(
+            'Project & task management, in-house',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurface,
+            ),
+          ),
         ],
       ),
     );
@@ -197,20 +209,25 @@ class _Headline extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text('Run every project',
-            style: base.copyWith(color: scheme.onSurface)),
+        Text(
+          'Run every project',
+          style: base.copyWith(color: scheme.onSurface),
+        ),
         ShaderMask(
-          shaderCallback: (Rect bounds) => AppColors.brandGradient
-              .createShader(Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
+          shaderCallback: (Rect bounds) => AppColors.brandGradient.createShader(
+            Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+          ),
           blendMode: BlendMode.srcIn,
-          child: const Text('in one calm place.',
-              style: TextStyle(
-                fontSize: 52,
-                height: 1.05,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -1.4,
-                color: Colors.white,
-              )),
+          child: const Text(
+            'in one calm place.',
+            style: TextStyle(
+              fontSize: 52,
+              height: 1.05,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -1.4,
+              color: Colors.white,
+            ),
+          ),
         ),
       ],
     );
@@ -308,8 +325,7 @@ class _FloatCard extends StatelessWidget {
       child: AnimatedBuilder(
         animation: float,
         builder: (BuildContext context, Widget? child) {
-          final double dy =
-              math.sin((float.value + phase) * math.pi * 2) * 7;
+          final double dy = math.sin((float.value + phase) * math.pi * 2) * 7;
           return Transform.translate(offset: Offset(0, dy), child: child);
         },
         child: GlassSurface(
@@ -329,9 +345,13 @@ class _FloatCard extends StatelessWidget {
                   child: Icon(icon, color: Colors.white, size: 18),
                 ),
                 const SizedBox(width: 11),
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w700)),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),

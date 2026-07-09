@@ -12,12 +12,12 @@ class DependenciesRepository {
 
   /// Fetches every task dependency in the workspace.
   Future<List<TaskDependency>> list() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/dependencies');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/dependencies',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
-        .map((dynamic e) =>
-            TaskDependency.fromJson(e as Map<String, dynamic>))
+        .map((dynamic e) => TaskDependency.fromJson(e as Map<String, dynamic>))
         .toList(growable: false);
   }
 
@@ -39,6 +39,5 @@ class DependenciesRepository {
   }
 
   /// Removes the dependency identified by [id].
-  Future<void> delete(int id) =>
-      _dio.delete<void>('/api/v1/dependencies/$id');
+  Future<void> delete(int id) => _dio.delete<void>('/api/v1/dependencies/$id');
 }

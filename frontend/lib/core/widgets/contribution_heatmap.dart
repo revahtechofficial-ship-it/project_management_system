@@ -31,10 +31,12 @@ class ContributionHeatmap extends StatelessWidget {
     final Color empty = scheme.surfaceContainerHighest.withValues(alpha: 0.6);
     final DateTime today = _day(anchor);
     // Monday of the current week, then wind back to the first shown week.
-    final DateTime thisMonday =
-        today.subtract(Duration(days: today.weekday - 1));
-    final DateTime firstMonday =
-        thisMonday.subtract(Duration(days: (weeks - 1) * 7));
+    final DateTime thisMonday = today.subtract(
+      Duration(days: today.weekday - 1),
+    );
+    final DateTime firstMonday = thisMonday.subtract(
+      Duration(days: (weeks - 1) * 7),
+    );
 
     int maxCount = 1;
     counts.forEach((DateTime _, int v) {
@@ -66,8 +68,9 @@ class ContributionHeatmap extends StatelessWidget {
                       for (int d = 0; d < 7; d++)
                         Builder(
                           builder: (BuildContext context) {
-                            final DateTime day = firstMonday
-                                .add(Duration(days: w * 7 + d));
+                            final DateTime day = firstMonday.add(
+                              Duration(days: w * 7 + d),
+                            );
                             final bool future = day.isAfter(today);
                             final int count = counts[day] ?? 0;
                             return Padding(
@@ -76,9 +79,9 @@ class ContributionHeatmap extends StatelessWidget {
                                 message: future
                                     ? ''
                                     : '${day.year}-'
-                                        '${day.month.toString().padLeft(2, '0')}-'
-                                        '${day.day.toString().padLeft(2, '0')}'
-                                        '  ·  $count',
+                                          '${day.month.toString().padLeft(2, '0')}-'
+                                          '${day.day.toString().padLeft(2, '0')}'
+                                          '  ·  $count',
                                 child: Container(
                                   width: cell,
                                   height: cell,

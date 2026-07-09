@@ -32,8 +32,10 @@ class DonutBreakdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final int total =
-        segments.fold<int>(0, (int s, DonutSegment e) => s + e.value);
+    final int total = segments.fold<int>(
+      0,
+      (int s, DonutSegment e) => s + e.value,
+    );
 
     final Widget donut = SizedBox(
       width: size,
@@ -139,11 +141,7 @@ class DonutBreakdown extends StatelessWidget {
       builder: (BuildContext context, BoxConstraints c) {
         if (c.maxWidth < 340) {
           return Column(
-            children: <Widget>[
-              donut,
-              const SizedBox(height: 12),
-              legend,
-            ],
+            children: <Widget>[donut, const SizedBox(height: 12), legend],
           );
         }
         return Row(

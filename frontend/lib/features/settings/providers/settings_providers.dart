@@ -48,17 +48,16 @@ class SettingsState {
     bool? autoDark,
     bool? reduceMotion,
     double? textScale,
-  }) =>
-      SettingsState(
-        emailNotifications: emailNotifications ?? this.emailNotifications,
-        pushNotifications: pushNotifications ?? this.pushNotifications,
-        weeklyDigest: weeklyDigest ?? this.weeklyDigest,
-        compactMode: compactMode ?? this.compactMode,
-        accent: accent ?? this.accent,
-        autoDark: autoDark ?? this.autoDark,
-        reduceMotion: reduceMotion ?? this.reduceMotion,
-        textScale: textScale ?? this.textScale,
-      );
+  }) => SettingsState(
+    emailNotifications: emailNotifications ?? this.emailNotifications,
+    pushNotifications: pushNotifications ?? this.pushNotifications,
+    weeklyDigest: weeklyDigest ?? this.weeklyDigest,
+    compactMode: compactMode ?? this.compactMode,
+    accent: accent ?? this.accent,
+    autoDark: autoDark ?? this.autoDark,
+    reduceMotion: reduceMotion ?? this.reduceMotion,
+    textScale: textScale ?? this.textScale,
+  );
 }
 
 /// Holds preferences and persists each setting to `SharedPreferences`
@@ -145,6 +144,5 @@ class SettingsController extends Notifier<SettingsState> {
 }
 
 final NotifierProvider<SettingsController, SettingsState>
-    settingsControllerProvider =
-    NotifierProvider<SettingsController, SettingsState>(
-        SettingsController.new);
+settingsControllerProvider =
+    NotifierProvider<SettingsController, SettingsState>(SettingsController.new);

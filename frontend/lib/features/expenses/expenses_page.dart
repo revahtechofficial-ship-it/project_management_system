@@ -38,8 +38,14 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     exportCsv(
       'expenses',
       <String>[
-        'Date', 'Category', 'Merchant', 'Description', 'Amount', 'Status',
-        'Project', 'Submitter',
+        'Date',
+        'Category',
+        'Merchant',
+        'Description',
+        'Amount',
+        'Status',
+        'Project',
+        'Submitter',
       ],
       <List<String>>[
         for (final Expense e in items)
@@ -122,7 +128,8 @@ class _Body extends StatelessWidget {
       return EmptyState(
         icon: Icons.receipt_long_outlined,
         title: 'No expenses yet',
-        message: 'File a claim for travel, software or anything the company '
+        message:
+            'File a claim for travel, software or anything the company '
             'should reimburse.',
         actionLabel: 'File an expense',
         actionIcon: Icons.add,
@@ -132,8 +139,7 @@ class _Body extends StatelessWidget {
     final List<Expense> items = filter == null
         ? all
         : all.where((Expense e) => e.status == filter).toList();
-    final int total =
-        all.fold<int>(0, (int s, Expense e) => s + e.amountCents);
+    final int total = all.fold<int>(0, (int s, Expense e) => s + e.amountCents);
     final int pending = all
         .where((Expense e) => e.status == ExpenseStatus.pending)
         .fold<int>(0, (int s, Expense e) => s + e.amountCents);
@@ -182,8 +188,9 @@ class _Stat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final Color color =
-        warn ? const Color(0xFFEA580C) : scheme.onSurfaceVariant;
+    final Color color = warn
+        ? const Color(0xFFEA580C)
+        : scheme.onSurfaceVariant;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -197,9 +204,14 @@ class _Stat extends StatelessWidget {
         children: <Widget>[
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
-          Text(label,
-              style: TextStyle(
-                  fontWeight: FontWeight.w700, color: color, fontSize: 13)),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: color,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
@@ -237,7 +249,10 @@ class _ExpenseRow extends ConsumerWidget {
   final Expense expense;
 
   Future<void> _setStatus(
-      BuildContext context, WidgetRef ref, ExpenseStatus status) async {
+    BuildContext context,
+    WidgetRef ref,
+    ExpenseStatus status,
+  ) async {
     try {
       await ref
           .read(expensesRepositoryProvider)
@@ -254,7 +269,8 @@ class _ExpenseRow extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final bool ok = await showDialog<bool>(
+    final bool ok =
+        await showDialog<bool>(
           context: context,
           builder: (BuildContext ctx) => AlertDialog(
             title: const Text('Delete expense?'),
@@ -290,24 +306,24 @@ class _ExpenseRow extends ConsumerWidget {
 
   /// Workflow transitions available from the current status.
   List<ExpenseStatus> get _transitions => switch (expense.status) {
-        ExpenseStatus.pending => <ExpenseStatus>[
-            ExpenseStatus.approved,
-            ExpenseStatus.rejected,
-          ],
-        ExpenseStatus.approved => <ExpenseStatus>[
-            ExpenseStatus.reimbursed,
-            ExpenseStatus.rejected,
-          ],
-        ExpenseStatus.rejected => <ExpenseStatus>[ExpenseStatus.pending],
-        ExpenseStatus.reimbursed => <ExpenseStatus>[],
-      };
+    ExpenseStatus.pending => <ExpenseStatus>[
+      ExpenseStatus.approved,
+      ExpenseStatus.rejected,
+    ],
+    ExpenseStatus.approved => <ExpenseStatus>[
+      ExpenseStatus.reimbursed,
+      ExpenseStatus.rejected,
+    ],
+    ExpenseStatus.rejected => <ExpenseStatus>[ExpenseStatus.pending],
+    ExpenseStatus.reimbursed => <ExpenseStatus>[],
+  };
 
   String _labelFor(ExpenseStatus s) => switch (s) {
-        ExpenseStatus.approved => 'Approve',
-        ExpenseStatus.rejected => 'Reject',
-        ExpenseStatus.reimbursed => 'Mark reimbursed',
-        ExpenseStatus.pending => 'Re-open',
-      };
+    ExpenseStatus.approved => 'Approve',
+    ExpenseStatus.rejected => 'Reject',
+    ExpenseStatus.reimbursed => 'Mark reimbursed',
+    ExpenseStatus.pending => 'Re-open',
+  };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -350,7 +366,9 @@ class _ExpenseRow extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 12, color: scheme.onSurfaceVariant),
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
               ],
             ),
@@ -360,9 +378,13 @@ class _ExpenseRow extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Text(formatCents(e.amountCents),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w800, fontSize: 15)),
+              Text(
+                formatCents(e.amountCents),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
+              ),
               const SizedBox(height: 4),
               _StatusChip(status: e.status),
             ],
@@ -389,7 +411,9 @@ class _ExpenseRow extends ConsumerWidget {
               if (_transitions.isNotEmpty) const PopupMenuDivider(),
               const PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
               const PopupMenuItem<String>(
-                  value: 'delete', child: Text('Delete')),
+                value: 'delete',
+                child: Text('Delete'),
+              ),
             ],
           ),
         ],
@@ -414,7 +438,10 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         status.label,
         style: TextStyle(
-            fontSize: 11, fontWeight: FontWeight.w700, color: color),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }

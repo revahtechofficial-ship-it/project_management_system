@@ -15,8 +15,9 @@ class ClientsRepository {
 
   /// All clients with their project counts.
   Future<List<Client>> list() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/clients');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/clients',
+    );
     return <Client>[
       for (final dynamic e in res.data ?? <dynamic>[])
         Client.fromJson(e as Map<String, dynamic>),
@@ -29,15 +30,15 @@ class ClientsRepository {
     String company = '',
     String email = '',
   }) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.post<Map<String, dynamic>>(
-      '/api/v1/clients',
-      data: <String, dynamic>{
-        'name': name,
-        'company': company,
-        'email': email,
-      },
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/clients',
+          data: <String, dynamic>{
+            'name': name,
+            'company': company,
+            'email': email,
+          },
+        );
     return Client.fromJson(res.data ?? <String, dynamic>{});
   }
 
@@ -47,23 +48,19 @@ class ClientsRepository {
     String name = '',
     String company = '',
     String email = '',
-  }) =>
-      _dio.patch<void>(
-        '/api/v1/clients/$id',
-        data: <String, dynamic>{
-          'name': name,
-          'company': company,
-          'email': email,
-        },
-      );
+  }) => _dio.patch<void>(
+    '/api/v1/clients/$id',
+    data: <String, dynamic>{'name': name, 'company': company, 'email': email},
+  );
 
   /// Removes a client (unassigning their projects).
   Future<void> delete(int id) => _dio.delete<void>('/api/v1/clients/$id');
 
   /// All projects with a flag for whether they belong to [clientId].
   Future<List<ClientProjectFlag>> projects(int clientId) async {
-    final Response<List<dynamic>> res = await _dio
-        .get<List<dynamic>>('/api/v1/clients/$clientId/projects');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/clients/$clientId/projects',
+    );
     return <ClientProjectFlag>[
       for (final dynamic e in res.data ?? <dynamic>[])
         (
@@ -83,8 +80,8 @@ class ClientsRepository {
 
   /// Fetches a client's portal by [token] (no auth required).
   Future<PortalData> portal(String token) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.get<Map<String, dynamic>>('/api/v1/portal/$token');
+    final Response<Map<String, dynamic>> res = await _dio
+        .get<Map<String, dynamic>>('/api/v1/portal/$token');
     return PortalData.fromJson(res.data ?? <String, dynamic>{});
   }
 }

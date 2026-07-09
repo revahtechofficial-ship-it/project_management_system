@@ -16,8 +16,10 @@ class ProductivityChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final double maxValue =
-        <double>[...values, 1].reduce((double a, double b) => a > b ? a : b);
+    final double maxValue = <double>[
+      ...values,
+      1,
+    ].reduce((double a, double b) => a > b ? a : b);
     final double maxY = (maxValue + 1).ceilToDouble();
     final double interval = maxY <= 5 ? 1 : (maxY / 4).ceilToDouble();
     final int step = labels.length <= 7 ? 1 : (labels.length / 6).ceil();
@@ -40,20 +42,25 @@ class ProductivityChart extends StatelessWidget {
           touchTooltipData: LineTouchTooltipData(
             getTooltipColor: (_) => scheme.inverseSurface,
             getTooltipItems: (List<LineBarSpot> spots) => spots
-                .map((LineBarSpot s) => LineTooltipItem(
-                      s.y.toInt().toString(),
-                      TextStyle(
-                          color: scheme.onInverseSurface,
-                          fontWeight: FontWeight.w600),
-                    ))
+                .map(
+                  (LineBarSpot s) => LineTooltipItem(
+                    s.y.toInt().toString(),
+                    TextStyle(
+                      color: scheme.onInverseSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
                 .toList(),
           ),
         ),
         titlesData: FlTitlesData(
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -61,8 +68,7 @@ class ProductivityChart extends StatelessWidget {
               interval: interval,
               getTitlesWidget: (double value, TitleMeta meta) => Text(
                 value.toInt().toString(),
-                style: TextStyle(
-                    color: scheme.onSurfaceVariant, fontSize: 11),
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 11),
               ),
             ),
           ),
@@ -78,9 +84,13 @@ class ProductivityChart extends StatelessWidget {
                 }
                 return Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: Text(labels[i],
-                      style: TextStyle(
-                          color: scheme.onSurfaceVariant, fontSize: 11)),
+                  child: Text(
+                    labels[i],
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
+                  ),
                 );
               },
             ),

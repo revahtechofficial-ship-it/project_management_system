@@ -11,32 +11,32 @@ enum LeaveType {
   other;
 
   String get label => switch (this) {
-        LeaveType.vacation => 'Vacation',
-        LeaveType.sick => 'Sick',
-        LeaveType.personal => 'Personal',
-        LeaveType.other => 'Other',
-      };
+    LeaveType.vacation => 'Vacation',
+    LeaveType.sick => 'Sick',
+    LeaveType.personal => 'Personal',
+    LeaveType.other => 'Other',
+  };
 
   Color get color => switch (this) {
-        LeaveType.vacation => AppColors.sky,
-        LeaveType.sick => AppColors.rose,
-        LeaveType.personal => AppColors.violet,
-        LeaveType.other => AppColors.slate,
-      };
+    LeaveType.vacation => AppColors.sky,
+    LeaveType.sick => AppColors.rose,
+    LeaveType.personal => AppColors.violet,
+    LeaveType.other => AppColors.slate,
+  };
 
   IconData get icon => switch (this) {
-        LeaveType.vacation => Icons.beach_access_outlined,
-        LeaveType.sick => Icons.sick_outlined,
-        LeaveType.personal => Icons.person_outline,
-        LeaveType.other => Icons.event_busy_outlined,
-      };
+    LeaveType.vacation => Icons.beach_access_outlined,
+    LeaveType.sick => Icons.sick_outlined,
+    LeaveType.personal => Icons.person_outline,
+    LeaveType.other => Icons.event_busy_outlined,
+  };
 
   String toJson() => name;
 
   factory LeaveType.fromJson(String value) => switch (value) {
-        'vacation' => LeaveType.vacation,
-        'sick' => LeaveType.sick,
-        'personal' => LeaveType.personal,
-        _ => LeaveType.other,
-      };
+    'vacation' => LeaveType.vacation,
+    'sick' => LeaveType.sick,
+    'personal' => LeaveType.personal,
+    _ => LeaveType.other,
+  };
 }

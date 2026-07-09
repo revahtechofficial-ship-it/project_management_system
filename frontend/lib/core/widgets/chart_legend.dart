@@ -34,12 +34,15 @@ class ChartLegend extends StatelessWidget {
                 width: 10,
                 height: 10,
                 decoration: BoxDecoration(
-                    color: item.color, shape: BoxShape.circle),
+                  color: item.color,
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: 6),
-              Text(item.label,
-                  style: TextStyle(
-                      fontSize: 12, color: scheme.onSurfaceVariant)),
+              Text(
+                item.label,
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
             ],
           ),
       ],

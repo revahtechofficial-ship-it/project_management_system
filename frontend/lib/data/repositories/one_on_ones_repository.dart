@@ -14,8 +14,9 @@ class OneOnOnesRepository {
 
   /// The current user's 1:1s (as manager or report), newest first.
   Future<List<OneOnOne>> list() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/one-on-ones');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/one-on-ones',
+    );
     return <OneOnOne>[
       for (final dynamic e in res.data ?? <dynamic>[])
         OneOnOne.fromJson(e as Map<String, dynamic>),
@@ -27,21 +28,21 @@ class OneOnOnesRepository {
     required int reportId,
     required DateTime scheduledAt,
   }) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.post<Map<String, dynamic>>(
-      '/api/v1/one-on-ones',
-      data: <String, dynamic>{
-        'report_id': reportId,
-        'scheduled_at': scheduledAt.toIso8601String(),
-      },
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/one-on-ones',
+          data: <String, dynamic>{
+            'report_id': reportId,
+            'scheduled_at': scheduledAt.toIso8601String(),
+          },
+        );
     return OneOnOne.fromJson(res.data ?? <String, dynamic>{});
   }
 
   /// A single 1:1 with its agenda/notes/action items.
   Future<OneOnOneDetail> get(int id) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.get<Map<String, dynamic>>('/api/v1/one-on-ones/$id');
+    final Response<Map<String, dynamic>> res = await _dio
+        .get<Map<String, dynamic>>('/api/v1/one-on-ones/$id');
     final Map<String, dynamic> data = res.data ?? <String, dynamic>{};
     return (
       meeting: OneOnOne.fromJson(data),
@@ -53,12 +54,11 @@ class OneOnOnesRepository {
   }
 
   Future<void> reschedule(int id, DateTime at) => _dio.patch<void>(
-        '/api/v1/one-on-ones/$id',
-        data: <String, dynamic>{'scheduled_at': at.toIso8601String()},
-      );
+    '/api/v1/one-on-ones/$id',
+    data: <String, dynamic>{'scheduled_at': at.toIso8601String()},
+  );
 
-  Future<void> delete(int id) =>
-      _dio.delete<void>('/api/v1/one-on-ones/$id');
+  Future<void> delete(int id) => _dio.delete<void>('/api/v1/one-on-ones/$id');
 
   Future<void> addItem(int meetingId, String kind, String body) =>
       _dio.post<void>(
@@ -67,9 +67,9 @@ class OneOnOnesRepository {
       );
 
   Future<void> setItemDone(int itemId, bool done) => _dio.patch<void>(
-        '/api/v1/one-on-ones/items/$itemId',
-        data: <String, dynamic>{'done': done},
-      );
+    '/api/v1/one-on-ones/items/$itemId',
+    data: <String, dynamic>{'done': done},
+  );
 
   Future<void> deleteItem(int itemId) =>
       _dio.delete<void>('/api/v1/one-on-ones/items/$itemId');

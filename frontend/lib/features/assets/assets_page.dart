@@ -40,8 +40,15 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
     exportCsv(
       'inventory',
       <String>[
-        'Name', 'Type', 'Status', 'Identifier', 'Vendor', 'Assignee', 'Cost',
-        'Purchased', 'Expires',
+        'Name',
+        'Type',
+        'Status',
+        'Identifier',
+        'Vendor',
+        'Assignee',
+        'Cost',
+        'Purchased',
+        'Expires',
       ],
       <List<String>>[
         for (final Asset a in items)
@@ -125,7 +132,8 @@ class _Body extends StatelessWidget {
       return EmptyState(
         icon: Icons.inventory_2_outlined,
         title: 'No assets yet',
-        message: 'Track laptops, software subscriptions and licenses so you '
+        message:
+            'Track laptops, software subscriptions and licenses so you '
             'know what the team holds and when things expire.',
         actionLabel: 'Add the first asset',
         actionIcon: Icons.add,
@@ -135,8 +143,10 @@ class _Body extends StatelessWidget {
     final List<Asset> items = filter == null
         ? all
         : all.where((Asset a) => a.kind == filter).toList();
-    final int totalValue =
-        all.fold<int>(0, (int sum, Asset a) => sum + a.costCents);
+    final int totalValue = all.fold<int>(
+      0,
+      (int sum, Asset a) => sum + a.costCents,
+    );
     final int expiring = all.where((Asset a) => a.expiringSoon).length;
 
     return Column(
@@ -147,8 +157,14 @@ class _Body extends StatelessWidget {
           runSpacing: 10,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: <Widget>[
-            _Stat(label: '${all.length} items', icon: Icons.inventory_2_outlined),
-            _Stat(label: formatCents(totalValue), icon: Icons.payments_outlined),
+            _Stat(
+              label: '${all.length} items',
+              icon: Icons.inventory_2_outlined,
+            ),
+            _Stat(
+              label: formatCents(totalValue),
+              icon: Icons.payments_outlined,
+            ),
             if (expiring > 0)
               _Stat(
                 label: '$expiring expiring soon',
@@ -186,7 +202,9 @@ class _Stat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final Color color = warn ? const Color(0xFFEA580C) : scheme.onSurfaceVariant;
+    final Color color = warn
+        ? const Color(0xFFEA580C)
+        : scheme.onSurfaceVariant;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -200,9 +218,14 @@ class _Stat extends StatelessWidget {
         children: <Widget>[
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
-          Text(label,
-              style: TextStyle(
-                  fontWeight: FontWeight.w700, color: color, fontSize: 13)),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: color,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
@@ -245,7 +268,8 @@ class _AssetCard extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final bool ok = await showDialog<bool>(
+    final bool ok =
+        await showDialog<bool>(
           context: context,
           builder: (BuildContext ctx) => AlertDialog(
             title: const Text('Delete asset?'),
@@ -310,14 +334,18 @@ class _AssetCard extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 15),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
                     Text(
                       asset.vendor.isEmpty ? asset.kind.label : asset.vendor,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: 12, color: scheme.onSurfaceVariant),
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -335,10 +363,12 @@ class _AssetCard extends ConsumerWidget {
                 },
                 itemBuilder: (BuildContext context) =>
                     const <PopupMenuEntry<String>>[
-                  PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
-                  PopupMenuItem<String>(
-                      value: 'delete', child: Text('Delete')),
-                ],
+                      PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
+                      PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Text('Delete'),
+                      ),
+                    ],
               ),
             ],
           ),
@@ -366,11 +396,12 @@ class _AssetCard extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 12,
-                        color: scheme.onSurfaceVariant,
-                        fontFeatures: const <FontFeature>[
-                          FontFeature.tabularFigures(),
-                        ]),
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                      fontFeatures: const <FontFeature>[
+                        FontFeature.tabularFigures(),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -394,9 +425,13 @@ class _AssetCard extends ConsumerWidget {
                 ),
               ] else
                 Expanded(
-                  child: Text('Unassigned',
-                      style: TextStyle(
-                          fontSize: 12, color: scheme.onSurfaceVariant)),
+                  child: Text(
+                    'Unassigned',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
               if (asset.expiresOn case final DateTime e)
                 _ExpiryTag(date: e, soon: asset.expiringSoon),
@@ -424,7 +459,10 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         asset.status.label,
         style: TextStyle(
-            fontSize: 12, fontWeight: FontWeight.w700, color: color),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }
@@ -438,20 +476,25 @@ class _ExpiryTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final Color color =
-        soon ? const Color(0xFFEA580C) : scheme.onSurfaceVariant;
+    final Color color = soon
+        ? const Color(0xFFEA580C)
+        : scheme.onSurfaceVariant;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Icon(soon ? Icons.warning_amber_rounded : Icons.event_outlined,
-            size: 14, color: color),
+        Icon(
+          soon ? Icons.warning_amber_rounded : Icons.event_outlined,
+          size: 14,
+          color: color,
+        ),
         const SizedBox(width: 4),
         Text(
           '${shortDate(date)} ${date.year}',
           style: TextStyle(
-              fontSize: 12,
-              color: color,
-              fontWeight: soon ? FontWeight.w700 : FontWeight.w400),
+            fontSize: 12,
+            color: color,
+            fontWeight: soon ? FontWeight.w700 : FontWeight.w400,
+          ),
         ),
       ],
     );

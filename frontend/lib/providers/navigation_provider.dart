@@ -32,7 +32,8 @@ class PinnedNavController extends Notifier<List<String>> {
 
 final NotifierProvider<PinnedNavController, List<String>> pinnedNavProvider =
     NotifierProvider<PinnedNavController, List<String>>(
-        PinnedNavController.new);
+      PinnedNavController.new,
+    );
 
 /// The most-recently visited routes (newest first, capped), for the command
 /// palette's "Recent" quick-switcher. Persisted across launches.
@@ -69,6 +70,7 @@ class RecentPagesController extends Notifier<List<String>> {
   }
 }
 
-final NotifierProvider<RecentPagesController, List<String>> recentPagesProvider =
-    NotifierProvider<RecentPagesController, List<String>>(
-        RecentPagesController.new);
+final NotifierProvider<RecentPagesController, List<String>>
+recentPagesProvider = NotifierProvider<RecentPagesController, List<String>>(
+  RecentPagesController.new,
+);

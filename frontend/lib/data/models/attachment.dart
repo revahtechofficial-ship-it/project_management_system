@@ -55,9 +55,7 @@ class Attachment {
         name.endsWith('.7z')) {
       return Icons.folder_zip_outlined;
     }
-    if (name.endsWith('.doc') ||
-        name.endsWith('.docx') ||
-        t.contains('word')) {
+    if (name.endsWith('.doc') || name.endsWith('.docx') || t.contains('word')) {
       return Icons.description_outlined;
     }
     if (name.endsWith('.xls') ||
@@ -69,26 +67,26 @@ class Attachment {
   }
 
   factory Attachment.fromJson(Map<String, dynamic> json) => Attachment(
-        id: json['id'] as int,
-        taskId: json['task_id'] as int,
-        uploaderId: json['uploader_id'] as int?,
-        uploaderName: json['uploader_name'] as String?,
-        filename: json['filename'] as String? ?? '',
-        contentType: json['content_type'] as String? ?? '',
-        size: json['size'] as int? ?? 0,
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    taskId: json['task_id'] as int,
+    uploaderId: json['uploader_id'] as int?,
+    uploaderName: json['uploader_name'] as String?,
+    filename: json['filename'] as String? ?? '',
+    contentType: json['content_type'] as String? ?? '',
+    size: json['size'] as int? ?? 0,
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'task_id': taskId,
-        'uploader_id': uploaderId,
-        'uploader_name': uploaderName,
-        'filename': filename,
-        'content_type': contentType,
-        'size': size,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'task_id': taskId,
+    'uploader_id': uploaderId,
+    'uploader_name': uploaderName,
+    'filename': filename,
+    'content_type': contentType,
+    'size': size,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'Attachment(id: $id, filename: $filename)';
@@ -107,6 +105,14 @@ class Attachment {
           other.createdAt == createdAt;
 
   @override
-  int get hashCode => Object.hash(id, taskId, uploaderId, uploaderName,
-      filename, contentType, size, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    taskId,
+    uploaderId,
+    uploaderName,
+    filename,
+    contentType,
+    size,
+    createdAt,
+  );
 }

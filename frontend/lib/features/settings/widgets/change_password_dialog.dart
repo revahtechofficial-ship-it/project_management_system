@@ -13,8 +13,7 @@ class ChangePasswordDialog extends ConsumerStatefulWidget {
       _ChangePasswordDialogState();
 }
 
-class _ChangePasswordDialogState
-    extends ConsumerState<ChangePasswordDialog> {
+class _ChangePasswordDialogState extends ConsumerState<ChangePasswordDialog> {
   final TextEditingController _current = TextEditingController();
   final TextEditingController _next = TextEditingController();
   final TextEditingController _confirm = TextEditingController();
@@ -36,8 +35,10 @@ class _ChangePasswordDialogState
       return;
     }
     if (!PasswordPolicy.isValid(_next.text)) {
-      setState(() => _error =
-          'New password must be 8+ chars with upper, lower, number & symbol');
+      setState(
+        () => _error =
+            'New password must be 8+ chars with upper, lower, number & symbol',
+      );
       return;
     }
     if (_next.text != _confirm.text) {
@@ -49,7 +50,9 @@ class _ChangePasswordDialogState
       _error = null;
     });
     try {
-      await ref.read(authControllerProvider.notifier).changePassword(
+      await ref
+          .read(authControllerProvider.notifier)
+          .changePassword(
             currentPassword: _current.text,
             newPassword: _next.text,
           );
@@ -100,7 +103,8 @@ class _ChangePasswordDialogState
               ? const SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2))
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Text('Update password'),
         ),
       ],

@@ -45,7 +45,9 @@ class _AddRepoDialogState extends ConsumerState<_AddRepoDialog> {
     }
     setState(() => _busy = true);
     try {
-      await ref.read(gitRepositoryProvider).createRepo(
+      await ref
+          .read(gitRepositoryProvider)
+          .createRepo(
             name: _name.text.trim(),
             provider: _provider.toJson(),
             url: _url.text.trim(),
@@ -91,14 +93,13 @@ class _AddRepoDialogState extends ConsumerState<_AddRepoDialog> {
             DropdownButtonFormField<GitProvider>(
               initialValue: _provider,
               isExpanded: true,
-              decoration:
-                  const InputDecoration(labelText: 'Provider', isDense: true),
+              decoration: const InputDecoration(
+                labelText: 'Provider',
+                isDense: true,
+              ),
               items: <DropdownMenuItem<GitProvider>>[
                 for (final GitProvider p in GitProvider.values)
-                  DropdownMenuItem<GitProvider>(
-                    value: p,
-                    child: Text(p.label),
-                  ),
+                  DropdownMenuItem<GitProvider>(value: p, child: Text(p.label)),
               ],
               onChanged: (GitProvider? v) =>
                   setState(() => _provider = v ?? _provider),
@@ -117,14 +118,18 @@ class _AddRepoDialogState extends ConsumerState<_AddRepoDialog> {
             TextField(
               controller: _branch,
               decoration: const InputDecoration(
-                  labelText: 'Default branch', isDense: true),
+                labelText: 'Default branch',
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<int?>(
               initialValue: _projectId,
               isExpanded: true,
               decoration: const InputDecoration(
-                  labelText: 'Project (optional)', isDense: true),
+                labelText: 'Project (optional)',
+                isDense: true,
+              ),
               items: <DropdownMenuItem<int?>>[
                 const DropdownMenuItem<int?>(child: Text('No project')),
                 for (final Project p in projects)

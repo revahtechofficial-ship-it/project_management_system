@@ -24,22 +24,22 @@ class PageVersion {
   }
 
   factory PageVersion.fromJson(Map<String, dynamic> json) => PageVersion(
-        id: json['id'] as int,
-        title: json['title'] as String? ?? '',
-        body: json['body'] as String? ?? '',
-        editorName: json['editor_name'] as String? ?? '',
-        editedAt: DateTime.parse(json['edited_at'] as String),
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    title: json['title'] as String? ?? '',
+    body: json['body'] as String? ?? '',
+    editorName: json['editor_name'] as String? ?? '',
+    editedAt: DateTime.parse(json['edited_at'] as String),
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'title': title,
-        'body': body,
-        'editor_name': editorName,
-        'edited_at': editedAt.toIso8601String(),
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'title': title,
+    'body': body,
+    'editor_name': editorName,
+    'edited_at': editedAt.toIso8601String(),
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'PageVersion(id: $id, $title)';

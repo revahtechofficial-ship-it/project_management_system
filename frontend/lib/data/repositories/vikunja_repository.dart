@@ -10,8 +10,9 @@ class VikunjaRepository {
   final Dio _dio;
 
   Future<List<VikunjaProject>> listProjects() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/vikunja/projects');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/vikunja/projects',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => VikunjaProject.fromJson(e as Map<String, dynamic>))

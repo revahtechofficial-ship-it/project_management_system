@@ -38,15 +38,19 @@ class FocusPage extends ConsumerWidget {
     final DateTime now = DateTime.now();
     final DateTime today = DateTime(now.year, now.month, now.day);
 
-    final List<Task> open =
-        tasks.where((Task t) => !t.done && t.parentId == null).toList();
+    final List<Task> open = tasks
+        .where((Task t) => !t.done && t.parentId == null)
+        .toList();
     final List<Task> overdue = open
-        .where((Task t) =>
-            t.dueDate != null && t.dueDate!.toLocal().isBefore(today))
+        .where(
+          (Task t) => t.dueDate != null && t.dueDate!.toLocal().isBefore(today),
+        )
         .toList();
     final List<Task> dueToday = open
-        .where((Task t) =>
-            t.dueDate != null && _sameDay(t.dueDate!.toLocal(), today))
+        .where(
+          (Task t) =>
+              t.dueDate != null && _sameDay(t.dueDate!.toLocal(), today),
+        )
         .toList();
     final Set<int> planned = <int>{
       for (final Task t in overdue) t.id,
@@ -56,8 +60,7 @@ class FocusPage extends ConsumerWidget {
         .where((Task t) => starredIds.contains(t.id) && !planned.contains(t.id))
         .toList();
 
-    final bool empty =
-        overdue.isEmpty && dueToday.isEmpty && starred.isEmpty;
+    final bool empty = overdue.isEmpty && dueToday.isEmpty && starred.isEmpty;
 
     final Widget lanes = ListView(
       padding: EdgeInsets.zero,
@@ -66,28 +69,17 @@ class FocusPage extends ConsumerWidget {
           const EmptyState(
             icon: Icons.wb_sunny_outlined,
             title: "You're all set",
-            message: 'Nothing due today and nothing starred. Enjoy the calm — '
+            message:
+                'Nothing due today and nothing starred. Enjoy the calm — '
                 'or star a task to line it up here.',
           )
         else ...<Widget>[
           if (overdue.isNotEmpty)
-            _Lane(
-              title: 'Overdue',
-              color: AppColors.rose,
-              tasks: overdue,
-            ),
+            _Lane(title: 'Overdue', color: AppColors.rose, tasks: overdue),
           if (dueToday.isNotEmpty)
-            _Lane(
-              title: 'Due today',
-              color: AppColors.brand,
-              tasks: dueToday,
-            ),
+            _Lane(title: 'Due today', color: AppColors.brand, tasks: dueToday),
           if (starred.isNotEmpty)
-            _Lane(
-              title: 'Starred',
-              color: AppColors.amber,
-              tasks: starred,
-            ),
+            _Lane(title: 'Starred', color: AppColors.amber, tasks: starred),
         ],
       ],
     );
@@ -97,10 +89,7 @@ class FocusPage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          PageHeader(
-            title: 'My Day',
-            subtitle: formatLongDate(now),
-          ),
+          PageHeader(title: 'My Day', subtitle: formatLongDate(now)),
           const SizedBox(height: 16),
           Expanded(
             child: LayoutBuilder(
@@ -152,19 +141,27 @@ class _Lane extends StatelessWidget {
                 Container(
                   width: 8,
                   height: 8,
-                  decoration:
-                      BoxDecoration(color: color, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 8),
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(width: 6),
-                Text('${tasks.length}',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    )),
+                Text(
+                  '${tasks.length}',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 4),
@@ -195,15 +192,13 @@ class _FocusTaskRow extends ConsumerWidget {
           ref.read(tasksProvider.notifier).toggleDone(task.id, v ?? false);
         },
       ),
-      title: Text(
-        task.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: Text(task.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: task.projectName == null
           ? null
-          : Text(task.projectName!,
-              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
+          : Text(
+              task.projectName!,
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+            ),
       trailing: task.dueDate == null
           ? null
           : Text(
@@ -278,7 +273,9 @@ class _PomodoroCardState extends State<_PomodoroCard> {
     });
     if (mounted) {
       context.showSuccess(
-        wasFocus ? 'Focus session done — take a break 🎉' : 'Break over — back to it',
+        wasFocus
+            ? 'Focus session done — take a break 🎉'
+            : 'Break over — back to it',
       );
     }
   }
@@ -341,8 +338,9 @@ class _PomodoroCardState extends State<_PomodoroCard> {
                     value: fraction,
                     strokeWidth: 8,
                     color: color,
-                    backgroundColor:
-                        scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                    backgroundColor: scheme.surfaceContainerHighest.withValues(
+                      alpha: 0.6,
+                    ),
                   ),
                 ),
                 Column(
@@ -376,10 +374,7 @@ class _PomodoroCardState extends State<_PomodoroCard> {
                 ),
               ),
               const SizedBox(width: 10),
-              OutlinedButton(
-                onPressed: _reset,
-                child: const Text('Reset'),
-              ),
+              OutlinedButton(onPressed: _reset, child: const Text('Reset')),
             ],
           ),
           const SizedBox(height: 12),

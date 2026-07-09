@@ -31,8 +31,9 @@ class _RecapPageState extends ConsumerState<RecapPage> {
       _error = null;
     });
     try {
-      final AiRecapResult r =
-          await ref.read(aiRepositoryProvider).recap(days: _days);
+      final AiRecapResult r = await ref
+          .read(aiRepositoryProvider)
+          .recap(days: _days);
       if (mounted) {
         setState(() {
           _result = r;
@@ -92,8 +93,11 @@ class _RecapPageState extends ConsumerState<RecapPage> {
               ),
               child: Row(
                 children: <Widget>[
-                  Icon(Icons.info_outline, size: 18,
-                      color: scheme.onSurfaceVariant),
+                  Icon(
+                    Icons.info_outline,
+                    size: 18,
+                    color: scheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -123,7 +127,8 @@ class _RecapPageState extends ConsumerState<RecapPage> {
       return const EmptyState(
         icon: Icons.auto_awesome,
         title: 'Generate a recap',
-        message: 'Summarise the last few days of activity — completed work, '
+        message:
+            'Summarise the last few days of activity — completed work, '
             'new work and notable changes — into a shareable recap.',
       );
     }
@@ -135,12 +140,10 @@ class _RecapPageState extends ConsumerState<RecapPage> {
             spacing: 10,
             runSpacing: 10,
             children: <Widget>[
+              _Stat(label: '${r.activityCount} updates', icon: Icons.history),
               _Stat(
-                label: '${r.activityCount} updates',
-                icon: Icons.history,
-              ),
-              _Stat(
-                label: '${r.contributors} '
+                label:
+                    '${r.contributors} '
                     '${r.contributors == 1 ? 'contributor' : 'contributors'}',
                 icon: Icons.groups_outlined,
               ),
@@ -150,8 +153,10 @@ class _RecapPageState extends ConsumerState<RecapPage> {
           const SizedBox(height: 14),
           DashboardCard(
             child: r.recap.trim().isEmpty
-                ? Text('The recap came back empty. Try again.',
-                    style: TextStyle(color: scheme.onSurfaceVariant))
+                ? Text(
+                    'The recap came back empty. Try again.',
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  )
                 : MarkdownView(data: r.recap),
           ),
           const SizedBox(height: 10),
@@ -193,11 +198,14 @@ class _Stat extends StatelessWidget {
         children: <Widget>[
           Icon(icon, size: 16, color: scheme.onSurfaceVariant),
           const SizedBox(width: 6),
-          Text(label,
-              style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurfaceVariant,
-                  fontSize: 13)),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurfaceVariant,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );

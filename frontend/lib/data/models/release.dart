@@ -20,8 +20,7 @@ class Release {
   });
 
   /// The display label, combining name and version when both are present.
-  String get displayName =>
-      version.isEmpty ? name : '$name · $version';
+  String get displayName => version.isEmpty ? name : '$name · $version';
 
   factory Release.fromJson(Map<String, dynamic> json) => Release(
     id: json['id'] as int,
@@ -62,6 +61,5 @@ class Release {
           other.notes == notes;
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, version, status, targetDate, notes);
+  int get hashCode => Object.hash(id, name, version, status, targetDate, notes);
 }

@@ -44,21 +44,20 @@ String _fieldLabel(String key) {
 }
 
 String _fieldValue(Task t, String key) => switch (key) {
-      'title' => t.title,
-      'status' => t.status.label,
-      'priority' => t.priority.label,
-      'project' => t.projectName ?? '',
-      'assignee' => t.assigneeName ?? '',
-      'done' => t.done ? 'Yes' : 'No',
-      'due' => t.dueDate == null
-          ? ''
-          : '${shortDate(t.dueDate!)} ${t.dueDate!.year}',
-      'created' => '${shortDate(t.createdAt)} ${t.createdAt.year}',
-      'tags' => t.tags.join(', '),
-      'points' => '${t.points}',
-      'estimate' => (t.estimateMinutes / 60).toStringAsFixed(1),
-      _ => '',
-    };
+  'title' => t.title,
+  'status' => t.status.label,
+  'priority' => t.priority.label,
+  'project' => t.projectName ?? '',
+  'assignee' => t.assigneeName ?? '',
+  'done' => t.done ? 'Yes' : 'No',
+  'due' =>
+    t.dueDate == null ? '' : '${shortDate(t.dueDate!)} ${t.dueDate!.year}',
+  'created' => '${shortDate(t.createdAt)} ${t.createdAt.year}',
+  'tags' => t.tags.join(', '),
+  'points' => '${t.points}',
+  'estimate' => (t.estimateMinutes / 60).toStringAsFixed(1),
+  _ => '',
+};
 
 bool _matches(Task t, List<ReportFilter> filters) {
   for (final ReportFilter f in filters) {
@@ -91,7 +90,10 @@ class ReportBuilderPage extends ConsumerStatefulWidget {
 class _ReportBuilderPageState extends ConsumerState<ReportBuilderPage> {
   final TextEditingController _name = TextEditingController();
   final List<String> _columns = <String>[
-    'title', 'status', 'priority', 'assignee',
+    'title',
+    'status',
+    'priority',
+    'assignee',
   ];
   final List<ReportFilter> _filters = <ReportFilter>[];
   int? _reportId;
@@ -103,12 +105,15 @@ class _ReportBuilderPageState extends ConsumerState<ReportBuilderPage> {
   }
 
   /// Selected columns in catalog order.
-  List<String> get _orderedColumns =>
-      <String>[for (final (String, String) f in _fields)
-        if (_columns.contains(f.$1)) f.$1];
+  List<String> get _orderedColumns => <String>[
+    for (final (String, String) f in _fields)
+      if (_columns.contains(f.$1)) f.$1,
+  ];
 
-  List<Task> _filtered(List<Task> all) =>
-      <Task>[for (final Task t in all) if (_matches(t, _filters)) t];
+  List<Task> _filtered(List<Task> all) => <Task>[
+    for (final Task t in all)
+      if (_matches(t, _filters)) t,
+  ];
 
   void _loadReport(ReportDef r) {
     setState(() {
@@ -324,17 +329,22 @@ class _ConfigCard extends ConsumerWidget {
               if (reportId != null)
                 IconButton(
                   tooltip: 'Delete report',
-                  icon: Icon(Icons.delete_outline,
-                      color: Theme.of(context).colorScheme.error),
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                   onPressed: () => _delete(context, ref),
                 ),
             ],
           ),
           const SizedBox(height: 14),
-          Text('Columns',
-              style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Text(
+            'Columns',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
@@ -356,10 +366,13 @@ class _ConfigCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Text('Filters',
-              style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Text(
+            'Filters',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(height: 4),
           for (int i = 0; i < filters.length; i++)
             _FilterRow(
@@ -465,7 +478,9 @@ class _ValueField extends StatefulWidget {
 }
 
 class _ValueFieldState extends State<_ValueField> {
-  late final TextEditingController _c = TextEditingController(text: widget.value);
+  late final TextEditingController _c = TextEditingController(
+    text: widget.value,
+  );
 
   @override
   void dispose() {
@@ -518,7 +533,9 @@ class _Results extends StatelessWidget {
                 ? '${rows.length} tasks · showing first $_cap (export for all)'
                 : '${rows.length} ${rows.length == 1 ? 'task' : 'tasks'}',
             style: TextStyle(
-                fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
+            ),
           ),
         ),
         Expanded(
@@ -528,7 +545,8 @@ class _Results extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 columns: <DataColumn>[
-                  for (final String c in columns) DataColumn(label: Text(_fieldLabel(c))),
+                  for (final String c in columns)
+                    DataColumn(label: Text(_fieldLabel(c))),
                 ],
                 rows: <DataRow>[
                   for (final Task t in shown)

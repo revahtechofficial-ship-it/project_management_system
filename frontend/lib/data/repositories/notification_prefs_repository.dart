@@ -11,15 +11,14 @@ class NotificationPrefsRepository {
 
   /// The current user's notification preferences.
   Future<NotificationPrefs> get() async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.get<Map<String, dynamic>>(
-            '/api/v1/account/notification-prefs');
+    final Response<Map<String, dynamic>> res = await _dio
+        .get<Map<String, dynamic>>('/api/v1/account/notification-prefs');
     return NotificationPrefs.fromJson(res.data ?? <String, dynamic>{});
   }
 
   /// Saves the notification preferences.
   Future<void> set(NotificationPrefs prefs) => _dio.put<void>(
-        '/api/v1/account/notification-prefs',
-        data: prefs.toJson(),
-      );
+    '/api/v1/account/notification-prefs',
+    data: prefs.toJson(),
+  );
 }

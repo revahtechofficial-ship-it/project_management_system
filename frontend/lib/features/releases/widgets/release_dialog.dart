@@ -160,9 +160,7 @@ class _ReleaseDialogState extends ConsumerState<_ReleaseDialog> {
               controller: _notes,
               minLines: 2,
               maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Notes (optional)',
-              ),
+              decoration: const InputDecoration(labelText: 'Notes (optional)'),
             ),
             if (_error != null) ...<Widget>[
               const SizedBox(height: 10),

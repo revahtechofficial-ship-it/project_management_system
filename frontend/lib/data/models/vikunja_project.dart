@@ -15,21 +15,22 @@ class VikunjaProject {
   });
 
   factory VikunjaProject.fromJson(Map<String, dynamic> json) => VikunjaProject(
-        id: json['id'] as int,
-        title: json['title'] as String? ?? '',
-        description: json['description'] as String? ?? '',
-        isArchived: json['is_archived'] as bool? ?? false,
-      );
+    id: json['id'] as int,
+    title: json['title'] as String? ?? '',
+    description: json['description'] as String? ?? '',
+    isArchived: json['is_archived'] as bool? ?? false,
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'title': title,
-        'description': description,
-        'is_archived': isArchived,
-      };
+    'id': id,
+    'title': title,
+    'description': description,
+    'is_archived': isArchived,
+  };
 
   @override
-  String toString() => 'VikunjaProject('
+  String toString() =>
+      'VikunjaProject('
       'id: $id, title: $title, description: $description, '
       'isArchived: $isArchived)';
 

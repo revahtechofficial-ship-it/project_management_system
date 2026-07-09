@@ -8,8 +8,10 @@ import '../providers/checklist_templates_providers.dart';
 
 /// Opens the create/edit dialog for a [ChecklistTemplate]. Pass [existing] to
 /// edit. Returns true when saved.
-Future<bool?> showChecklistTemplateDialog(BuildContext context,
-    {ChecklistTemplate? existing}) {
+Future<bool?> showChecklistTemplateDialog(
+  BuildContext context, {
+  ChecklistTemplate? existing,
+}) {
   return showDialog<bool>(
     context: context,
     builder: (BuildContext _) => _ChecklistTemplateDialog(existing: existing),
@@ -66,8 +68,9 @@ class _ChecklistTemplateDialogState
     ];
     setState(() => _busy = true);
     try {
-      final ChecklistTemplatesRepository repo =
-          ref.read(checklistTemplatesRepositoryProvider);
+      final ChecklistTemplatesRepository repo = ref.read(
+        checklistTemplatesRepositoryProvider,
+      );
       if (widget.existing == null) {
         await repo.create(
           name: _name.text.trim(),
@@ -113,7 +116,9 @@ class _ChecklistTemplateDialogState
                   Text(
                     editing ? 'Edit checklist' : 'New checklist template',
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
@@ -129,7 +134,9 @@ class _ChecklistTemplateDialogState
                       controller: _name,
                       autofocus: !editing,
                       decoration: const InputDecoration(
-                          labelText: 'Name', isDense: true),
+                        labelText: 'Name',
+                        isDense: true,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -141,28 +148,31 @@ class _ChecklistTemplateDialogState
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text('Items',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant)),
+                    Text(
+                      'Items',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     for (int i = 0; i < _items.length; i++)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Row(
                           children: <Widget>[
-                            const Icon(Icons.check_box_outline_blank,
-                                size: 18),
+                            const Icon(Icons.check_box_outline_blank, size: 18),
                             const SizedBox(width: 8),
                             Expanded(
                               child: TextField(
                                 controller: _items[i],
                                 decoration: const InputDecoration(
-                                    isDense: true, hintText: 'Checklist item'),
+                                  isDense: true,
+                                  hintText: 'Checklist item',
+                                ),
                                 onSubmitted: (_) => setState(
-                                    () => _items.add(TextEditingController())),
+                                  () => _items.add(TextEditingController()),
+                                ),
                               ),
                             ),
                             IconButton(
@@ -182,8 +192,8 @@ class _ChecklistTemplateDialogState
                     Align(
                       alignment: Alignment.centerLeft,
                       child: TextButton.icon(
-                        onPressed: () => setState(
-                            () => _items.add(TextEditingController())),
+                        onPressed: () =>
+                            setState(() => _items.add(TextEditingController())),
                         icon: const Icon(Icons.add, size: 18),
                         label: const Text('Add item'),
                       ),

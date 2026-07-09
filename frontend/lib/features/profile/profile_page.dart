@@ -64,7 +64,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       _error = null;
     });
     try {
-      await ref.read(authControllerProvider.notifier).updateProfile(
+      await ref
+          .read(authControllerProvider.notifier)
+          .updateProfile(
             fullName: _name.text.trim(),
             phone: _phone.text.trim(),
             jobTitle: _jobTitle.text.trim(),
@@ -85,8 +87,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _changePhoto() async {
-    final FilePickerResult? result =
-        await FilePicker.pickFiles(type: FileType.image, withData: true);
+    final FilePickerResult? result = await FilePicker.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
     final bytes = result?.files.first.bytes;
     if (result == null || bytes == null || !mounted) {
       return;
@@ -152,8 +156,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         icon: Icons.person_outline,
                         validator: (String? v) =>
                             (v == null || v.trim().isEmpty)
-                                ? 'Name is required'
-                                : null,
+                            ? 'Name is required'
+                            : null,
                       ),
                       _ProfileField(
                         controller: _phone,
@@ -208,7 +212,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.save_outlined, size: 18),
                   label: Text(_saving ? 'Saving…' : 'Save changes'),
                   style: FilledButton.styleFrom(
@@ -220,12 +225,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   title: 'Security',
                   child: ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.lock_outline,
-                        color: scheme.onSurfaceVariant),
+                    leading: Icon(
+                      Icons.lock_outline,
+                      color: scheme.onSurfaceVariant,
+                    ),
                     title: const Text('Change password'),
                     subtitle: const Text('Update your account password'),
-                    trailing: Icon(Icons.chevron_right,
-                        color: scheme.onSurfaceVariant),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: scheme.onSurfaceVariant,
+                    ),
                     onTap: _changePassword,
                   ),
                 ),
@@ -265,8 +274,11 @@ class _HeaderCard extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 12,
                     backgroundColor: scheme.primary,
-                    child: const Icon(Icons.camera_alt,
-                        size: 13, color: Colors.white),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      size: 13,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -277,29 +289,40 @@ class _HeaderCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w800)),
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(user?.email ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: scheme.onSurfaceVariant)),
+                Text(
+                  user?.email ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
                 const SizedBox(height: 8),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: role.color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(role.label,
-                      style: TextStyle(
-                          color: role.color,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12)),
+                  child: Text(
+                    role.label,
+                    style: TextStyle(
+                      color: role.color,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ],
             ),

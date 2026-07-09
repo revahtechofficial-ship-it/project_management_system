@@ -27,17 +27,17 @@ class GiphyRepository {
         ? '$_base/$kind/trending'
         : '$_base/$kind/search';
     try {
-      final Response<Map<String, dynamic>> res =
-          await _dio.get<Map<String, dynamic>>(
-        path,
-        queryParameters: <String, dynamic>{
-          'api_key': AppConfig.giphyApiKey,
-          if (trimmed.isNotEmpty) 'q': trimmed,
-          'limit': 24,
-          'rating': 'pg',
-          'bundle': 'fixed_height',
-        },
-      );
+      final Response<Map<String, dynamic>> res = await _dio
+          .get<Map<String, dynamic>>(
+            path,
+            queryParameters: <String, dynamic>{
+              'api_key': AppConfig.giphyApiKey,
+              if (trimmed.isNotEmpty) 'q': trimmed,
+              'limit': 24,
+              'rating': 'pg',
+              'bundle': 'fixed_height',
+            },
+          );
       final List<dynamic> data =
           (res.data?['data'] as List<dynamic>?) ?? <dynamic>[];
       return data

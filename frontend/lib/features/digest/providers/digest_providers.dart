@@ -7,11 +7,12 @@ import '../../../providers/dio_provider.dart';
 /// The digest repository, from the shared Dio client (AGENTS.md §1).
 final Provider<DigestRepository> digestRepositoryProvider =
     Provider<DigestRepository>((ref) {
-  return DigestRepository(ref.watch(dioProvider));
-});
+      return DigestRepository(ref.watch(dioProvider));
+    });
 
 /// The current user's digest. Invalidate to refresh.
-final FutureProvider<DigestData> digestProvider =
-    FutureProvider<DigestData>((ref) {
+final FutureProvider<DigestData> digestProvider = FutureProvider<DigestData>((
+  ref,
+) {
   return ref.watch(digestRepositoryProvider).get();
 });

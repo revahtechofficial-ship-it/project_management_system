@@ -10,9 +10,9 @@ class ApprovalsRepository {
   final Dio _dio;
 
   List<Approval> _parse(Response<List<dynamic>> res) => <Approval>[
-        for (final dynamic e in res.data ?? <dynamic>[])
-          Approval.fromJson(e as Map<String, dynamic>),
-      ];
+    for (final dynamic e in res.data ?? <dynamic>[])
+      Approval.fromJson(e as Map<String, dynamic>),
+  ];
 
   /// Approvals awaiting the current user's decision.
   Future<List<Approval>> pending() async =>
@@ -24,11 +24,11 @@ class ApprovalsRepository {
 
   /// Approvals recorded against one subject (e.g. a task).
   Future<List<Approval>> forSubject(String type, int id) async => _parse(
-        await _dio.get<List<dynamic>>(
-          '/api/v1/approvals/subject',
-          queryParameters: <String, dynamic>{'type': type, 'id': id},
-        ),
-      );
+    await _dio.get<List<dynamic>>(
+      '/api/v1/approvals/subject',
+      queryParameters: <String, dynamic>{'type': type, 'id': id},
+    ),
+  );
 
   /// Requests sign-off on a subject from [approverId].
   Future<void> request({
@@ -37,21 +37,20 @@ class ApprovalsRepository {
     required String subjectTitle,
     required int approverId,
     String note = '',
-  }) =>
-      _dio.post<void>(
-        '/api/v1/approvals',
-        data: <String, dynamic>{
-          'subject_type': subjectType,
-          'subject_id': subjectId,
-          'subject_title': subjectTitle,
-          'approver_id': approverId,
-          'note': note,
-        },
-      );
+  }) => _dio.post<void>(
+    '/api/v1/approvals',
+    data: <String, dynamic>{
+      'subject_type': subjectType,
+      'subject_id': subjectId,
+      'subject_title': subjectTitle,
+      'approver_id': approverId,
+      'note': note,
+    },
+  );
 
   /// Approves or rejects an approval (approver-only server-side).
   Future<void> decide(int id, {required bool approved}) => _dio.post<void>(
-        '/api/v1/approvals/$id/decide',
-        data: <String, dynamic>{'status': approved ? 'approved' : 'rejected'},
-      );
+    '/api/v1/approvals/$id/decide',
+    data: <String, dynamic>{'status': approved ? 'approved' : 'rejected'},
+  );
 }

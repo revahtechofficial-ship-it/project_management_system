@@ -18,22 +18,22 @@ class Skill {
   });
 
   factory Skill.fromJson(Map<String, dynamic> json) => Skill(
-        id: json['id'] as int,
-        userId: json['user_id'] as int,
-        userName: json['user_name'] as String? ?? '',
-        avatarUrl: json['avatar_url'] as String?,
-        skill: json['skill'] as String? ?? '',
-        level: json['level'] as int? ?? 3,
-      );
+    id: json['id'] as int,
+    userId: json['user_id'] as int,
+    userName: json['user_name'] as String? ?? '',
+    avatarUrl: json['avatar_url'] as String?,
+    skill: json['skill'] as String? ?? '',
+    level: json['level'] as int? ?? 3,
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'user_id': userId,
-        'user_name': userName,
-        'avatar_url': avatarUrl,
-        'skill': skill,
-        'level': level,
-      };
+    'id': id,
+    'user_id': userId,
+    'user_name': userName,
+    'avatar_url': avatarUrl,
+    'skill': skill,
+    'level': level,
+  };
 
   @override
   String toString() => 'Skill($skill L$level u$userId)';

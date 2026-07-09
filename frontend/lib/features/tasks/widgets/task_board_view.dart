@@ -251,10 +251,7 @@ class _DashedRRectPainter extends CustomPainter {
       ..strokeWidth = 1.5;
     final Path path = Path()
       ..addRRect(
-        RRect.fromRectAndRadius(
-          Offset.zero & size,
-          const Radius.circular(10),
-        ),
+        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(10)),
       );
     const double dash = 6;
     const double gap = 4;

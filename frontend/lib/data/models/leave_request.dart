@@ -39,36 +39,36 @@ class LeaveRequest {
   bool get isRejected => status == 'rejected';
 
   factory LeaveRequest.fromJson(Map<String, dynamic> json) => LeaveRequest(
-        id: json['id'] as int,
-        userId: json['user_id'] as int,
-        userName: json['user_name'] as String? ?? '',
-        avatarUrl: json['avatar_url'] as String?,
-        type: LeaveType.fromJson(json['type'] as String? ?? 'vacation'),
-        startDate: DateTime.parse(json['start_date'] as String),
-        endDate: DateTime.parse(json['end_date'] as String),
-        status: json['status'] as String? ?? 'pending',
-        note: json['note'] as String? ?? '',
-        approverName: json['approver_name'] as String? ?? '',
-        decidedAt: json['decided_at'] == null
-            ? null
-            : DateTime.parse(json['decided_at'] as String),
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    userId: json['user_id'] as int,
+    userName: json['user_name'] as String? ?? '',
+    avatarUrl: json['avatar_url'] as String?,
+    type: LeaveType.fromJson(json['type'] as String? ?? 'vacation'),
+    startDate: DateTime.parse(json['start_date'] as String),
+    endDate: DateTime.parse(json['end_date'] as String),
+    status: json['status'] as String? ?? 'pending',
+    note: json['note'] as String? ?? '',
+    approverName: json['approver_name'] as String? ?? '',
+    decidedAt: json['decided_at'] == null
+        ? null
+        : DateTime.parse(json['decided_at'] as String),
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'user_id': userId,
-        'user_name': userName,
-        'avatar_url': avatarUrl,
-        'type': type.toJson(),
-        'start_date': startDate.toIso8601String(),
-        'end_date': endDate.toIso8601String(),
-        'status': status,
-        'note': note,
-        'approver_name': approverName,
-        'decided_at': decidedAt?.toIso8601String(),
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'user_id': userId,
+    'user_name': userName,
+    'avatar_url': avatarUrl,
+    'type': type.toJson(),
+    'start_date': startDate.toIso8601String(),
+    'end_date': endDate.toIso8601String(),
+    'status': status,
+    'note': note,
+    'approver_name': approverName,
+    'decided_at': decidedAt?.toIso8601String(),
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'LeaveRequest(id: $id, ${type.name}, $status)';
@@ -91,6 +91,18 @@ class LeaveRequest {
           other.createdAt == createdAt;
 
   @override
-  int get hashCode => Object.hash(id, userId, userName, avatarUrl, type,
-      startDate, endDate, status, note, approverName, decidedAt, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    userId,
+    userName,
+    avatarUrl,
+    type,
+    startDate,
+    endDate,
+    status,
+    note,
+    approverName,
+    decidedAt,
+    createdAt,
+  );
 }

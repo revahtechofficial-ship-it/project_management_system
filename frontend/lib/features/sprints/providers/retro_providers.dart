@@ -12,8 +12,9 @@ class RetroRepository {
   final Dio _dio;
 
   Future<List<RetroItem>> list(int sprintId) async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/sprints/$sprintId/retro');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/sprints/$sprintId/retro',
+    );
     return <RetroItem>[
       for (final dynamic e in res.data ?? <dynamic>[])
         RetroItem.fromJson(e as Map<String, dynamic>),
@@ -27,9 +28,9 @@ class RetroRepository {
       );
 
   Future<void> setDone(int itemId, bool done) => _dio.patch<void>(
-        '/api/v1/sprints/retro/$itemId',
-        data: <String, dynamic>{'done': done},
-      );
+    '/api/v1/sprints/retro/$itemId',
+    data: <String, dynamic>{'done': done},
+  );
 
   Future<void> delete(int itemId) =>
       _dio.delete<void>('/api/v1/sprints/retro/$itemId');
@@ -37,11 +38,13 @@ class RetroRepository {
 
 final Provider<RetroRepository> retroRepositoryProvider =
     Provider<RetroRepository>((ref) {
-  return RetroRepository(ref.watch(dioProvider));
-});
+      return RetroRepository(ref.watch(dioProvider));
+    });
 
 /// The retrospective items for a sprint, keyed by sprint id.
-final sprintRetroProvider =
-    FutureProvider.family<List<RetroItem>, int>((ref, int sprintId) {
+final sprintRetroProvider = FutureProvider.family<List<RetroItem>, int>((
+  ref,
+  int sprintId,
+) {
   return ref.watch(retroRepositoryProvider).list(sprintId);
 });

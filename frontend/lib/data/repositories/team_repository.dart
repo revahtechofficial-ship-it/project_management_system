@@ -12,8 +12,9 @@ class TeamRepository {
 
   /// Fetches all workspace members with their task workload.
   Future<List<TeamMember>> list() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/team');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/team',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => TeamMember.fromJson(e as Map<String, dynamic>))

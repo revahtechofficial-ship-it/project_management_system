@@ -24,8 +24,9 @@ class InlineEditText extends StatefulWidget {
 
 class _InlineEditTextState extends State<InlineEditText> {
   final FocusNode _focus = FocusNode();
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.value);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.value,
+  );
   bool _editing = false;
   bool _hover = false;
   bool _saving = false;

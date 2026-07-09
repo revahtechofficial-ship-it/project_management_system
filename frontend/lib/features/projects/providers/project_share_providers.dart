@@ -38,17 +38,21 @@ class ProjectShareRepository {
 
 final Provider<ProjectShareRepository> projectShareRepositoryProvider =
     Provider<ProjectShareRepository>((ref) {
-  return ProjectShareRepository(ref.watch(dioProvider));
-});
+      return ProjectShareRepository(ref.watch(dioProvider));
+    });
 
 /// The current share token for a project (null when not shared).
-final projectShareTokenProvider =
-    FutureProvider.family<String?, int>((ref, int projectId) {
+final projectShareTokenProvider = FutureProvider.family<String?, int>((
+  ref,
+  int projectId,
+) {
   return ref.watch(projectShareRepositoryProvider).getToken(projectId);
 });
 
 /// A read-only shared project, keyed by token.
-final sharedProjectProvider =
-    FutureProvider.family<SharedProject, String>((ref, String token) {
+final sharedProjectProvider = FutureProvider.family<SharedProject, String>((
+  ref,
+  String token,
+) {
   return ref.watch(projectShareRepositoryProvider).publicProject(token);
 });

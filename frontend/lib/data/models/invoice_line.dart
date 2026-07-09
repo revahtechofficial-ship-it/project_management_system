@@ -19,20 +19,20 @@ class InvoiceLine {
   double get hours => quantityMinutes / 60;
 
   factory InvoiceLine.fromJson(Map<String, dynamic> json) => InvoiceLine(
-        id: json['id'] as int,
-        description: json['description'] as String? ?? '',
-        quantityMinutes: json['quantity_minutes'] as int? ?? 0,
-        rateCents: json['rate_cents'] as int? ?? 0,
-        amountCents: json['amount_cents'] as int? ?? 0,
-      );
+    id: json['id'] as int,
+    description: json['description'] as String? ?? '',
+    quantityMinutes: json['quantity_minutes'] as int? ?? 0,
+    rateCents: json['rate_cents'] as int? ?? 0,
+    amountCents: json['amount_cents'] as int? ?? 0,
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'description': description,
-        'quantity_minutes': quantityMinutes,
-        'rate_cents': rateCents,
-        'amount_cents': amountCents,
-      };
+    'id': id,
+    'description': description,
+    'quantity_minutes': quantityMinutes,
+    'rate_cents': rateCents,
+    'amount_cents': amountCents,
+  };
 
   @override
   String toString() => 'InvoiceLine(id: $id, $description: $amountCents)';

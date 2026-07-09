@@ -184,6 +184,69 @@ void main() {
     });
   });
 
+  group('Nepal time', () {
+    test('is UTC+05:45', () {
+      expect(kNepalOffset, const Duration(hours: 5, minutes: 45));
+      expect(
+        nepalTimeOf(DateTime.utc(2026, 7, 9, 6)),
+        DateTime.utc(2026, 7, 9, 11, 45),
+      );
+    });
+
+    test('does not depend on the device zone', () {
+      // Same instant, expressed two ways: the Nepal reading must match.
+      final DateTime utc = DateTime.utc(2026, 7, 9, 18, 30);
+      expect(nepalTimeOf(utc), nepalTimeOf(utc.toLocal()));
+    });
+
+    test('rolls the date over when Nepal is already tomorrow', () {
+      final DateTime nepal = nepalTimeOf(DateTime.utc(2026, 7, 9, 20));
+      expect(nepal.day, 10);
+      expect(nepal.hour, 1);
+      expect(nepal.minute, 45);
+    });
+
+    test('meridiem names the stretch of day, not just AM/PM', () {
+      expect(nepaliMeridiem(2), 'राति');
+      expect(nepaliMeridiem(9), 'बिहान');
+      expect(nepaliMeridiem(13), 'दिउँसो');
+      expect(nepaliMeridiem(18), 'साँझ');
+      expect(nepaliMeridiem(22), 'राति');
+    });
+
+    test('formatClock reads a 12-hour clock', () {
+      final DateTime afternoon = DateTime.utc(2026, 7, 9, 13, 5, 9);
+      expect(formatClock(afternoon, nepali: false), '1:05:09 PM');
+      expect(formatClock(afternoon, nepali: true), '१:०५:०९ दिउँसो');
+    });
+
+    test('formatClock shows midnight and noon as 12, not 0', () {
+      expect(
+        formatClock(DateTime.utc(2026, 7, 9, 0, 0, 0), nepali: false),
+        '12:00:00 AM',
+      );
+      expect(
+        formatClock(DateTime.utc(2026, 7, 9, 12, 0, 0), nepali: false),
+        '12:00:00 PM',
+      );
+    });
+  });
+
+  group('supported year range', () {
+    test('the picker stays inside what the conversion table covers', () {
+      expect(kBsPickerMinYear, greaterThanOrEqualTo(kBsMinYear));
+      expect(kBsPickerMaxYear, lessThanOrEqualTo(kBsMaxYear));
+    });
+
+    test('both ends of the picker range actually convert', () {
+      for (final int year in <int>[kBsPickerMinYear, kBsPickerMaxYear]) {
+        expect(() => bsMonthGrid(year, 1), returnsNormally);
+        expect(() => bsMonthGrid(year, 12), returnsNormally);
+        expect(adToBs(bsToAd(year, 12, 1)), BsDate(year, 12, 1));
+      }
+    });
+  });
+
   group('formatting', () {
     test('month label in both languages', () {
       expect(bsMonthLabel(2083, 3, nepali: true), 'असार २०८३');

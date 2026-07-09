@@ -45,6 +45,5 @@ class PublicChannel {
           other.createdAt == createdAt;
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, avatarUrl, memberCount, createdAt);
+  int get hashCode => Object.hash(id, name, avatarUrl, memberCount, createdAt);
 }

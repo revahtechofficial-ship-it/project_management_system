@@ -15,15 +15,15 @@ class SearchRepository {
     int limit = 20,
     int offset = 0,
   }) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.get<Map<String, dynamic>>(
-      '/api/v1/search',
-      queryParameters: <String, dynamic>{
-        'q': query,
-        'limit': limit,
-        'offset': offset,
-      },
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .get<Map<String, dynamic>>(
+          '/api/v1/search',
+          queryParameters: <String, dynamic>{
+            'q': query,
+            'limit': limit,
+            'offset': offset,
+          },
+        );
     return SearchResults.fromJson(res.data ?? const <String, dynamic>{});
   }
 }

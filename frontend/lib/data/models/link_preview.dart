@@ -19,20 +19,20 @@ class LinkPreview {
   bool get hasContent => title.isNotEmpty || image.isNotEmpty;
 
   factory LinkPreview.fromJson(Map<String, dynamic> json) => LinkPreview(
-        url: json['url'] as String? ?? '',
-        title: json['title'] as String? ?? '',
-        description: json['description'] as String? ?? '',
-        image: json['image'] as String? ?? '',
-        site: json['site'] as String? ?? '',
-      );
+    url: json['url'] as String? ?? '',
+    title: json['title'] as String? ?? '',
+    description: json['description'] as String? ?? '',
+    image: json['image'] as String? ?? '',
+    site: json['site'] as String? ?? '',
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'url': url,
-        'title': title,
-        'description': description,
-        'image': image,
-        'site': site,
-      };
+    'url': url,
+    'title': title,
+    'description': description,
+    'image': image,
+    'site': site,
+  };
 
   @override
   String toString() => 'LinkPreview(url: $url, title: $title)';

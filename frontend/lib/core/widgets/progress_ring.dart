@@ -46,7 +46,8 @@ class ProgressRing extends StatelessWidget {
             value: v,
             color: color,
             stroke: stroke,
-            track: trackColor ??
+            track:
+                trackColor ??
                 scheme.surfaceContainerHighest.withValues(alpha: 0.7),
           ),
           child: Center(

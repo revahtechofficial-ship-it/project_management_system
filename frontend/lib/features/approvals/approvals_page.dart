@@ -72,7 +72,11 @@ class _AwaitingView extends ConsumerWidget {
   const _AwaitingView();
 
   Future<void> _decide(
-      BuildContext context, WidgetRef ref, int id, bool approved) async {
+    BuildContext context,
+    WidgetRef ref,
+    int id,
+    bool approved,
+  ) async {
     try {
       await ref
           .read(approvalsRepositoryProvider)
@@ -91,8 +95,9 @@ class _AwaitingView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final AsyncValue<List<Approval>> async =
-        ref.watch(pendingApprovalsProvider);
+    final AsyncValue<List<Approval>> async = ref.watch(
+      pendingApprovalsProvider,
+    );
     return async.when(
       loading: () => const LoadingView(),
       error: (Object e, _) => ErrorView(
@@ -128,22 +133,27 @@ class _AwaitingView extends ConsumerWidget {
                                   : a.subjectTitle,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w700),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             Text(
                               '${a.subjectType} · from '
                               '${a.requesterName.isEmpty ? 'a teammate' : a.requesterName}',
                               style: TextStyle(
-                                  fontSize: 12,
-                                  color: scheme.onSurfaceVariant),
+                                fontSize: 12,
+                                color: scheme.onSurfaceVariant,
+                              ),
                             ),
                             if (a.note.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: 2),
-                                child: Text(a.note,
-                                    style: TextStyle(
-                                        color: scheme.onSurfaceVariant)),
+                                child: Text(
+                                  a.note,
+                                  style: TextStyle(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
                               ),
                           ],
                         ),
@@ -179,8 +189,9 @@ class _MineView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final AsyncValue<List<Approval>> async =
-        ref.watch(myApprovalRequestsProvider);
+    final AsyncValue<List<Approval>> async = ref.watch(
+      myApprovalRequestsProvider,
+    );
     return async.when(
       loading: () => const LoadingView(),
       error: (Object e, _) => ErrorView(
@@ -192,7 +203,8 @@ class _MineView extends ConsumerWidget {
           return const EmptyState(
             icon: Icons.send_outlined,
             title: 'No requests yet',
-            message: 'Request approval from a task, doc or release and it will '
+            message:
+                'Request approval from a task, doc or release and it will '
                 'show up here.',
           );
         }
@@ -215,16 +227,18 @@ class _MineView extends ConsumerWidget {
                                   : a.subjectTitle,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w700),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             Text(
                               '${a.subjectType} · '
                               '${a.approverName.isEmpty ? 'approver' : a.approverName}'
                               ' · ${relativeTime(a.createdAt)}',
                               style: TextStyle(
-                                  fontSize: 12,
-                                  color: scheme.onSurfaceVariant),
+                                fontSize: 12,
+                                color: scheme.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),

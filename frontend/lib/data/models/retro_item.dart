@@ -22,24 +22,24 @@ class RetroItem {
   });
 
   factory RetroItem.fromJson(Map<String, dynamic> json) => RetroItem(
-        id: json['id'] as int,
-        sprintId: json['sprint_id'] as int,
-        kind: RetroKind.fromJson(json['kind'] as String? ?? 'start'),
-        body: json['body'] as String? ?? '',
-        authorName: json['author_name'] as String? ?? '',
-        done: json['done'] as bool? ?? false,
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    sprintId: json['sprint_id'] as int,
+    kind: RetroKind.fromJson(json['kind'] as String? ?? 'start'),
+    body: json['body'] as String? ?? '',
+    authorName: json['author_name'] as String? ?? '',
+    done: json['done'] as bool? ?? false,
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'sprint_id': sprintId,
-        'kind': kind.toJson(),
-        'body': body,
-        'author_name': authorName,
-        'done': done,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'sprint_id': sprintId,
+    'kind': kind.toJson(),
+    'body': body,
+    'author_name': authorName,
+    'done': done,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'RetroItem(id: $id, ${kind.name}: $body)';

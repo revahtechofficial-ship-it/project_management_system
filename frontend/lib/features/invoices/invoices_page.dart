@@ -42,7 +42,13 @@ class _InvoicesPageState extends ConsumerState<InvoicesPage> {
     exportCsv(
       'invoices',
       <String>[
-        'Number', 'Client', 'Project', 'Status', 'Issued', 'Due', 'Total',
+        'Number',
+        'Client',
+        'Project',
+        'Status',
+        'Issued',
+        'Due',
+        'Total',
         'Lines',
       ],
       <List<String>>[

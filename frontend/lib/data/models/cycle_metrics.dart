@@ -16,20 +16,20 @@ class CyclePoint {
   });
 
   factory CyclePoint.fromJson(Map<String, dynamic> json) => CyclePoint(
-        id: json['id'] as int,
-        title: json['title'] as String? ?? '',
-        completedAt: DateTime.parse(json['completed_at'] as String),
-        leadDays: (json['lead_days'] as num?)?.toDouble() ?? 0,
-        cycleDays: (json['cycle_days'] as num?)?.toDouble(),
-      );
+    id: json['id'] as int,
+    title: json['title'] as String? ?? '',
+    completedAt: DateTime.parse(json['completed_at'] as String),
+    leadDays: (json['lead_days'] as num?)?.toDouble() ?? 0,
+    cycleDays: (json['cycle_days'] as num?)?.toDouble(),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'title': title,
-        'completed_at': completedAt.toIso8601String(),
-        'lead_days': leadDays,
-        'cycle_days': cycleDays,
-      };
+    'id': id,
+    'title': title,
+    'completed_at': completedAt.toIso8601String(),
+    'lead_days': leadDays,
+    'cycle_days': cycleDays,
+  };
 
   @override
   String toString() => 'CyclePoint(id: $id, lead: $leadDays)';
@@ -45,8 +45,7 @@ class CyclePoint {
           other.cycleDays == cycleDays;
 
   @override
-  int get hashCode =>
-      Object.hash(id, title, completedAt, leadDays, cycleDays);
+  int get hashCode => Object.hash(id, title, completedAt, leadDays, cycleDays);
 }
 
 /// Delivery metrics derived from task completion times: cycle time, lead time
@@ -74,31 +73,29 @@ class CycleMetrics {
   });
 
   factory CycleMetrics.fromJson(Map<String, dynamic> json) => CycleMetrics(
-        completedCount: json['completed_count'] as int? ?? 0,
-        days: json['days'] as int? ?? 90,
-        avgLeadDays: (json['avg_lead_days'] as num?)?.toDouble() ?? 0,
-        medianLeadDays: (json['median_lead_days'] as num?)?.toDouble() ?? 0,
-        p85LeadDays: (json['p85_lead_days'] as num?)?.toDouble() ?? 0,
-        avgCycleDays: (json['avg_cycle_days'] as num?)?.toDouble() ?? 0,
-        throughputPerWeek:
-            (json['throughput_per_week'] as num?)?.toDouble() ?? 0,
-        points: <CyclePoint>[
-          for (final dynamic e
-              in (json['points'] as List<dynamic>? ?? <dynamic>[]))
-            CyclePoint.fromJson(e as Map<String, dynamic>),
-        ],
-      );
+    completedCount: json['completed_count'] as int? ?? 0,
+    days: json['days'] as int? ?? 90,
+    avgLeadDays: (json['avg_lead_days'] as num?)?.toDouble() ?? 0,
+    medianLeadDays: (json['median_lead_days'] as num?)?.toDouble() ?? 0,
+    p85LeadDays: (json['p85_lead_days'] as num?)?.toDouble() ?? 0,
+    avgCycleDays: (json['avg_cycle_days'] as num?)?.toDouble() ?? 0,
+    throughputPerWeek: (json['throughput_per_week'] as num?)?.toDouble() ?? 0,
+    points: <CyclePoint>[
+      for (final dynamic e in (json['points'] as List<dynamic>? ?? <dynamic>[]))
+        CyclePoint.fromJson(e as Map<String, dynamic>),
+    ],
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'completed_count': completedCount,
-        'days': days,
-        'avg_lead_days': avgLeadDays,
-        'median_lead_days': medianLeadDays,
-        'p85_lead_days': p85LeadDays,
-        'avg_cycle_days': avgCycleDays,
-        'throughput_per_week': throughputPerWeek,
-        'points': points.map((CyclePoint p) => p.toJson()).toList(),
-      };
+    'completed_count': completedCount,
+    'days': days,
+    'avg_lead_days': avgLeadDays,
+    'median_lead_days': medianLeadDays,
+    'p85_lead_days': p85LeadDays,
+    'avg_cycle_days': avgCycleDays,
+    'throughput_per_week': throughputPerWeek,
+    'points': points.map((CyclePoint p) => p.toJson()).toList(),
+  };
 
   @override
   String toString() =>
@@ -118,13 +115,13 @@ class CycleMetrics {
 
   @override
   int get hashCode => Object.hash(
-        completedCount,
-        days,
-        avgLeadDays,
-        medianLeadDays,
-        p85LeadDays,
-        avgCycleDays,
-        throughputPerWeek,
-        Object.hashAll(points),
-      );
+    completedCount,
+    days,
+    avgLeadDays,
+    medianLeadDays,
+    p85LeadDays,
+    avgCycleDays,
+    throughputPerWeek,
+    Object.hashAll(points),
+  );
 }

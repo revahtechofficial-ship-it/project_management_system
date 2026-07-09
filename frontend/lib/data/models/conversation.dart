@@ -35,58 +35,58 @@ class Conversation {
 
   /// A one-line preview of the most recent message.
   String get preview => switch (lastKind) {
-        'image' => '📷 Photo',
-        'file' => '📎 Attachment',
-        _ => lastBody,
-      };
+    'image' => '📷 Photo',
+    'file' => '📎 Attachment',
+    _ => lastBody,
+  };
 
   Conversation copyWith({int? unreadCount}) => Conversation(
-        id: id,
-        lastAt: lastAt,
-        createdAt: createdAt,
-        type: type,
-        name: name,
-        otherUserId: otherUserId,
-        otherAvatarUrl: otherAvatarUrl,
-        groupAvatarUrl: groupAvatarUrl,
-        unreadCount: unreadCount ?? this.unreadCount,
-        lastBody: lastBody,
-        lastKind: lastKind,
-        lastSenderId: lastSenderId,
-        memberCount: memberCount,
-      );
+    id: id,
+    lastAt: lastAt,
+    createdAt: createdAt,
+    type: type,
+    name: name,
+    otherUserId: otherUserId,
+    otherAvatarUrl: otherAvatarUrl,
+    groupAvatarUrl: groupAvatarUrl,
+    unreadCount: unreadCount ?? this.unreadCount,
+    lastBody: lastBody,
+    lastKind: lastKind,
+    lastSenderId: lastSenderId,
+    memberCount: memberCount,
+  );
 
   factory Conversation.fromJson(Map<String, dynamic> json) => Conversation(
-        id: json['id'] as int,
-        type: json['type'] as String? ?? 'dm',
-        name: json['name'] as String? ?? '',
-        otherUserId: json['other_user_id'] as int?,
-        otherAvatarUrl: json['other_avatar_url'] as String?,
-        groupAvatarUrl: json['group_avatar_url'] as String?,
-        unreadCount: json['unread_count'] as int? ?? 0,
-        lastBody: json['last_body'] as String? ?? '',
-        lastKind: json['last_kind'] as String? ?? '',
-        lastAt: DateTime.parse(json['last_at'] as String),
-        lastSenderId: json['last_sender_id'] as int?,
-        memberCount: json['member_count'] as int? ?? 0,
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    type: json['type'] as String? ?? 'dm',
+    name: json['name'] as String? ?? '',
+    otherUserId: json['other_user_id'] as int?,
+    otherAvatarUrl: json['other_avatar_url'] as String?,
+    groupAvatarUrl: json['group_avatar_url'] as String?,
+    unreadCount: json['unread_count'] as int? ?? 0,
+    lastBody: json['last_body'] as String? ?? '',
+    lastKind: json['last_kind'] as String? ?? '',
+    lastAt: DateTime.parse(json['last_at'] as String),
+    lastSenderId: json['last_sender_id'] as int?,
+    memberCount: json['member_count'] as int? ?? 0,
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'type': type,
-        'name': name,
-        'other_user_id': otherUserId,
-        'other_avatar_url': otherAvatarUrl,
-        'group_avatar_url': groupAvatarUrl,
-        'unread_count': unreadCount,
-        'last_body': lastBody,
-        'last_kind': lastKind,
-        'last_at': lastAt.toIso8601String(),
-        'last_sender_id': lastSenderId,
-        'member_count': memberCount,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'type': type,
+    'name': name,
+    'other_user_id': otherUserId,
+    'other_avatar_url': otherAvatarUrl,
+    'group_avatar_url': groupAvatarUrl,
+    'unread_count': unreadCount,
+    'last_body': lastBody,
+    'last_kind': lastKind,
+    'last_at': lastAt.toIso8601String(),
+    'last_sender_id': lastSenderId,
+    'member_count': memberCount,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'Conversation(id: $id, name: $name)';
@@ -110,7 +110,19 @@ class Conversation {
           other.createdAt == createdAt;
 
   @override
-  int get hashCode => Object.hash(id, type, name, otherUserId, otherAvatarUrl,
-      groupAvatarUrl, unreadCount, lastBody, lastKind, lastAt, lastSenderId,
-      memberCount, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    type,
+    name,
+    otherUserId,
+    otherAvatarUrl,
+    groupAvatarUrl,
+    unreadCount,
+    lastBody,
+    lastKind,
+    lastAt,
+    lastSenderId,
+    memberCount,
+    createdAt,
+  );
 }

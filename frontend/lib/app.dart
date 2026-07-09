@@ -30,7 +30,10 @@ class RevahApp extends ConsumerWidget {
         compact: settings.compactMode,
         reduceMotion: settings.reduceMotion,
       ),
-      themeMode: _effectiveMode(ref.watch(themeModeProvider), settings.autoDark),
+      themeMode: _effectiveMode(
+        ref.watch(themeModeProvider),
+        settings.autoDark,
+      ),
       routerConfig: ref.watch(goRouterProvider),
       builder: (BuildContext context, Widget? child) {
         final MediaQueryData mq = MediaQuery.of(context);

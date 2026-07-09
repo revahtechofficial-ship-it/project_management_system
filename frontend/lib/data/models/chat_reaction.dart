@@ -12,16 +12,16 @@ class ChatReaction {
   });
 
   factory ChatReaction.fromJson(Map<String, dynamic> json) => ChatReaction(
-        messageId: json['message_id'] as int,
-        emoji: json['emoji'] as String? ?? '',
-        userId: json['user_id'] as int,
-      );
+    messageId: json['message_id'] as int,
+    emoji: json['emoji'] as String? ?? '',
+    userId: json['user_id'] as int,
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'message_id': messageId,
-        'emoji': emoji,
-        'user_id': userId,
-      };
+    'message_id': messageId,
+    'emoji': emoji,
+    'user_id': userId,
+  };
 
   @override
   String toString() => 'ChatReaction($messageId, $emoji, $userId)';

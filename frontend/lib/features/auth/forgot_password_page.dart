@@ -11,8 +11,7 @@ class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});
 
   @override
-  ConsumerState<ForgotPasswordPage> createState() =>
-      _ForgotPasswordPageState();
+  ConsumerState<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }
 
 class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
@@ -76,7 +75,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
             if (_error != null) AuthError(_error!),
             const SizedBox(height: 16),
             SubmitButton(
-                label: 'Send reset code', busy: _busy, onPressed: _submit),
+              label: 'Send reset code',
+              busy: _busy,
+              onPressed: _submit,
+            ),
             const SizedBox(height: 8),
             Center(
               child: TextButton(

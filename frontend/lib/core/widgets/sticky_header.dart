@@ -57,7 +57,11 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => _height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Container(
       alignment: Alignment.centerLeft,

@@ -591,8 +591,7 @@ class _TaskFormDialogState extends ConsumerState<TaskFormDialog> {
                     Expanded(
                       child: _ReleaseField(
                         value: _releaseId,
-                        onChanged: (int? id) =>
-                            setState(() => _releaseId = id),
+                        onChanged: (int? id) => setState(() => _releaseId = id),
                       ),
                     ),
                   ],
@@ -851,8 +850,8 @@ class _ReleaseField extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final List<Release> releases =
         ref.watch(releasesProvider).asData?.value ?? const <Release>[];
-    final bool exists = value == null ||
-        releases.any((Release r) => r.id == value);
+    final bool exists =
+        value == null || releases.any((Release r) => r.id == value);
     return DropdownButtonFormField<int?>(
       initialValue: exists ? value : null,
       decoration: const InputDecoration(
@@ -1447,8 +1446,10 @@ class _ChecklistSectionState extends ConsumerState<_ChecklistSection> {
   }
 
   Future<void> _applyTemplate() async {
-    final int? added =
-        await showApplyChecklistTemplateDialog(context, widget.taskId);
+    final int? added = await showApplyChecklistTemplateDialog(
+      context,
+      widget.taskId,
+    );
     if (added != null) {
       _refresh();
       if (mounted && added > 0) {
@@ -1562,8 +1563,10 @@ class _WatchButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final ({int count, bool watching})? data =
-        ref.watch(taskWatchProvider(taskId)).asData?.value;
+    final ({int count, bool watching})? data = ref
+        .watch(taskWatchProvider(taskId))
+        .asData
+        ?.value;
     final bool watching = data?.watching ?? false;
     final int count = data?.count ?? 0;
     return IconButton(
@@ -1600,7 +1603,8 @@ class _ApprovalControl extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final List<Approval> approvals = ref
+    final List<Approval> approvals =
+        ref
             .watch(approvalsForSubjectProvider((type: 'task', id: taskId)))
             .asData
             ?.value ??
@@ -1626,7 +1630,8 @@ class _ApprovalControl extends ConsumerWidget {
             );
             if (made ?? false) {
               ref.invalidate(
-                  approvalsForSubjectProvider((type: 'task', id: taskId)));
+                approvalsForSubjectProvider((type: 'task', id: taskId)),
+              );
             }
           },
         ),

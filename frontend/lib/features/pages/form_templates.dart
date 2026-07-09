@@ -124,7 +124,12 @@ List<FormStarter> formStarters() => <FormStarter>[
     ),
     fields: <FormField>[
       _field('f0', 'Summary', FormFieldType.text, required: true),
-      _field('f1', 'Steps to reproduce', FormFieldType.textarea, required: true),
+      _field(
+        'f1',
+        'Steps to reproduce',
+        FormFieldType.textarea,
+        required: true,
+      ),
       _field('f2', 'Expected result', FormFieldType.textarea),
       _field('f3', 'Actual result', FormFieldType.textarea),
       _field(

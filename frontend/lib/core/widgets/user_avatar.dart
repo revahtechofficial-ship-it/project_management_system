@@ -44,8 +44,9 @@ class UserAvatar extends StatelessWidget {
       backgroundColor: color ?? avatarColor(name),
       foregroundImage: resolved == null ? null : NetworkImage(resolved),
       // On a failed image load the CircleAvatar falls back to its child.
-      onForegroundImageError:
-          resolved == null ? null : (Object _, StackTrace? _) {},
+      onForegroundImageError: resolved == null
+          ? null
+          : (Object _, StackTrace? _) {},
       child: Text(
         avatarInitials(name),
         style: TextStyle(
@@ -100,7 +101,8 @@ Color avatarColor(String name) {
   if (name.isEmpty) {
     return AppColors.slate;
   }
-  final int index = name.codeUnits.fold<int>(0, (int a, int b) => a + b) %
+  final int index =
+      name.codeUnits.fold<int>(0, (int a, int b) => a + b) %
       AppColors.avatarPalette.length;
   return AppColors.avatarPalette[index];
 }

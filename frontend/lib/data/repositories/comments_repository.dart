@@ -12,8 +12,9 @@ class CommentsRepository {
 
   /// Comments on a task, oldest first.
   Future<List<Comment>> list(int taskId) async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/tasks/$taskId/comments');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/tasks/$taskId/comments',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => Comment.fromJson(e as Map<String, dynamic>))
@@ -27,15 +28,14 @@ class CommentsRepository {
     String body,
     List<int> mentions, {
     int? parentId,
-  }) =>
-      _dio.post<Map<String, dynamic>>(
-        '/api/v1/tasks/$taskId/comments',
-        data: <String, dynamic>{
-          'body': body,
-          'mentions': mentions,
-          'parent_id': ?parentId,
-        },
-      );
+  }) => _dio.post<Map<String, dynamic>>(
+    '/api/v1/tasks/$taskId/comments',
+    data: <String, dynamic>{
+      'body': body,
+      'mentions': mentions,
+      'parent_id': ?parentId,
+    },
+  );
 
   /// Deletes a comment (author or admin on the server).
   Future<void> delete(int commentId) =>
@@ -43,8 +43,9 @@ class CommentsRepository {
 
   /// The recent activity timeline for a task, newest first.
   Future<List<Activity>> listActivity(int taskId) async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/tasks/$taskId/activity');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/tasks/$taskId/activity',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => Activity.fromJson(e as Map<String, dynamic>))

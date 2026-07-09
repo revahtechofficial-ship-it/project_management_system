@@ -27,30 +27,30 @@ class PortalData {
       : (clientName.isNotEmpty ? clientName : 'Client portal');
 
   factory PortalData.fromJson(Map<String, dynamic> json) => PortalData(
-        clientName: json['client_name'] as String? ?? '',
-        clientCompany: json['client_company'] as String? ?? '',
-        clientEmail: json['client_email'] as String? ?? '',
-        projects: <Project>[
-          for (final dynamic e
-              in (json['projects'] as List<dynamic>? ?? <dynamic>[]))
-            Project.fromJson(e as Map<String, dynamic>),
-        ],
-        invoices: <Invoice>[
-          for (final dynamic e
-              in (json['invoices'] as List<dynamic>? ?? <dynamic>[]))
-            Invoice.fromJson(e as Map<String, dynamic>),
-        ],
-        outstandingCents: json['outstanding_cents'] as int? ?? 0,
-      );
+    clientName: json['client_name'] as String? ?? '',
+    clientCompany: json['client_company'] as String? ?? '',
+    clientEmail: json['client_email'] as String? ?? '',
+    projects: <Project>[
+      for (final dynamic e
+          in (json['projects'] as List<dynamic>? ?? <dynamic>[]))
+        Project.fromJson(e as Map<String, dynamic>),
+    ],
+    invoices: <Invoice>[
+      for (final dynamic e
+          in (json['invoices'] as List<dynamic>? ?? <dynamic>[]))
+        Invoice.fromJson(e as Map<String, dynamic>),
+    ],
+    outstandingCents: json['outstanding_cents'] as int? ?? 0,
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'client_name': clientName,
-        'client_company': clientCompany,
-        'client_email': clientEmail,
-        'projects': projects.map((Project p) => p.toJson()).toList(),
-        'invoices': invoices.map((Invoice i) => i.toJson()).toList(),
-        'outstanding_cents': outstandingCents,
-      };
+    'client_name': clientName,
+    'client_company': clientCompany,
+    'client_email': clientEmail,
+    'projects': projects.map((Project p) => p.toJson()).toList(),
+    'invoices': invoices.map((Invoice i) => i.toJson()).toList(),
+    'outstanding_cents': outstandingCents,
+  };
 
   @override
   String toString() =>
@@ -70,13 +70,13 @@ class PortalData {
 
   @override
   int get hashCode => Object.hash(
-        clientName,
-        clientCompany,
-        clientEmail,
-        outstandingCents,
-        Object.hashAll(projects),
-        Object.hashAll(invoices),
-      );
+    clientName,
+    clientCompany,
+    clientEmail,
+    outstandingCents,
+    Object.hashAll(projects),
+    Object.hashAll(invoices),
+  );
 
   static bool _listEq(List<Object?> a, List<Object?> b) {
     if (a.length != b.length) {

@@ -9,12 +9,14 @@ class ChannelPref {
       ChannelPref(inApp: inApp ?? this.inApp, email: email ?? this.email);
 
   factory ChannelPref.fromJson(Map<String, dynamic> json) => ChannelPref(
-        inApp: json['in_app'] as bool? ?? true,
-        email: json['email'] as bool? ?? true,
-      );
+    inApp: json['in_app'] as bool? ?? true,
+    email: json['email'] as bool? ?? true,
+  );
 
-  Map<String, dynamic> toJson() =>
-      <String, dynamic>{'in_app': inApp, 'email': email};
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'in_app': inApp,
+    'email': email,
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -38,23 +40,23 @@ class NotificationPrefs {
       byCategory[category] ?? const ChannelPref();
 
   /// Returns a copy with [category] set to [pref].
-  NotificationPrefs set(String category, ChannelPref pref) =>
-      NotificationPrefs(byCategory: <String, ChannelPref>{
-        ...byCategory,
-        category: pref,
-      });
+  NotificationPrefs set(String category, ChannelPref pref) => NotificationPrefs(
+    byCategory: <String, ChannelPref>{...byCategory, category: pref},
+  );
 
   factory NotificationPrefs.fromJson(Map<String, dynamic> json) =>
-      NotificationPrefs(byCategory: <String, ChannelPref>{
-        for (final MapEntry<String, dynamic> e in json.entries)
-          if (e.value is Map<String, dynamic>)
-            e.key: ChannelPref.fromJson(e.value as Map<String, dynamic>),
-      });
+      NotificationPrefs(
+        byCategory: <String, ChannelPref>{
+          for (final MapEntry<String, dynamic> e in json.entries)
+            if (e.value is Map<String, dynamic>)
+              e.key: ChannelPref.fromJson(e.value as Map<String, dynamic>),
+        },
+      );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        for (final MapEntry<String, ChannelPref> e in byCategory.entries)
-          e.key: e.value.toJson(),
-      };
+    for (final MapEntry<String, ChannelPref> e in byCategory.entries)
+      e.key: e.value.toJson(),
+  };
 
   @override
   String toString() => 'NotificationPrefs(${byCategory.length} set)';
@@ -66,9 +68,9 @@ class NotificationPrefs {
 
   @override
   int get hashCode => Object.hashAll(<Object?>[
-        for (final MapEntry<String, ChannelPref> e in byCategory.entries)
-          Object.hash(e.key, e.value),
-      ]);
+    for (final MapEntry<String, ChannelPref> e in byCategory.entries)
+      Object.hash(e.key, e.value),
+  ]);
 
   static bool _mapEq(Map<String, ChannelPref> a, Map<String, ChannelPref> b) {
     if (a.length != b.length) {

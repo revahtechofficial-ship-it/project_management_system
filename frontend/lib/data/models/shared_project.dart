@@ -38,15 +38,15 @@ class SharedProject {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'project': <String, dynamic>{
-          'id': id,
-          'name': name,
-          'description': description,
-          'status': status,
-          'due_date': dueDate?.toIso8601String(),
-        },
-        'tasks': tasks.map((SharedTask t) => t.toJson()).toList(),
-      };
+    'project': <String, dynamic>{
+      'id': id,
+      'name': name,
+      'description': description,
+      'status': status,
+      'due_date': dueDate?.toIso8601String(),
+    },
+    'tasks': tasks.map((SharedTask t) => t.toJson()).toList(),
+  };
 
   @override
   String toString() => 'SharedProject(id: $id, name: $name)';
@@ -82,22 +82,22 @@ class SharedTask {
   });
 
   factory SharedTask.fromJson(Map<String, dynamic> json) => SharedTask(
-        id: json['id'] as int,
-        title: json['title'] as String? ?? '',
-        done: json['done'] as bool? ?? false,
-        status: json['status'] as String? ?? 'todo',
-        dueDate: json['due_date'] == null
-            ? null
-            : DateTime.parse(json['due_date'] as String),
-      );
+    id: json['id'] as int,
+    title: json['title'] as String? ?? '',
+    done: json['done'] as bool? ?? false,
+    status: json['status'] as String? ?? 'todo',
+    dueDate: json['due_date'] == null
+        ? null
+        : DateTime.parse(json['due_date'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'title': title,
-        'done': done,
-        'status': status,
-        'due_date': dueDate?.toIso8601String(),
-      };
+    'id': id,
+    'title': title,
+    'done': done,
+    'status': status,
+    'due_date': dueDate?.toIso8601String(),
+  };
 
   @override
   String toString() => 'SharedTask(id: $id, title: $title)';

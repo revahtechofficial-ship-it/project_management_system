@@ -27,15 +27,18 @@ class _DigestPageState extends ConsumerState<DigestPage> {
   Future<void> _email() async {
     setState(() => _emailing = true);
     try {
-      final DigestEmailResult r =
-          await ref.read(digestRepositoryProvider).emailToMe();
+      final DigestEmailResult r = await ref
+          .read(digestRepositoryProvider)
+          .emailToMe();
       if (mounted) {
         if (r.sent) {
           context.showSuccess('Digest emailed to you');
         } else {
-          context.showError(r.reason.isEmpty
-              ? 'Could not email the digest'
-              : 'Not emailed — ${r.reason}');
+          context.showError(
+            r.reason.isEmpty
+                ? 'Could not email the digest'
+                : 'Not emailed — ${r.reason}',
+          );
         }
       }
     } catch (e) {
@@ -86,7 +89,8 @@ class _DigestPageState extends ConsumerState<DigestPage> {
                   return const EmptyState(
                     icon: Icons.check_circle_outline,
                     title: 'You\'re all caught up',
-                    message: 'No unread notifications and nothing overdue or '
+                    message:
+                        'No unread notifications and nothing overdue or '
                         'due this week.',
                   );
                 }
@@ -153,8 +157,9 @@ class _Stat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final Color color =
-        warn ? const Color(0xFFEA580C) : scheme.onSurfaceVariant;
+    final Color color = warn
+        ? const Color(0xFFEA580C)
+        : scheme.onSurfaceVariant;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -168,9 +173,14 @@ class _Stat extends StatelessWidget {
         children: <Widget>[
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
-          Text(label,
-              style: TextStyle(
-                  fontWeight: FontWeight.w700, color: color, fontSize: 13)),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: color,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
@@ -199,12 +209,18 @@ class _TaskCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 5),
               child: Row(
                 children: <Widget>[
-                  Icon(Icons.radio_button_unchecked,
-                      size: 16, color: scheme.onSurfaceVariant),
+                  Icon(
+                    Icons.radio_button_unchecked,
+                    size: 16,
+                    color: scheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(t.title,
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      t.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Text(
@@ -252,25 +268,31 @@ class _NotificationsCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          Text(n.title,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600)),
+                          Text(
+                            n.title,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
                           if (n.body.isNotEmpty)
                             Text(
                               n.body,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                  fontSize: 12.5,
-                                  color: scheme.onSurfaceVariant),
+                                fontSize: 12.5,
+                                color: scheme.onSurfaceVariant,
+                              ),
                             ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(relativeTime(n.createdAt),
-                        style: TextStyle(
-                            fontSize: 11, color: scheme.onSurfaceVariant)),
+                    Text(
+                      relativeTime(n.createdAt),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
               ),

@@ -196,6 +196,29 @@ BsDate adToBs(DateTime ad) {
 /// Today in the Bikram Sambat calendar.
 BsDate bsToday() => adToBs(DateTime.now());
 
+/// Nepal Standard Time is UTC+05:45, and observes no daylight saving.
+const Duration kNepalOffset = Duration(hours: 5, minutes: 45);
+
+/// [moment] as a wall-clock time in Nepal.
+///
+/// The result carries the UTC flag — only its calendar fields are meaningful,
+/// and they read as a clock on a wall in Kathmandu.
+DateTime nepalTimeOf(DateTime moment) => moment.toUtc().add(kNepalOffset);
+
+/// The current wall-clock time in Nepal, whatever zone the device is in.
+DateTime nepalNow() => nepalTimeOf(DateTime.now());
+
+/// The `nepali_utils` conversion table runs from BS 1969 to 2250. Our helpers
+/// look one year past the one they are asked about (to find where it ends), so
+/// the usable range stops a year short of the table's.
+const int kBsMinYear = 1970;
+const int kBsMaxYear = 2249;
+
+/// The span the year picker offers. A full 280 years is not useful to scroll;
+/// BS 2000–2100 spans AD 1943–2043, which covers every plausible date.
+const int kBsPickerMinYear = 2000;
+const int kBsPickerMaxYear = 2100;
+
 /// The number of days in a BS month.
 int bsMonthLength(int year, int month) {
   final DateTime start = bsToAd(year, month, 1);
@@ -288,6 +311,36 @@ String dayKey(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-'
     '${d.month.toString().padLeft(2, '0')}-'
     '${d.day.toString().padLeft(2, '0')}';
+
+/// The Nepali word for the part of the day a 24-hour [hour] falls in — Nepali
+/// names the stretch of day rather than splitting it at noon like AM/PM.
+String nepaliMeridiem(int hour) {
+  if (hour < 4) {
+    return 'राति';
+  }
+  if (hour < 12) {
+    return 'बिहान';
+  }
+  if (hour < 16) {
+    return 'दिउँसो';
+  }
+  if (hour < 20) {
+    return 'साँझ';
+  }
+  return 'राति';
+}
+
+/// A 12-hour clock reading, e.g. `1:05:09 PM` or `१:०५:०९ दिउँसो`.
+String formatClock(DateTime time, {required bool nepali}) {
+  final int hour12 = time.hour % 12 == 0 ? 12 : time.hour % 12;
+  final String mm = time.minute.toString().padLeft(2, '0');
+  final String ss = time.second.toString().padLeft(2, '0');
+  final String clock = '$hour12:$mm:$ss';
+  if (!nepali) {
+    return '$clock ${time.hour < 12 ? 'AM' : 'PM'}';
+  }
+  return '${toNepaliDigits(clock)} ${nepaliMeridiem(time.hour)}';
+}
 
 /// A one-line date for an event list, e.g. `Fri, 28 Aug 2026` in English or
 /// `शुक्र, १२ भदौ २०८३` in Nepali (which counts in the BS calendar).

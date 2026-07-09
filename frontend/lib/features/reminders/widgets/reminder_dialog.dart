@@ -54,7 +54,10 @@ class _ReminderDialogState extends ConsumerState<_ReminderDialog> {
       lastDate: DateTime(now.year + 2),
     );
     if (d != null) {
-      setState(() => _when = DateTime(d.year, d.month, d.day, _when.hour, _when.minute));
+      setState(
+        () =>
+            _when = DateTime(d.year, d.month, d.day, _when.hour, _when.minute),
+      );
     }
   }
 
@@ -64,13 +67,15 @@ class _ReminderDialogState extends ConsumerState<_ReminderDialog> {
       initialTime: TimeOfDay.fromDateTime(_when),
     );
     if (t != null) {
-      setState(() => _when = DateTime(
-            _when.year,
-            _when.month,
-            _when.day,
-            t.hour,
-            t.minute,
-          ));
+      setState(
+        () => _when = DateTime(
+          _when.year,
+          _when.month,
+          _when.day,
+          t.hour,
+          t.minute,
+        ),
+      );
     }
   }
 
@@ -88,7 +93,9 @@ class _ReminderDialogState extends ConsumerState<_ReminderDialog> {
       _error = null;
     });
     try {
-      await ref.read(remindersRepositoryProvider).create(
+      await ref
+          .read(remindersRepositoryProvider)
+          .create(
             remindAt: _when,
             note: _note.text.trim(),
             taskId: widget.taskId,

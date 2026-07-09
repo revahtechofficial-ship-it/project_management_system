@@ -38,8 +38,7 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<Task>> tasksAsync = ref.watch(tasksProvider);
     final List<Task> tasks = tasksAsync.asData?.value ?? const <Task>[];
-    final AuthUser? user =
-        ref.watch(authControllerProvider).asData?.value.user;
+    final AuthUser? user = ref.watch(authControllerProvider).asData?.value.user;
     final _Metrics metrics = _Metrics.from(tasks);
 
     // Show the first-run tour once the "seen" flag has loaded as false.
@@ -62,36 +61,36 @@ class DashboardPage extends ConsumerWidget {
         padding: const EdgeInsets.all(24),
         children: <Widget>[
           _GreetingHeader(name: user?.name ?? '', streak: metrics.streak),
-        if (tasksAsync.hasError)
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: _ErrorNotice(error: tasksAsync.error!),
-          ),
-        const SizedBox(height: 20),
-        if (firstLoad)
-          const _DashboardSkeleton()
-        else ...<Widget>[
-          const _QuickActionsRow(),
-          const SizedBox(height: 16),
-          _SummaryBand(metrics: metrics),
-          if (user != null && _profileCompletion(user) < 1.0) ...<Widget>[
+          if (tasksAsync.hasError)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: _ErrorNotice(error: tasksAsync.error!),
+            ),
+          const SizedBox(height: 20),
+          if (firstLoad)
+            const _DashboardSkeleton()
+          else ...<Widget>[
+            const _QuickActionsRow(),
             const SizedBox(height: 16),
-            _ProfileMeter(user: user),
+            _SummaryBand(metrics: metrics),
+            if (user != null && _profileCompletion(user) < 1.0) ...<Widget>[
+              const SizedBox(height: 16),
+              _ProfileMeter(user: user),
+            ],
+            const SizedBox(height: 20),
+            _KpiSection(metrics: metrics),
+            const SizedBox(height: 20),
+            const _QuickAccessSection(),
+            const SizedBox(height: 20),
+            _ChartsSection(metrics: metrics),
+            const SizedBox(height: 20),
+            _InsightsSection(metrics: metrics),
+            const SizedBox(height: 20),
+            _ListsSection(metrics: metrics),
+            const SizedBox(height: 20),
+            _SecondaryListsSection(metrics: metrics),
+            const SizedBox(height: 8),
           ],
-          const SizedBox(height: 20),
-          _KpiSection(metrics: metrics),
-          const SizedBox(height: 20),
-          const _QuickAccessSection(),
-          const SizedBox(height: 20),
-          _ChartsSection(metrics: metrics),
-          const SizedBox(height: 20),
-          _InsightsSection(metrics: metrics),
-          const SizedBox(height: 20),
-          _ListsSection(metrics: metrics),
-          const SizedBox(height: 20),
-          _SecondaryListsSection(metrics: metrics),
-          const SizedBox(height: 8),
-        ],
         ],
       ),
     );
@@ -117,10 +116,14 @@ class _QuickAccessSection extends ConsumerWidget {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints c) {
         final bool wide = c.maxWidth >= 720;
-        final Widget favCard =
-            _FavoritesCard(favorites: favorites, loading: favLoading);
-        final Widget remCard =
-            _RemindersCard(reminders: reminders, loading: remLoading);
+        final Widget favCard = _FavoritesCard(
+          favorites: favorites,
+          loading: favLoading,
+        );
+        final Widget remCard = _RemindersCard(
+          reminders: reminders,
+          loading: remLoading,
+        );
         if (!wide) {
           return Column(
             children: <Widget>[favCard, const SizedBox(height: 16), remCard],
@@ -264,7 +267,9 @@ class _GreetingHeader extends StatelessWidget {
                 Text(
                   '${_greeting()}$who 👋',
                   style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.w800),
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 if (streak >= 2) ...<Widget>[
                   const SizedBox(width: 12),
@@ -331,30 +336,30 @@ class _QuickActionsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const List<({IconData icon, String label, Color color, String route})>
-        actions = <({IconData icon, String label, Color color, String route})>[
+    actions = <({IconData icon, String label, Color color, String route})>[
       (
         icon: Icons.add_task,
         label: 'New task',
         color: AppColors.brand,
-        route: '/tasks'
+        route: '/tasks',
       ),
       (
         icon: Icons.create_new_folder_outlined,
         label: 'New project',
         color: AppColors.teal,
-        route: '/projects'
+        route: '/projects',
       ),
       (
         icon: Icons.chat_bubble_outline,
         label: 'Message',
         color: AppColors.sky,
-        route: '/chat'
+        route: '/chat',
       ),
       (
         icon: Icons.auto_awesome,
         label: 'Ask AI',
         color: AppColors.violet,
-        route: '/ai'
+        route: '/ai',
       ),
     ];
     return LayoutBuilder(
@@ -367,11 +372,13 @@ class _QuickActionsRow extends StatelessWidget {
           runSpacing: gap,
           children: <Widget>[
             for (final ({
-              IconData icon,
-              String label,
-              Color color,
-              String route
-            }) a in actions)
+                  IconData icon,
+                  String label,
+                  Color color,
+                  String route,
+                })
+                a
+                in actions)
               SizedBox(
                 width: w,
                 child: _QuickActionCard(
@@ -450,31 +457,31 @@ class _SummaryBand extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<({IconData icon, int value, String label, Color color})> stats =
         <({IconData icon, int value, String label, Color color})>[
-      (
-        icon: Icons.today_rounded,
-        value: metrics.dueToday,
-        label: 'due today',
-        color: AppColors.brand
-      ),
-      (
-        icon: Icons.warning_amber_rounded,
-        value: metrics.overdue,
-        label: 'overdue',
-        color: AppColors.rose
-      ),
-      (
-        icon: Icons.timelapse_rounded,
-        value: metrics.pending,
-        label: 'in progress',
-        color: AppColors.orange
-      ),
-      (
-        icon: Icons.check_circle_rounded,
-        value: metrics.completedThisWeek,
-        label: 'done this week',
-        color: AppColors.green
-      ),
-    ];
+          (
+            icon: Icons.today_rounded,
+            value: metrics.dueToday,
+            label: 'due today',
+            color: AppColors.brand,
+          ),
+          (
+            icon: Icons.warning_amber_rounded,
+            value: metrics.overdue,
+            label: 'overdue',
+            color: AppColors.rose,
+          ),
+          (
+            icon: Icons.timelapse_rounded,
+            value: metrics.pending,
+            label: 'in progress',
+            color: AppColors.orange,
+          ),
+          (
+            icon: Icons.check_circle_rounded,
+            value: metrics.completedThisWeek,
+            label: 'done this week',
+            color: AppColors.green,
+          ),
+        ];
     return GlassSurface(
       borderRadius: 14,
       child: Padding(
@@ -484,12 +491,8 @@ class _SummaryBand extends StatelessWidget {
           runSpacing: 12,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: <Widget>[
-            for (final ({
-              IconData icon,
-              int value,
-              String label,
-              Color color
-            }) s in stats)
+            for (final ({IconData icon, int value, String label, Color color}) s
+                in stats)
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
@@ -498,13 +501,16 @@ class _SummaryBand extends StatelessWidget {
                   Text(
                     '${s.value}',
                     style: const TextStyle(
-                        fontWeight: FontWeight.w800, fontSize: 16),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
                   ),
                   const SizedBox(width: 5),
                   Text(
                     s.label,
                     style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -559,8 +565,8 @@ class _ProfileMeter extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: pct,
                       minHeight: 6,
-                      backgroundColor:
-                          scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                      backgroundColor: scheme.surfaceContainerHighest
+                          .withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -644,9 +650,9 @@ class _QuickAddButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: Theme.of(context).colorScheme.primary.withValues(
-                    alpha: 0.3,
-                  ),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -760,7 +766,8 @@ class _ChartsSection extends StatelessWidget {
             )
           : const _ChartPlaceholder(
               icon: Icons.show_chart_rounded,
-              message: 'No activity in the last 7 days.\n'
+              message:
+                  'No activity in the last 7 days.\n'
                   'Create or complete a task to see trends here.',
             ),
     );
@@ -788,7 +795,8 @@ class _ChartsSection extends StatelessWidget {
             )
           : const _ChartPlaceholder(
               icon: Icons.donut_large_rounded,
-              message: 'No tasks yet.\n'
+              message:
+                  'No tasks yet.\n'
                   'Add your first task to track completion.',
             ),
     );
@@ -866,7 +874,8 @@ class _InsightsSection extends StatelessWidget {
       child: metrics.activityByDay.isEmpty
           ? const _ChartPlaceholder(
               icon: Icons.grid_on_rounded,
-              message: 'No tasks yet.\n'
+              message:
+                  'No tasks yet.\n'
                   'Create tasks to build up your activity calendar.',
             )
           : ContributionHeatmap(
@@ -1458,10 +1467,14 @@ class _Metrics {
       );
     }
 
-    final int createdThisWeek =
-        created.fold(0, (int a, double b) => a + b.toInt());
-    final int completedThisWeek =
-        done.fold(0, (int a, double b) => a + b.toInt());
+    final int createdThisWeek = created.fold(
+      0,
+      (int a, double b) => a + b.toInt(),
+    );
+    final int completedThisWeek = done.fold(
+      0,
+      (int a, double b) => a + b.toInt(),
+    );
 
     final List<Task> myTasks = tasks.where((Task t) => !t.done).toList()
       ..sort((Task a, Task b) => b.updatedAt.compareTo(a.updatedAt));
@@ -1469,9 +1482,7 @@ class _Metrics {
       ..sort((Task a, Task b) => b.updatedAt.compareTo(a.updatedAt));
 
     final List<Task> upcoming =
-        tasks
-            .where((Task t) => !t.done && t.dueDate != null)
-            .toList()
+        tasks.where((Task t) => !t.done && t.dueDate != null).toList()
           ..sort((Task a, Task b) => a.dueDate!.compareTo(b.dueDate!));
 
     final Map<String, int> load = <String, int>{};
@@ -1482,11 +1493,14 @@ class _Metrics {
       }
       load[name] = (load[name] ?? 0) + 1;
     }
-    final List<({String name, int open})> projectLoad = load.entries
-        .map((MapEntry<String, int> e) => (name: e.key, open: e.value))
-        .toList()
-      ..sort((({String name, int open}) a, ({String name, int open}) b) =>
-          b.open.compareTo(a.open));
+    final List<({String name, int open})> projectLoad =
+        load.entries
+            .map((MapEntry<String, int> e) => (name: e.key, open: e.value))
+            .toList()
+          ..sort(
+            (({String name, int open}) a, ({String name, int open}) b) =>
+                b.open.compareTo(a.open),
+          );
 
     // Open tasks by priority (for the donut breakdown).
     final Map<TaskPriority, int> byPriority = <TaskPriority, int>{};
@@ -1506,16 +1520,20 @@ class _Metrics {
     }
 
     final int overdue = tasks
-        .where((Task t) =>
-            !t.done &&
-            t.dueDate != null &&
-            t.dueDate!.toLocal().isBefore(today))
+        .where(
+          (Task t) =>
+              !t.done &&
+              t.dueDate != null &&
+              t.dueDate!.toLocal().isBefore(today),
+        )
         .length;
     final int dueToday = tasks
-        .where((Task t) =>
-            !t.done &&
-            t.dueDate != null &&
-            sameDay(t.dueDate!.toLocal(), today))
+        .where(
+          (Task t) =>
+              !t.done &&
+              t.dueDate != null &&
+              sameDay(t.dueDate!.toLocal(), today),
+        )
         .length;
 
     // Completion streak: consecutive days (with a one-day grace for today)

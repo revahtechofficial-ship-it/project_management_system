@@ -20,7 +20,9 @@ class ActivityPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<FeedActivity>> async = ref.watch(activityFeedProvider);
+    final AsyncValue<List<FeedActivity>> async = ref.watch(
+      activityFeedProvider,
+    );
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -115,7 +117,8 @@ class _FeedState extends State<_Feed> {
               ? const EmptyState(
                   icon: Icons.history,
                   title: 'No activity yet',
-                  message: 'Task updates across your workspace will show up '
+                  message:
+                      'Task updates across your workspace will show up '
                       'here as your team works.',
                 )
               : _GroupedList(items: filtered),

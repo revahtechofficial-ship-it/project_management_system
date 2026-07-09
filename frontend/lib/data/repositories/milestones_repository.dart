@@ -12,8 +12,9 @@ class MilestonesRepository {
 
   /// Fetches all milestones, earliest due first.
   Future<List<Milestone>> list() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/milestones');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/milestones',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => Milestone.fromJson(e as Map<String, dynamic>))
@@ -25,15 +26,14 @@ class MilestonesRepository {
     required String name,
     required DateTime dueDate,
     int? projectId,
-  }) =>
-      _dio.post<Map<String, dynamic>>(
-        '/api/v1/milestones',
-        data: <String, dynamic>{
-          'name': name,
-          'due_date': dateParam(dueDate),
-          'project_id': projectId,
-        },
-      );
+  }) => _dio.post<Map<String, dynamic>>(
+    '/api/v1/milestones',
+    data: <String, dynamic>{
+      'name': name,
+      'due_date': dateParam(dueDate),
+      'project_id': projectId,
+    },
+  );
 
   /// Updates a milestone's name, date and done state.
   Future<void> update(
@@ -41,17 +41,15 @@ class MilestonesRepository {
     required String name,
     required DateTime dueDate,
     required bool done,
-  }) =>
-      _dio.patch<Map<String, dynamic>>(
-        '/api/v1/milestones/$id',
-        data: <String, dynamic>{
-          'name': name,
-          'due_date': dateParam(dueDate),
-          'done': done,
-        },
-      );
+  }) => _dio.patch<Map<String, dynamic>>(
+    '/api/v1/milestones/$id',
+    data: <String, dynamic>{
+      'name': name,
+      'due_date': dateParam(dueDate),
+      'done': done,
+    },
+  );
 
   /// Deletes the milestone identified by [id].
-  Future<void> delete(int id) =>
-      _dio.delete<void>('/api/v1/milestones/$id');
+  Future<void> delete(int id) => _dio.delete<void>('/api/v1/milestones/$id');
 }

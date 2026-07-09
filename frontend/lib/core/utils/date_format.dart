@@ -2,19 +2,50 @@
 // dependency, so formatting is done by hand against fixed English labels.
 
 const List<String> _weekdaysShort = <String>[
-  'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
+  'Mon',
+  'Tue',
+  'Wed',
+  'Thu',
+  'Fri',
+  'Sat',
+  'Sun',
 ];
 const List<String> _weekdaysLong = <String>[
-  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
-  'Sunday'
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
 ];
 const List<String> _monthsLong = <String>[
-  'January', 'February', 'March', 'April', 'May', 'June', 'July',
-  'August', 'September', 'October', 'November', 'December'
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 const List<String> _monthsShort = <String>[
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
-  'Nov', 'Dec'
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 /// Short weekday label, e.g. `Mon`.

@@ -46,17 +46,17 @@ class TimesheetSubmission {
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'user_id': userId,
-        'user_name': userName,
-        'week_start': weekStart.toIso8601String(),
-        'status': status,
-        'minutes': minutes,
-        'note': note,
-        'approver_name': approverName,
-        'decided_at': decidedAt?.toIso8601String(),
-        'submitted_at': submittedAt.toIso8601String(),
-      };
+    'id': id,
+    'user_id': userId,
+    'user_name': userName,
+    'week_start': weekStart.toIso8601String(),
+    'status': status,
+    'minutes': minutes,
+    'note': note,
+    'approver_name': approverName,
+    'decided_at': decidedAt?.toIso8601String(),
+    'submitted_at': submittedAt.toIso8601String(),
+  };
 
   @override
   String toString() =>
@@ -78,6 +78,16 @@ class TimesheetSubmission {
           other.submittedAt == submittedAt;
 
   @override
-  int get hashCode => Object.hash(id, userId, userName, weekStart, status,
-      minutes, note, approverName, decidedAt, submittedAt);
+  int get hashCode => Object.hash(
+    id,
+    userId,
+    userName,
+    weekStart,
+    status,
+    minutes,
+    note,
+    approverName,
+    decidedAt,
+    submittedAt,
+  );
 }

@@ -373,8 +373,9 @@ class _Row {
   final double capacityHours;
   final int leaveDays;
 
-  double get util =>
-      capacityHours <= 0 ? (alloc.hours > 0 ? 2.0 : 0) : alloc.hours / capacityHours;
+  double get util => capacityHours <= 0
+      ? (alloc.hours > 0 ? 2.0 : 0)
+      : alloc.hours / capacityHours;
 }
 
 class _MemberWorkloadRow extends StatelessWidget {
@@ -452,7 +453,10 @@ class _MemberWorkloadRow extends StatelessWidget {
                     if (row.leaveDays > 0)
                       '${row.leaveDays} leave ${row.leaveDays == 1 ? 'day' : 'days'}',
                   ].join('  ·  '),
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -702,10 +706,7 @@ class _AvailabilityView extends ConsumerWidget {
               : Column(
                   children: <Widget>[
                     for (final AvailabilityEntry e in off)
-                      _TimeOffRow(
-                        entry: e,
-                        onDelete: () => _delete(ref, e.id),
-                      ),
+                      _TimeOffRow(entry: e, onDelete: () => _delete(ref, e.id)),
                   ],
                 ),
         ),
@@ -761,7 +762,10 @@ class _TimeOffRow extends StatelessWidget {
                 ),
                 Text(
                   entry.note.isEmpty ? range : '$range · ${entry.note}',
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

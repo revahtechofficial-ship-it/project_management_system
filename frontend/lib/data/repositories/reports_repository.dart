@@ -11,8 +11,9 @@ class ReportsRepository {
 
   /// Every saved report definition.
   Future<List<ReportDef>> list() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/reports');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/reports',
+    );
     return <ReportDef>[
       for (final dynamic e in res.data ?? <dynamic>[])
         ReportDef.fromJson(e as Map<String, dynamic>),
@@ -25,11 +26,11 @@ class ReportsRepository {
     required List<String> columns,
     required List<ReportFilter> filters,
   }) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.post<Map<String, dynamic>>(
-      '/api/v1/reports',
-      data: _body(name, columns, filters),
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/reports',
+          data: _body(name, columns, filters),
+        );
     return ReportDef.fromJson(res.data ?? <String, dynamic>{});
   }
 
@@ -40,11 +41,11 @@ class ReportsRepository {
     required List<String> columns,
     required List<ReportFilter> filters,
   }) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.put<Map<String, dynamic>>(
-      '/api/v1/reports/$id',
-      data: _body(name, columns, filters),
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .put<Map<String, dynamic>>(
+          '/api/v1/reports/$id',
+          data: _body(name, columns, filters),
+        );
     return ReportDef.fromJson(res.data ?? <String, dynamic>{});
   }
 
@@ -55,12 +56,11 @@ class ReportsRepository {
     String name,
     List<String> columns,
     List<ReportFilter> filters,
-  ) =>
-      <String, dynamic>{
-        'name': name,
-        'config': <String, dynamic>{
-          'columns': columns,
-          'filters': filters.map((ReportFilter f) => f.toJson()).toList(),
-        },
-      };
+  ) => <String, dynamic>{
+    'name': name,
+    'config': <String, dynamic>{
+      'columns': columns,
+      'filters': filters.map((ReportFilter f) => f.toJson()).toList(),
+    },
+  };
 }

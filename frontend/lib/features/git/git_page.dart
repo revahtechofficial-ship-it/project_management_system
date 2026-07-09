@@ -92,16 +92,15 @@ class _ReposView extends ConsumerWidget {
     final AsyncValue<List<GitRepo>> async = ref.watch(gitReposProvider);
     return async.when(
       loading: () => const LoadingView(),
-      error: (Object e, _) => ErrorView(
-        error: e,
-        onRetry: () => ref.invalidate(gitReposProvider),
-      ),
+      error: (Object e, _) =>
+          ErrorView(error: e, onRetry: () => ref.invalidate(gitReposProvider)),
       data: (List<GitRepo> repos) {
         if (repos.isEmpty) {
           return EmptyState(
             icon: Icons.folder_copy_outlined,
             title: 'No repositories',
-            message: 'Register a repo, then point its push webhook at the '
+            message:
+                'Register a repo, then point its push webhook at the '
                 'generated URL to stream commits here. Commit messages that '
                 'reference #<task id> link automatically.',
             actionLabel: 'Register a repository',
@@ -132,7 +131,8 @@ class _RepoCard extends ConsumerWidget {
       '${AppConfig.apiBaseUrl}/api/v1/git-webhook/${repo.webhookToken}';
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final bool ok = await showDialog<bool>(
+    final bool ok =
+        await showDialog<bool>(
           context: context,
           builder: (BuildContext ctx) => AlertDialog(
             title: const Text('Remove repository?'),
@@ -174,8 +174,7 @@ class _RepoCard extends ConsumerWidget {
       if (repo.projectName.isNotEmpty) repo.projectName,
       repo.defaultBranch,
       '${repo.commitCount} commits',
-      if (repo.lastCommitAt case final DateTime t)
-        'last ${relativeTime(t)}',
+      if (repo.lastCommitAt case final DateTime t) 'last ${relativeTime(t)}',
     ];
     return DashboardCard(
       child: Column(
@@ -191,8 +190,11 @@ class _RepoCard extends ConsumerWidget {
                   color: repo.provider.color.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(repo.provider.icon,
-                    size: 20, color: repo.provider.color),
+                child: Icon(
+                  repo.provider.icon,
+                  size: 20,
+                  color: repo.provider.color,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -205,14 +207,18 @@ class _RepoCard extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 15),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
                     Text(
                       meta.join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: 12, color: scheme.onSurfaceVariant),
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -221,8 +227,10 @@ class _RepoCard extends ConsumerWidget {
                 IconButton(
                   tooltip: 'Open repository',
                   icon: const Icon(Icons.open_in_new, size: 18),
-                  onPressed: () => launchUrl(Uri.parse(repo.url),
-                      webOnlyWindowName: '_blank'),
+                  onPressed: () => launchUrl(
+                    Uri.parse(repo.url),
+                    webOnlyWindowName: '_blank',
+                  ),
                 ),
               IconButton(
                 tooltip: 'Remove',
@@ -256,7 +264,11 @@ class _WebhookField extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          Icon(Icons.webhook_outlined, size: 16, color: scheme.onSurfaceVariant),
+          Icon(
+            Icons.webhook_outlined,
+            size: 16,
+            color: scheme.onSurfaceVariant,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -266,9 +278,7 @@ class _WebhookField extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 color: scheme.onSurfaceVariant,
-                fontFeatures: const <FontFeature>[
-                  FontFeature.tabularFigures(),
-                ],
+                fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
               ),
             ),
           ),
@@ -306,7 +316,8 @@ class _ActivityView extends ConsumerWidget {
           return const EmptyState(
             icon: Icons.commit,
             title: 'No commit activity',
-            message: 'Once a repository push webhook fires, its commits show '
+            message:
+                'Once a repository push webhook fires, its commits show '
                 'up here newest first.',
           );
         }
@@ -351,9 +362,7 @@ class _CommitRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 color: scheme.onSurfaceVariant,
-                fontFeatures: const <FontFeature>[
-                  FontFeature.tabularFigures(),
-                ],
+                fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
               ),
             ),
           ),
@@ -374,8 +383,10 @@ class _CommitRow extends StatelessWidget {
                   meta.join(' · '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style:
-                      TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 if (c.taskRef != null) ...<Widget>[
                   const SizedBox(height: 6),
@@ -425,9 +436,10 @@ class _TaskLinkChip extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.primary),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: scheme.primary,
+              ),
             ),
           ),
         ],

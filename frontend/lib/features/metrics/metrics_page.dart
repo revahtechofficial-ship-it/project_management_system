@@ -23,7 +23,9 @@ class _MetricsPageState extends ConsumerState<MetricsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final AsyncValue<CycleMetrics> async = ref.watch(cycleMetricsProvider(_days));
+    final AsyncValue<CycleMetrics> async = ref.watch(
+      cycleMetricsProvider(_days),
+    );
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -59,7 +61,8 @@ class _MetricsPageState extends ConsumerState<MetricsPage> {
                   return const EmptyState(
                     icon: Icons.timeline_outlined,
                     title: 'No completed tasks yet',
-                    message: 'Cycle and lead time appear once tasks are '
+                    message:
+                        'Cycle and lead time appear once tasks are '
                         'completed in the selected window.',
                   );
                 }
@@ -154,30 +157,42 @@ class _StatCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Text(label,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurfaceVariant)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
             const SizedBox(height: 6),
             Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: <Widget>[
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 26, fontWeight: FontWeight.w800)),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
                 const SizedBox(width: 4),
-                Text(unit,
-                    style: TextStyle(
-                        fontSize: 13, color: scheme.onSurfaceVariant)),
+                Text(
+                  unit,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
             if (hint.isNotEmpty) ...<Widget>[
               const SizedBox(height: 2),
-              Text(hint,
-                  style: TextStyle(
-                      fontSize: 11, color: scheme.onSurfaceVariant)),
+              Text(
+                hint,
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+              ),
             ],
           ],
         ),
@@ -222,20 +237,22 @@ class _ControlChart extends StatelessWidget {
         ),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          bottomTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 34,
               getTitlesWidget: (double value, TitleMeta meta) => Text(
                 value.toStringAsFixed(0),
-                style:
-                    TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
               ),
             ),
           ),
@@ -243,11 +260,15 @@ class _ControlChart extends StatelessWidget {
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
             getTooltipItems: (List<LineBarSpot> spots) => spots
-                .map((LineBarSpot s) => LineTooltipItem(
-                      '${s.y} days',
-                      const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w600),
-                    ))
+                .map(
+                  (LineBarSpot s) => LineTooltipItem(
+                    '${s.y} days',
+                    const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
                 .toList(),
           ),
         ),
@@ -262,8 +283,10 @@ class _ControlChart extends StatelessWidget {
                 alignment: Alignment.topRight,
                 labelResolver: (_) => 'avg ${metrics.avgLeadDays}d',
                 style: const TextStyle(
-                    fontSize: 10, color: AppColors.green,
-                    fontWeight: FontWeight.w700),
+                  fontSize: 10,
+                  color: AppColors.green,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             HorizontalLine(
@@ -276,8 +299,10 @@ class _ControlChart extends StatelessWidget {
                 alignment: Alignment.bottomRight,
                 labelResolver: (_) => '85th ${metrics.p85LeadDays}d',
                 style: const TextStyle(
-                    fontSize: 10, color: AppColors.amber,
-                    fontWeight: FontWeight.w700),
+                  fontSize: 10,
+                  color: AppColors.amber,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],
@@ -316,14 +341,20 @@ class _SlowestCard extends StatelessWidget {
               child: Row(
                 children: <Widget>[
                   Expanded(
-                    child: Text(p.title.isEmpty ? 'Untitled' : p.title,
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      p.title.isEmpty ? 'Untitled' : p.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  Text('${p.leadDays} d',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurfaceVariant)),
+                  Text(
+                    '${p.leadDays} d',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
             ),

@@ -16,18 +16,18 @@ class PageBacklink {
   });
 
   factory PageBacklink.fromJson(Map<String, dynamic> json) => PageBacklink(
-        id: json['id'] as int,
-        title: json['title'] as String? ?? '',
-        type: PageType.fromJson(json['type'] as String? ?? 'doc'),
-        icon: json['icon'] as String? ?? '',
-      );
+    id: json['id'] as int,
+    title: json['title'] as String? ?? '',
+    type: PageType.fromJson(json['type'] as String? ?? 'doc'),
+    icon: json['icon'] as String? ?? '',
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'title': title,
-        'type': type.toJson(),
-        'icon': icon,
-      };
+    'id': id,
+    'title': title,
+    'type': type.toJson(),
+    'icon': icon,
+  };
 
   @override
   String toString() => 'PageBacklink(id: $id, title: $title)';

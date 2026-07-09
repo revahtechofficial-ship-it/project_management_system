@@ -75,7 +75,9 @@ class _BudgetFormDialogState extends ConsumerState<_BudgetFormDialog> {
     }
     setState(() => _busy = true);
     try {
-      await ref.read(budgetsRepositoryProvider).upsert(
+      await ref
+          .read(budgetsRepositoryProvider)
+          .upsert(
             projectId: _projectId!,
             amountCents: _cents(_amount),
             hourlyRateCents: _cents(_rate),
@@ -101,8 +103,7 @@ class _BudgetFormDialogState extends ConsumerState<_BudgetFormDialog> {
     final List<Budget> budgets =
         ref.watch(budgetsProvider).asData?.value ?? const <Budget>[];
     // When creating, only offer projects that don't already have a budget.
-    final Set<int> taken =
-        budgets.map((Budget b) => b.projectId).toSet();
+    final Set<int> taken = budgets.map((Budget b) => b.projectId).toSet();
     final List<Project> selectable = editing
         ? allProjects
         : allProjects.where((Project p) => !taken.contains(p.id)).toList();
@@ -121,21 +122,24 @@ class _BudgetFormDialogState extends ConsumerState<_BudgetFormDialog> {
                 child: Text(
                   widget.existing!.projectName,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w700),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               )
             else
               DropdownButtonFormField<int>(
                 initialValue: _projectId,
                 isExpanded: true,
-                decoration:
-                    const InputDecoration(labelText: 'Project', isDense: true),
+                decoration: const InputDecoration(
+                  labelText: 'Project',
+                  isDense: true,
+                ),
                 items: <DropdownMenuItem<int>>[
                   for (final Project p in selectable)
                     DropdownMenuItem<int>(
                       value: p.id,
-                      child:
-                          Text(p.name, overflow: TextOverflow.ellipsis),
+                      child: Text(p.name, overflow: TextOverflow.ellipsis),
                     ),
                 ],
                 onChanged: (int? v) => setState(() => _projectId = v),
@@ -144,8 +148,9 @@ class _BudgetFormDialogState extends ConsumerState<_BudgetFormDialog> {
             TextField(
               controller: _amount,
               autofocus: editing,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: <TextInputFormatter>[
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],
@@ -158,8 +163,9 @@ class _BudgetFormDialogState extends ConsumerState<_BudgetFormDialog> {
             const SizedBox(height: 12),
             TextField(
               controller: _rate,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: <TextInputFormatter>[
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],
@@ -174,7 +180,9 @@ class _BudgetFormDialogState extends ConsumerState<_BudgetFormDialog> {
             TextField(
               controller: _notes,
               decoration: const InputDecoration(
-                  labelText: 'Notes (optional)', isDense: true),
+                labelText: 'Notes (optional)',
+                isDense: true,
+              ),
             ),
           ],
         ),

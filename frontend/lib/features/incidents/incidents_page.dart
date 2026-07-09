@@ -38,8 +38,15 @@ class _IncidentsPageState extends ConsumerState<IncidentsPage> {
     exportCsv(
       'incidents',
       <String>[
-        'Title', 'Type', 'Severity', 'Status', 'Assignee', 'Reporter',
-        'Project', 'Component', 'Created',
+        'Title',
+        'Type',
+        'Severity',
+        'Status',
+        'Assignee',
+        'Reporter',
+        'Project',
+        'Component',
+        'Created',
       ],
       <List<String>>[
         for (final Incident i in items)
@@ -123,7 +130,8 @@ class _Body extends StatelessWidget {
       return EmptyState(
         icon: Icons.bug_report_outlined,
         title: 'No issues logged',
-        message: 'Report a bug or incident to track it through triage to '
+        message:
+            'Report a bug or incident to track it through triage to '
             'resolution.',
         actionLabel: 'Report an issue',
         actionIcon: Icons.add,
@@ -143,10 +151,7 @@ class _Body extends StatelessWidget {
           runSpacing: 10,
           children: <Widget>[
             _Stat(label: '$active active', icon: Icons.error_outline),
-            _Stat(
-              label: '${all.length} total',
-              icon: Icons.all_inbox_outlined,
-            ),
+            _Stat(label: '${all.length} total', icon: Icons.all_inbox_outlined),
           ],
         ),
         const SizedBox(height: 14),
@@ -184,11 +189,14 @@ class _Stat extends StatelessWidget {
         children: <Widget>[
           Icon(icon, size: 16, color: scheme.onSurfaceVariant),
           const SizedBox(width: 6),
-          Text(label,
-              style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurfaceVariant,
-                  fontSize: 13)),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurfaceVariant,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
@@ -226,7 +234,10 @@ class _IncidentRow extends ConsumerWidget {
   final Incident incident;
 
   Future<void> _setStatus(
-      BuildContext context, WidgetRef ref, IncidentStatus status) async {
+    BuildContext context,
+    WidgetRef ref,
+    IncidentStatus status,
+  ) async {
     try {
       await ref
           .read(incidentsRepositoryProvider)
@@ -243,7 +254,8 @@ class _IncidentRow extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final bool ok = await showDialog<bool>(
+    final bool ok =
+        await showDialog<bool>(
           context: context,
           builder: (BuildContext ctx) => AlertDialog(
             title: const Text('Delete issue?'),
@@ -279,26 +291,26 @@ class _IncidentRow extends ConsumerWidget {
 
   /// Workflow transitions available from the current status.
   List<IncidentStatus> get _transitions => switch (incident.status) {
-        IncidentStatus.open => <IncidentStatus>[
-            IncidentStatus.investigating,
-            IncidentStatus.resolved,
-            IncidentStatus.closed,
-          ],
-        IncidentStatus.investigating => <IncidentStatus>[
-            IncidentStatus.mitigated,
-            IncidentStatus.resolved,
-            IncidentStatus.closed,
-          ],
-        IncidentStatus.mitigated => <IncidentStatus>[
-            IncidentStatus.resolved,
-            IncidentStatus.closed,
-          ],
-        IncidentStatus.resolved => <IncidentStatus>[
-            IncidentStatus.closed,
-            IncidentStatus.open,
-          ],
-        IncidentStatus.closed => <IncidentStatus>[IncidentStatus.open],
-      };
+    IncidentStatus.open => <IncidentStatus>[
+      IncidentStatus.investigating,
+      IncidentStatus.resolved,
+      IncidentStatus.closed,
+    ],
+    IncidentStatus.investigating => <IncidentStatus>[
+      IncidentStatus.mitigated,
+      IncidentStatus.resolved,
+      IncidentStatus.closed,
+    ],
+    IncidentStatus.mitigated => <IncidentStatus>[
+      IncidentStatus.resolved,
+      IncidentStatus.closed,
+    ],
+    IncidentStatus.resolved => <IncidentStatus>[
+      IncidentStatus.closed,
+      IncidentStatus.open,
+    ],
+    IncidentStatus.closed => <IncidentStatus>[IncidentStatus.open],
+  };
 
   String _labelFor(IncidentStatus s) =>
       s == IncidentStatus.open ? 'Re-open' : 'Mark ${s.label.toLowerCase()}';
@@ -343,8 +355,10 @@ class _IncidentRow extends ConsumerWidget {
                   meta.join(' · '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style:
-                      TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 if (i.description.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 6),
@@ -353,7 +367,9 @@ class _IncidentRow extends ConsumerWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 12.5, color: scheme.onSurfaceVariant),
+                      fontSize: 12.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],
@@ -408,7 +424,9 @@ class _IncidentRow extends ConsumerWidget {
               const PopupMenuDivider(),
               const PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
               const PopupMenuItem<String>(
-                  value: 'delete', child: Text('Delete')),
+                value: 'delete',
+                child: Text('Delete'),
+              ),
             ],
           ),
         ],
@@ -439,7 +457,10 @@ class _SeverityBadge extends StatelessWidget {
           Text(
             incident.severity.label,
             style: TextStyle(
-                fontSize: 10, fontWeight: FontWeight.w700, color: color),
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -463,7 +484,10 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         status.label,
         style: TextStyle(
-            fontSize: 11, fontWeight: FontWeight.w700, color: color),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }

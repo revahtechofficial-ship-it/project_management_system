@@ -18,20 +18,20 @@ class CustomField {
   });
 
   factory CustomField.fromJson(Map<String, dynamic> json) => CustomField(
-        id: json['id'] as int,
-        name: json['name'] as String? ?? '',
-        type: CustomFieldType.fromJson(json['type'] as String? ?? 'text'),
-        options: (json['options'] as List<dynamic>? ?? <dynamic>[])
-            .map((dynamic e) => e as String)
-            .toList(growable: false),
-      );
+    id: json['id'] as int,
+    name: json['name'] as String? ?? '',
+    type: CustomFieldType.fromJson(json['type'] as String? ?? 'text'),
+    options: (json['options'] as List<dynamic>? ?? <dynamic>[])
+        .map((dynamic e) => e as String)
+        .toList(growable: false),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'name': name,
-        'type': type.toJson(),
-        'options': options,
-      };
+    'id': id,
+    'name': name,
+    'type': type.toJson(),
+    'options': options,
+  };
 
   @override
   String toString() => 'CustomField(id: $id, name: $name, type: $type)';

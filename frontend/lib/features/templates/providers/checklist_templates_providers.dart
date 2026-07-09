@@ -6,13 +6,14 @@ import '../../../providers/dio_provider.dart';
 
 /// The checklist-templates repository, from the shared Dio client (AGENTS.md §1).
 final Provider<ChecklistTemplatesRepository>
-    checklistTemplatesRepositoryProvider =
-    Provider<ChecklistTemplatesRepository>((ref) {
+checklistTemplatesRepositoryProvider = Provider<ChecklistTemplatesRepository>((
+  ref,
+) {
   return ChecklistTemplatesRepository(ref.watch(dioProvider));
 });
 
 /// All checklist templates. Invalidate to refresh after a change.
 final FutureProvider<List<ChecklistTemplate>> checklistTemplatesProvider =
     FutureProvider<List<ChecklistTemplate>>((ref) {
-  return ref.watch(checklistTemplatesRepositoryProvider).list();
-});
+      return ref.watch(checklistTemplatesRepositoryProvider).list();
+    });

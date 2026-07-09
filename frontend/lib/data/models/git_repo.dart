@@ -37,32 +37,32 @@ class GitRepo {
   }
 
   factory GitRepo.fromJson(Map<String, dynamic> json) => GitRepo(
-        id: json['id'] as int,
-        name: json['name'] as String? ?? '',
-        provider: GitProvider.fromJson(json['provider'] as String? ?? 'github'),
-        url: json['url'] as String? ?? '',
-        defaultBranch: json['default_branch'] as String? ?? 'main',
-        projectId: json['project_id'] as int?,
-        projectName: json['project_name'] as String? ?? '',
-        webhookToken: json['webhook_token'] as String? ?? '',
-        commitCount: json['commit_count'] as int? ?? 0,
-        lastCommitAt: _date(json['last_commit_at']),
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    name: json['name'] as String? ?? '',
+    provider: GitProvider.fromJson(json['provider'] as String? ?? 'github'),
+    url: json['url'] as String? ?? '',
+    defaultBranch: json['default_branch'] as String? ?? 'main',
+    projectId: json['project_id'] as int?,
+    projectName: json['project_name'] as String? ?? '',
+    webhookToken: json['webhook_token'] as String? ?? '',
+    commitCount: json['commit_count'] as int? ?? 0,
+    lastCommitAt: _date(json['last_commit_at']),
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'name': name,
-        'provider': provider.toJson(),
-        'url': url,
-        'default_branch': defaultBranch,
-        'project_id': projectId,
-        'project_name': projectName,
-        'webhook_token': webhookToken,
-        'commit_count': commitCount,
-        'last_commit_at': lastCommitAt?.toIso8601String(),
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'provider': provider.toJson(),
+    'url': url,
+    'default_branch': defaultBranch,
+    'project_id': projectId,
+    'project_name': projectName,
+    'webhook_token': webhookToken,
+    'commit_count': commitCount,
+    'last_commit_at': lastCommitAt?.toIso8601String(),
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'GitRepo(id: $id, name: $name)';
@@ -85,16 +85,16 @@ class GitRepo {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        name,
-        provider,
-        url,
-        defaultBranch,
-        projectId,
-        projectName,
-        webhookToken,
-        commitCount,
-        lastCommitAt,
-        createdAt,
-      );
+    id,
+    name,
+    provider,
+    url,
+    defaultBranch,
+    projectId,
+    projectName,
+    webhookToken,
+    commitCount,
+    lastCommitAt,
+    createdAt,
+  );
 }

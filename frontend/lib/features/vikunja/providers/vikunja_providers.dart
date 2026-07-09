@@ -7,11 +7,11 @@ import '../../../providers/dio_provider.dart';
 /// The Vikunja repository, built from the shared (auth-attaching) Dio client.
 final Provider<VikunjaRepository> vikunjaRepositoryProvider =
     Provider<VikunjaRepository>((ref) {
-  return VikunjaRepository(ref.watch(dioProvider));
-});
+      return VikunjaRepository(ref.watch(dioProvider));
+    });
 
 /// The user's Vikunja projects, fetched through the BFF bridge.
 final FutureProvider<List<VikunjaProject>> vikunjaProjectsProvider =
     FutureProvider<List<VikunjaProject>>((ref) {
-  return ref.watch(vikunjaRepositoryProvider).listProjects();
-});
+      return ref.watch(vikunjaRepositoryProvider).listProjects();
+    });

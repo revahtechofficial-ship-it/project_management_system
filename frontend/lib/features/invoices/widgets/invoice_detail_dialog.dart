@@ -25,15 +25,15 @@ class _InvoiceDetailDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<Invoice> async =
-        ref.watch(invoiceDetailProvider(invoiceId));
+    final AsyncValue<Invoice> async = ref.watch(
+      invoiceDetailProvider(invoiceId),
+    );
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640, maxHeight: 720),
         child: async.when(
-          loading: () =>
-              const SizedBox(height: 240, child: LoadingView()),
+          loading: () => const SizedBox(height: 240, child: LoadingView()),
           error: (Object e, _) => Padding(
             padding: const EdgeInsets.all(24),
             child: ErrorNotice(error: e),
@@ -55,7 +55,10 @@ class _Content extends ConsumerWidget {
   }
 
   Future<void> _setStatus(
-      BuildContext context, WidgetRef ref, InvoiceStatus status) async {
+    BuildContext context,
+    WidgetRef ref,
+    InvoiceStatus status,
+  ) async {
     try {
       await ref
           .read(invoicesRepositoryProvider)
@@ -80,7 +83,9 @@ class _Content extends ConsumerWidget {
       return;
     }
     try {
-      await ref.read(invoicesRepositoryProvider).addLine(
+      await ref
+          .read(invoicesRepositoryProvider)
+          .addLine(
             invoice.id,
             description: line.description,
             amountCents: line.amountCents,
@@ -94,7 +99,10 @@ class _Content extends ConsumerWidget {
   }
 
   Future<void> _deleteLine(
-      BuildContext context, WidgetRef ref, int lineId) async {
+    BuildContext context,
+    WidgetRef ref,
+    int lineId,
+  ) async {
     try {
       await ref.read(invoicesRepositoryProvider).deleteLine(invoice.id, lineId);
       _refresh(ref);
@@ -106,12 +114,15 @@ class _Content extends ConsumerWidget {
   }
 
   Future<void> _deleteInvoice(BuildContext context, WidgetRef ref) async {
-    final bool ok = await showDialog<bool>(
+    final bool ok =
+        await showDialog<bool>(
           context: context,
           builder: (BuildContext ctx) => AlertDialog(
             title: const Text('Delete invoice?'),
-            content: Text('Delete ${invoice.number}? Any time it billed is '
-                'released back to unbilled.'),
+            content: Text(
+              'Delete ${invoice.number}? Any time it billed is '
+              'released back to unbilled.',
+            ),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
@@ -153,9 +164,13 @@ class _Content extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(20, 16, 8, 8),
           child: Row(
             children: <Widget>[
-              Text(inv.number,
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.w800)),
+              Text(
+                inv.number,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               const SizedBox(width: 10),
               _StatusChip(status: inv.status),
               const Spacer(),
@@ -177,13 +192,17 @@ class _Content extends ConsumerWidget {
           child: inv.lines.isEmpty
               ? Padding(
                   padding: const EdgeInsets.all(28),
-                  child: Text('No line items yet.',
-                      style: TextStyle(color: scheme.onSurfaceVariant)),
+                  child: Text(
+                    'No line items yet.',
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
                 )
               : ListView.separated(
                   shrinkWrap: true,
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 8),
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
                   itemCount: inv.lines.length,
                   separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (BuildContext context, int i) => _LineRow(
@@ -203,12 +222,15 @@ class _Content extends ConsumerWidget {
                 label: const Text('Add line'),
               ),
               const Spacer(),
-              Text('Total',
-                  style: TextStyle(color: scheme.onSurfaceVariant)),
+              Text('Total', style: TextStyle(color: scheme.onSurfaceVariant)),
               const SizedBox(width: 10),
-              Text(formatCents(inv.totalCents),
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.w800)),
+              Text(
+                formatCents(inv.totalCents),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ],
           ),
         ),
@@ -239,20 +261,23 @@ class _Content extends ConsumerWidget {
   }
 
   List<Widget> _statusAction(
-      BuildContext context, WidgetRef ref, InvoiceStatus status) {
+    BuildContext context,
+    WidgetRef ref,
+    InvoiceStatus status,
+  ) {
     return switch (status) {
       InvoiceStatus.draft => <Widget>[
-          FilledButton(
-            onPressed: () => _setStatus(context, ref, InvoiceStatus.sent),
-            child: const Text('Mark sent'),
-          ),
-        ],
+        FilledButton(
+          onPressed: () => _setStatus(context, ref, InvoiceStatus.sent),
+          child: const Text('Mark sent'),
+        ),
+      ],
       InvoiceStatus.sent => <Widget>[
-          FilledButton(
-            onPressed: () => _setStatus(context, ref, InvoiceStatus.paid),
-            child: const Text('Mark paid'),
-          ),
-        ],
+        FilledButton(
+          onPressed: () => _setStatus(context, ref, InvoiceStatus.paid),
+          child: const Text('Mark paid'),
+        ),
+      ],
       InvoiceStatus.paid || InvoiceStatus.void_ => <Widget>[],
     };
   }
@@ -298,21 +323,27 @@ class _LineRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text(line.description.isEmpty ? 'Item' : line.description,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  line.description.isEmpty ? 'Item' : line.description,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 if (timed)
                   Text(
                     '${line.hours.toStringAsFixed(1)} h @ '
                     '${formatCents(line.rateCents)}/h',
                     style: TextStyle(
-                        fontSize: 12, color: scheme.onSurfaceVariant),
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
               ],
             ),
           ),
           const SizedBox(width: 12),
-          Text(formatCents(line.amountCents),
-              style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text(
+            formatCents(line.amountCents),
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
           IconButton(
             tooltip: 'Remove line',
             visualDensity: VisualDensity.compact,
@@ -339,9 +370,14 @@ class _StatusChip extends StatelessWidget {
         color: color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(status.label,
-          style: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+      child: Text(
+        status.label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
     );
   }
 }
@@ -393,13 +429,16 @@ class _AddLineDialogState extends State<_AddLineDialog> {
               controller: _description,
               autofocus: true,
               decoration: const InputDecoration(
-                  labelText: 'Description', isDense: true),
+                labelText: 'Description',
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _amount,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: <TextInputFormatter>[
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],

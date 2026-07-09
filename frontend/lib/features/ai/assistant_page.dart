@@ -382,9 +382,7 @@ class _Bubble extends ConsumerWidget {
                     : AppColors.brand.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: isUser
-                  ? Text(turn.text)
-                  : MarkdownView(data: turn.text),
+              child: isUser ? Text(turn.text) : MarkdownView(data: turn.text),
             ),
           ),
         ],

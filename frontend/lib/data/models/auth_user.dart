@@ -52,34 +52,34 @@ class AuthUser {
       );
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
-        id: (json['id'] as num).toInt(),
-        email: json['email'] as String? ?? '',
-        name: json['name'] as String? ?? '',
-        role: MemberRole.fromJson(json['role'] as String? ?? 'member'),
-        avatarUrl: json['avatar_url'] as String?,
-        phone: json['phone'] as String? ?? '',
-        jobTitle: json['job_title'] as String? ?? '',
-        department: json['department'] as String? ?? '',
-        location: json['location'] as String? ?? '',
-        bio: json['bio'] as String? ?? '',
-        twoFactorEnabled: json['two_factor_enabled'] as bool? ?? false,
-        emailNotifications: json['email_notifications'] as bool? ?? true,
-      );
+    id: (json['id'] as num).toInt(),
+    email: json['email'] as String? ?? '',
+    name: json['name'] as String? ?? '',
+    role: MemberRole.fromJson(json['role'] as String? ?? 'member'),
+    avatarUrl: json['avatar_url'] as String?,
+    phone: json['phone'] as String? ?? '',
+    jobTitle: json['job_title'] as String? ?? '',
+    department: json['department'] as String? ?? '',
+    location: json['location'] as String? ?? '',
+    bio: json['bio'] as String? ?? '',
+    twoFactorEnabled: json['two_factor_enabled'] as bool? ?? false,
+    emailNotifications: json['email_notifications'] as bool? ?? true,
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'email': email,
-        'name': name,
-        'role': role.toJson(),
-        'avatar_url': avatarUrl,
-        'phone': phone,
-        'job_title': jobTitle,
-        'department': department,
-        'location': location,
-        'bio': bio,
-        'two_factor_enabled': twoFactorEnabled,
-        'email_notifications': emailNotifications,
-      };
+    'id': id,
+    'email': email,
+    'name': name,
+    'role': role.toJson(),
+    'avatar_url': avatarUrl,
+    'phone': phone,
+    'job_title': jobTitle,
+    'department': department,
+    'location': location,
+    'bio': bio,
+    'two_factor_enabled': twoFactorEnabled,
+    'email_notifications': emailNotifications,
+  };
 
   @override
   String toString() =>
@@ -103,7 +103,18 @@ class AuthUser {
           other.emailNotifications == emailNotifications;
 
   @override
-  int get hashCode => Object.hash(id, email, name, role, avatarUrl, phone,
-      jobTitle, department, location, bio, twoFactorEnabled,
-      emailNotifications);
+  int get hashCode => Object.hash(
+    id,
+    email,
+    name,
+    role,
+    avatarUrl,
+    phone,
+    jobTitle,
+    department,
+    location,
+    bio,
+    twoFactorEnabled,
+    emailNotifications,
+  );
 }

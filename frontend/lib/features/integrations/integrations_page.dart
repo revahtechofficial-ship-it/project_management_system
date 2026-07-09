@@ -183,18 +183,11 @@ class _IntegrationCard extends ConsumerWidget {
             if (isConnected)
               Row(
                 children: <Widget>[
-                  Icon(
-                    Icons.check_circle,
-                    size: 16,
-                    color: AppColors.green,
-                  ),
+                  Icon(Icons.check_circle, size: 16, color: AppColors.green),
                   const SizedBox(width: 6),
                   const Text(
                     'Connected',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                   ),
                   const Spacer(),
                   TextButton(
@@ -213,7 +206,8 @@ class _IntegrationCard extends ConsumerWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: FilledButton.tonal(
-                  onPressed: () => showConnectDialog(context, info, integration),
+                  onPressed: () =>
+                      showConnectDialog(context, info, integration),
                   child: const Text('Connect'),
                 ),
               ),
@@ -270,15 +264,18 @@ class _ApiKeysView extends ConsumerWidget {
               if (keys.isEmpty) {
                 return const EmptyState(
                   icon: Icons.key_outlined,
-                  message: 'No API keys yet. Create one for programmatic '
+                  message:
+                      'No API keys yet. Create one for programmatic '
                       'access.',
                 );
               }
               return ListView.separated(
                 itemCount: keys.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (BuildContext context, int i) =>
-                    _ApiKeyRow(apiKey: keys[i], onDelete: () => _delete(ref, keys[i].id)),
+                itemBuilder: (BuildContext context, int i) => _ApiKeyRow(
+                  apiKey: keys[i],
+                  onDelete: () => _delete(ref, keys[i].id),
+                ),
               );
             },
           ),
@@ -315,7 +312,10 @@ class _ApiKeyRow extends StatelessWidget {
                   '${apiKey.prefix}••••••••  ·  '
                   '${apiKey.lastUsedAt == null ? 'never used' : 'used ${relativeTime(apiKey.lastUsedAt!)}'}'
                   '  ·  created ${shortDate(apiKey.createdAt.toLocal())}',
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -338,12 +338,9 @@ class _WebhooksView extends ConsumerWidget {
   const _WebhooksView();
 
   Future<void> _toggle(WidgetRef ref, Webhook w, bool active) async {
-    await ref.read(integrationsRepositoryProvider).updateWebhook(
-          w.id,
-          url: w.url,
-          events: w.events,
-          active: active,
-        );
+    await ref
+        .read(integrationsRepositoryProvider)
+        .updateWebhook(w.id, url: w.url, events: w.events, active: active);
     ref.invalidate(webhooksProvider);
   }
 
@@ -404,8 +401,7 @@ class _WebhooksView extends ConsumerWidget {
                   webhook: hooks[i],
                   onToggle: (bool v) => _toggle(ref, hooks[i], v),
                   onTest: () => _test(context, ref, hooks[i].id),
-                  onEdit: () =>
-                      showWebhookDialog(context, existing: hooks[i]),
+                  onEdit: () => showWebhookDialog(context, existing: hooks[i]),
                   onDelete: () => _delete(ref, hooks[i].id),
                 ),
               );
@@ -468,7 +464,10 @@ class _WebhookRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '$events${webhook.hasSecret ? '  ·  signed' : ''}',
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

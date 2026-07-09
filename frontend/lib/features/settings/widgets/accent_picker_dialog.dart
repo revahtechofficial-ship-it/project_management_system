@@ -6,11 +6,26 @@ import '../providers/settings_providers.dart';
 
 /// A spectrum of swatches for the custom accent picker.
 const List<Color> _palette = <Color>[
-  Color(0xFF4F46E5), Color(0xFF6366F1), Color(0xFF2563EB), Color(0xFF0284C7),
-  Color(0xFF0891B2), Color(0xFF0D9488), Color(0xFF059669), Color(0xFF16A34A),
-  Color(0xFF65A30D), Color(0xFFCA8A04), Color(0xFFD97706), Color(0xFFEA580C),
-  Color(0xFFDC2626), Color(0xFFE11D48), Color(0xFFDB2777), Color(0xFFC026D3),
-  Color(0xFF9333EA), Color(0xFF7C3AED), Color(0xFF475569), Color(0xFF57534E),
+  Color(0xFF4F46E5),
+  Color(0xFF6366F1),
+  Color(0xFF2563EB),
+  Color(0xFF0284C7),
+  Color(0xFF0891B2),
+  Color(0xFF0D9488),
+  Color(0xFF059669),
+  Color(0xFF16A34A),
+  Color(0xFF65A30D),
+  Color(0xFFCA8A04),
+  Color(0xFFD97706),
+  Color(0xFFEA580C),
+  Color(0xFFDC2626),
+  Color(0xFFE11D48),
+  Color(0xFFDB2777),
+  Color(0xFFC026D3),
+  Color(0xFF9333EA),
+  Color(0xFF7C3AED),
+  Color(0xFF475569),
+  Color(0xFF57534E),
 ];
 
 /// Opens the custom accent picker; applies the chosen color to settings.
@@ -40,8 +55,9 @@ class _AccentPickerDialog extends StatefulWidget {
 
 class _AccentPickerDialogState extends State<_AccentPickerDialog> {
   late Color _selected = widget.current;
-  late final TextEditingController _hex =
-      TextEditingController(text: _hexOf(widget.current));
+  late final TextEditingController _hex = TextEditingController(
+    text: _hexOf(widget.current),
+  );
 
   static String _hexOf(Color c) =>
       '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
@@ -160,9 +176,7 @@ class _Swatch extends StatelessWidget {
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(10),
-          border: selected
-              ? Border.all(color: Colors.white, width: 3)
-              : null,
+          border: selected ? Border.all(color: Colors.white, width: 3) : null,
           boxShadow: selected
               ? <BoxShadow>[
                   BoxShadow(

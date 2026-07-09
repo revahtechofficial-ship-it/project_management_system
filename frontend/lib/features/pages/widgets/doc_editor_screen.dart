@@ -799,25 +799,30 @@ class _DocToc extends StatelessWidget {
             children: <Widget>[
               Icon(Icons.toc, size: 16, color: scheme.onSurfaceVariant),
               const SizedBox(width: 6),
-              Text('Contents',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: scheme.onSurfaceVariant)),
+              Text(
+                'Contents',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
           for (final ({int level, String text}) h in items)
             Padding(
               padding: EdgeInsets.only(
-                  left: (h.level - 1) * 14.0, top: 2, bottom: 2),
+                left: (h.level - 1) * 14.0,
+                top: 2,
+                bottom: 2,
+              ),
               child: Text(
                 h.text,
                 style: TextStyle(
                   fontSize: 13,
                   color: scheme.onSurfaceVariant,
-                  fontWeight:
-                      h.level <= 1 ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: h.level <= 1 ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
@@ -855,10 +860,13 @@ class _BacklinksSection extends ConsumerWidget {
               children: <Widget>[
                 Icon(Icons.link, size: 16, color: scheme.onSurfaceVariant),
                 const SizedBox(width: 6),
-                Text('Linked references',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurfaceVariant)),
+                Text(
+                  'Linked references',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
           ),
@@ -867,8 +875,7 @@ class _BacklinksSection extends ConsumerWidget {
               onTap: () => onOpen(b.id, b.type),
               borderRadius: BorderRadius.circular(8),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                 child: Row(
                   children: <Widget>[
                     Icon(b.type.icon, size: 16, color: scheme.primary),
@@ -879,8 +886,9 @@ class _BacklinksSection extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w600),
+                          color: scheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],

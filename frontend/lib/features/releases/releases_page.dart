@@ -128,7 +128,10 @@ class _ReleaseCard extends ConsumerWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
+                ),
                 decoration: BoxDecoration(
                   color: release.status.color.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(20),
@@ -154,7 +157,10 @@ class _ReleaseCard extends ConsumerWidget {
                   },
                   itemBuilder: (BuildContext context) =>
                       const <PopupMenuEntry<String>>[
-                        PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
+                        PopupMenuItem<String>(
+                          value: 'edit',
+                          child: Text('Edit'),
+                        ),
                         PopupMenuItem<String>(
                           value: 'delete',
                           child: Text('Delete'),

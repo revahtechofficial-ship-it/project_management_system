@@ -11,20 +11,19 @@ class NotificationsRepository {
 
   /// Fetches the most recent notifications (newest first).
   Future<List<AppNotification>> list() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/notifications');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/notifications',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
-        .map((dynamic e) =>
-            AppNotification.fromJson(e as Map<String, dynamic>))
+        .map((dynamic e) => AppNotification.fromJson(e as Map<String, dynamic>))
         .toList(growable: false);
   }
 
   /// Returns the number of unread notifications.
   Future<int> unreadCount() async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.get<Map<String, dynamic>>(
-            '/api/v1/notifications/unread-count');
+    final Response<Map<String, dynamic>> res = await _dio
+        .get<Map<String, dynamic>>('/api/v1/notifications/unread-count');
     return (res.data?['count'] as num?)?.toInt() ?? 0;
   }
 

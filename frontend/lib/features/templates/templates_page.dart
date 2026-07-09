@@ -26,8 +26,9 @@ class _TemplatesPageState extends ConsumerState<TemplatesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final AsyncValue<List<ChecklistTemplate>> async =
-        ref.watch(checklistTemplatesProvider);
+    final AsyncValue<List<ChecklistTemplate>> async = ref.watch(
+      checklistTemplatesProvider,
+    );
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -57,7 +58,8 @@ class _TemplatesPageState extends ConsumerState<TemplatesPage> {
                   return EmptyState(
                     icon: Icons.checklist,
                     title: 'No checklist templates',
-                    message: 'Save a checklist you reuse — a review checklist, '
+                    message:
+                        'Save a checklist you reuse — a review checklist, '
                         'onboarding steps — and apply it to any task in one '
                         'click.',
                     actionLabel: 'New checklist',
@@ -127,7 +129,8 @@ class _TemplateCard extends ConsumerWidget {
   final ChecklistTemplate template;
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final bool ok = await showDialog<bool>(
+    final bool ok =
+        await showDialog<bool>(
           context: context,
           builder: (BuildContext ctx) => AlertDialog(
             title: const Text('Delete template?'),
@@ -149,9 +152,7 @@ class _TemplateCard extends ConsumerWidget {
       return;
     }
     try {
-      await ref
-          .read(checklistTemplatesRepositoryProvider)
-          .delete(template.id);
+      await ref.read(checklistTemplatesRepositoryProvider).delete(template.id);
       ref.invalidate(checklistTemplatesProvider);
       if (context.mounted) {
         context.showSuccess('Template deleted');
@@ -180,7 +181,9 @@ class _TemplateCard extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 15),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
               ),
               PopupMenuButton<String>(
@@ -199,19 +202,24 @@ class _TemplateCard extends ConsumerWidget {
                 },
                 itemBuilder: (BuildContext context) =>
                     const <PopupMenuEntry<String>>[
-                  PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
-                  PopupMenuItem<String>(
-                      value: 'copy', child: Text('Copy as Markdown')),
-                  PopupMenuItem<String>(
-                      value: 'delete', child: Text('Delete')),
-                ],
+                      PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
+                      PopupMenuItem<String>(
+                        value: 'copy',
+                        child: Text('Copy as Markdown'),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Text('Delete'),
+                      ),
+                    ],
               ),
             ],
           ),
-          Text('${t.items.length} '
-              '${t.items.length == 1 ? 'item' : 'items'}',
-              style:
-                  TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+          Text(
+            '${t.items.length} '
+            '${t.items.length == 1 ? 'item' : 'items'}',
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
           const SizedBox(height: 10),
           for (final String item in t.items.take(6))
             Padding(
@@ -219,20 +227,27 @@ class _TemplateCard extends ConsumerWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Icon(Icons.check_box_outline_blank,
-                      size: 15, color: scheme.onSurfaceVariant),
+                  Icon(
+                    Icons.check_box_outline_blank,
+                    size: 15,
+                    color: scheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(item,
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      item,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
             ),
           if (t.items.length > 6)
-            Text('+${t.items.length - 6} more',
-                style:
-                    TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+            Text(
+              '+${t.items.length - 6} more',
+              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            ),
         ],
       ),
     );

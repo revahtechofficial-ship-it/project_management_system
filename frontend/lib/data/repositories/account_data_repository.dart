@@ -9,8 +9,8 @@ class AccountDataRepository {
 
   /// Fetches the authenticated user's exportable data as a JSON map.
   Future<Map<String, dynamic>> export() async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.get<Map<String, dynamic>>('/api/v1/account/export');
+    final Response<Map<String, dynamic>> res = await _dio
+        .get<Map<String, dynamic>>('/api/v1/account/export');
     return res.data ?? <String, dynamic>{};
   }
 }

@@ -21,28 +21,32 @@ const List<_TourStep> _steps = <_TourStep>[
     icon: Icons.dashboard_customize_rounded,
     color: AppColors.brand,
     title: 'Welcome to Revah',
-    body: 'Your workspace for projects, tasks, docs and team chat — all in '
+    body:
+        'Your workspace for projects, tasks, docs and team chat — all in '
         'one place. Here are a few things to get you started.',
   ),
   _TourStep(
     icon: Icons.search_rounded,
     color: AppColors.sky,
     title: 'Find anything fast',
-    body: 'Press Ctrl/⌘ + K anywhere to search tasks and projects, jump to a '
+    body:
+        'Press Ctrl/⌘ + K anywhere to search tasks and projects, jump to a '
         'page, or run a quick action.',
   ),
   _TourStep(
     icon: Icons.add_circle_outline_rounded,
     color: AppColors.green,
     title: 'Create in one click',
-    body: 'Use Quick add on the dashboard to spin up a task, project, page or '
+    body:
+        'Use Quick add on the dashboard to spin up a task, project, page or '
         'reminder without leaving home.',
   ),
   _TourStep(
     icon: Icons.insights_rounded,
     color: AppColors.violet,
     title: 'Stay on top of work',
-    body: 'The dashboard shows your KPIs, trends and what needs attention. '
+    body:
+        'The dashboard shows your KPIs, trends and what needs attention. '
         'Pin your favourite pages to the sidebar with a right-click.',
   ),
 ];
@@ -101,7 +105,10 @@ class _OnboardingTourDialogState extends State<_OnboardingTourDialog> {
               const SizedBox(height: 18),
               Text(
                 step.title,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 8),
               Text(

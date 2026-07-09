@@ -42,7 +42,11 @@ class _ProjectMembersDialog extends ConsumerWidget {
       ref.invalidate(projectMembersProvider(projectId));
 
   Future<void> _setRole(
-      BuildContext context, WidgetRef ref, int userId, String role) async {
+    BuildContext context,
+    WidgetRef ref,
+    int userId,
+    String role,
+  ) async {
     try {
       await ref
           .read(projectsRepositoryProvider)
@@ -56,10 +60,11 @@ class _ProjectMembersDialog extends ConsumerWidget {
     }
   }
 
-  Future<void> _remove(
-      BuildContext context, WidgetRef ref, int userId) async {
+  Future<void> _remove(BuildContext context, WidgetRef ref, int userId) async {
     try {
-      await ref.read(projectsRepositoryProvider).removeMember(projectId, userId);
+      await ref
+          .read(projectsRepositoryProvider)
+          .removeMember(projectId, userId);
       _refresh(ref);
       ref.invalidate(projectsProvider);
     } catch (e) {
@@ -72,8 +77,9 @@ class _ProjectMembersDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final AsyncValue<ProjectMembership> async =
-        ref.watch(projectMembersProvider(projectId));
+    final AsyncValue<ProjectMembership> async = ref.watch(
+      projectMembersProvider(projectId),
+    );
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: ConstrainedBox(
@@ -93,7 +99,9 @@ class _ProjectMembersDialog extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w700),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -145,8 +153,9 @@ class _Body extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bool canManage = membership.canManage;
-    final Set<int> existing =
-        membership.members.map((ProjectMember m) => m.userId).toSet();
+    final Set<int> existing = membership.members
+        .map((ProjectMember m) => m.userId)
+        .toSet();
     final List<TeamMember> addable =
         (ref.watch(teamMembersProvider).asData?.value ?? const <TeamMember>[])
             .where((TeamMember t) => !existing.contains(t.id))
@@ -160,18 +169,20 @@ class _Body extends ConsumerWidget {
           Text(
             membership.members.isEmpty
                 ? 'This project has no members yet, so everyone in the '
-                    'workspace can manage it. Add a member to start '
-                    'restricting access.'
+                      'workspace can manage it. Add a member to start '
+                      'restricting access.'
                 : 'Only these members can edit the project; everyone else can '
-                    'view it. Workspace admins always manage.',
+                      'view it. Workspace admins always manage.',
             style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 14),
           if (membership.members.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text('No members yet.',
-                  style: TextStyle(color: scheme.onSurfaceVariant)),
+              child: Text(
+                'No members yet.',
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
             )
           else
             for (final ProjectMember m in membership.members)
@@ -186,18 +197,22 @@ class _Body extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          Text(m.displayName,
+                          Text(
+                            m.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          if (m.userEmail.isNotEmpty)
+                            Text(
+                              m.userEmail,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600)),
-                          if (m.userEmail.isNotEmpty)
-                            Text(m.userEmail,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: scheme.onSurfaceVariant)),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -209,9 +224,12 @@ class _Body extends ConsumerWidget {
                         isExpanded: true,
                         decoration: const InputDecoration(isDense: true),
                         items: <DropdownMenuItem<String>>[
-                          for (final (String key, String label) in kProjectRoles)
+                          for (final (String key, String label)
+                              in kProjectRoles)
                             DropdownMenuItem<String>(
-                                value: key, child: Text(label)),
+                              value: key,
+                              child: Text(label),
+                            ),
                         ],
                         onChanged: canManage
                             ? (String? v) {
@@ -225,8 +243,7 @@ class _Body extends ConsumerWidget {
                     IconButton(
                       tooltip: 'Remove',
                       icon: const Icon(Icons.close, size: 18),
-                      onPressed:
-                          canManage ? () => onRemove(m.userId) : null,
+                      onPressed: canManage ? () => onRemove(m.userId) : null,
                     ),
                   ],
                 ),
@@ -235,15 +252,15 @@ class _Body extends ConsumerWidget {
             const SizedBox(height: 12),
             const Divider(),
             const SizedBox(height: 6),
-            Text('Add a member',
-                style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurfaceVariant)),
-            const SizedBox(height: 8),
-            _AddMemberRow(
-              candidates: addable,
-              onAdd: onSetRole,
+            Text(
+              'Add a member',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurfaceVariant,
+              ),
             ),
+            const SizedBox(height: 8),
+            _AddMemberRow(candidates: addable, onAdd: onSetRole),
           ],
         ],
       ),
@@ -268,8 +285,10 @@ class _AddMemberRowState extends State<_AddMemberRow> {
   @override
   Widget build(BuildContext context) {
     if (widget.candidates.isEmpty) {
-      return Text('Everyone is already a member.',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant));
+      return Text(
+        'Everyone is already a member.',
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+      );
     }
     return Row(
       children: <Widget>[
@@ -278,13 +297,17 @@ class _AddMemberRowState extends State<_AddMemberRow> {
             initialValue: _userId,
             isExpanded: true,
             decoration: const InputDecoration(
-                isDense: true, labelText: 'Team member'),
+              isDense: true,
+              labelText: 'Team member',
+            ),
             items: <DropdownMenuItem<int>>[
               for (final TeamMember t in widget.candidates)
                 DropdownMenuItem<int>(
                   value: t.id,
-                  child: Text(t.name.isEmpty ? t.email : t.name,
-                      overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    t.name.isEmpty ? t.email : t.name,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
             ],
             onChanged: (int? v) => setState(() => _userId = v),

@@ -55,7 +55,8 @@ class OneOnOnesPage extends ConsumerWidget {
                   return EmptyState(
                     icon: Icons.forum_outlined,
                     title: 'No 1:1s yet',
-                    message: 'Schedule a recurring check-in with a teammate to '
+                    message:
+                        'Schedule a recurring check-in with a teammate to '
                         'keep agendas and action items in one place.',
                     actionLabel: 'New 1:1',
                     onAction: () => _newMeeting(context, ref),
@@ -118,7 +119,9 @@ class _MeetingCard extends StatelessWidget {
                     Text(
                       other.isEmpty ? 'Teammate' : other,
                       style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w700),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -126,14 +129,18 @@ class _MeetingCard extends StatelessWidget {
                       '${_time(meeting.scheduledAt.toLocal())}'
                       '  ·  You are the ${meeting.isManager(myId) ? 'manager' : 'report'}',
                       style: TextStyle(
-                          fontSize: 12, color: scheme.onSurfaceVariant),
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: (upcoming ? AppColors.green : AppColors.slate)
                       .withValues(alpha: 0.14),
@@ -191,8 +198,10 @@ class _NewMeetingDialogState extends ConsumerState<_NewMeetingDialog> {
   }
 
   Future<void> _pickTime() async {
-    final TimeOfDay? t =
-        await showTimePicker(context: context, initialTime: _time);
+    final TimeOfDay? t = await showTimePicker(
+      context: context,
+      initialTime: _time,
+    );
     if (t != null) {
       setState(() => _time = t);
     }
@@ -204,7 +213,12 @@ class _NewMeetingDialogState extends ConsumerState<_NewMeetingDialog> {
     }
     setState(() => _busy = true);
     final DateTime when = DateTime(
-        _date.year, _date.month, _date.day, _time.hour, _time.minute);
+      _date.year,
+      _date.month,
+      _date.day,
+      _time.hour,
+      _time.minute,
+    );
     try {
       await ref
           .read(oneOnOnesRepositoryProvider)
@@ -243,8 +257,10 @@ class _NewMeetingDialogState extends ConsumerState<_NewMeetingDialog> {
                 for (final TeamMember m in members)
                   DropdownMenuItem<int>(
                     value: m.id,
-                    child: Text(m.name.isEmpty ? m.email : m.name,
-                        overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      m.name.isEmpty ? m.email : m.name,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
               ],
               onChanged: (int? v) => setState(() => _reportId = v),
@@ -293,8 +309,9 @@ class _MeetingDetailDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<OneOnOneDetail> async =
-        ref.watch(oneOnOneDetailProvider(meetingId));
+    final AsyncValue<OneOnOneDetail> async = ref.watch(
+      oneOnOneDetailProvider(meetingId),
+    );
     final int myId =
         ref.watch(authControllerProvider).asData?.value.user?.id ?? 0;
     return Dialog(
@@ -303,7 +320,9 @@ class _MeetingDetailDialog extends ConsumerWidget {
         constraints: const BoxConstraints(maxWidth: 520, maxHeight: 640),
         child: async.when(
           loading: () => const SizedBox(
-              height: 200, child: Center(child: CircularProgressIndicator())),
+            height: 200,
+            child: Center(child: CircularProgressIndicator()),
+          ),
           error: (Object e, _) => Padding(
             padding: const EdgeInsets.all(24),
             child: ErrorNotice(error: e),
@@ -382,8 +401,7 @@ class _Header extends ConsumerWidget {
     if (t == null) {
       return;
     }
-    final DateTime when =
-        DateTime(d.year, d.month, d.day, t.hour, t.minute);
+    final DateTime when = DateTime(d.year, d.month, d.day, t.hour, t.minute);
     await ref.read(oneOnOnesRepositoryProvider).reschedule(meeting.id, when);
     ref.invalidate(oneOnOneDetailProvider(meeting.id));
     ref.invalidate(oneOnOnesProvider);
@@ -419,13 +437,17 @@ class _Header extends ConsumerWidget {
                 Text(
                   '1:1 with ${meeting.otherName(myId)}',
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w700),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 Text(
                   '${formatLongDate(meeting.scheduledAt.toLocal())} · '
                   '${_time(meeting.scheduledAt.toLocal())}',
                   style: TextStyle(
-                      fontSize: 12, color: scheme.onSurfaceVariant),
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -478,18 +500,20 @@ class _Section extends StatelessWidget {
           children: <Widget>[
             Icon(icon, size: 16, color: scheme.onSurfaceVariant),
             const SizedBox(width: 6),
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w800)),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+            ),
           ],
         ),
         const SizedBox(height: 6),
         if (items.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Text('Nothing yet.',
-                style: TextStyle(
-                    fontSize: 13, color: scheme.onSurfaceVariant)),
+            child: Text(
+              'Nothing yet.',
+              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+            ),
           )
         else
           for (final OneOnOneItem i in items)
@@ -535,7 +559,11 @@ class _ItemRow extends ConsumerWidget {
           else
             Padding(
               padding: const EdgeInsets.only(top: 6, right: 8),
-              child: Icon(Icons.circle, size: 6, color: scheme.onSurfaceVariant),
+              child: Icon(
+                Icons.circle,
+                size: 6,
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           Expanded(
             child: Padding(

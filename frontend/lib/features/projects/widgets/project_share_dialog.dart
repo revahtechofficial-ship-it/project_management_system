@@ -70,8 +70,10 @@ class _ProjectShareDialogState extends ConsumerState<_ProjectShareDialog> {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final String? token =
-        ref.watch(projectShareTokenProvider(widget.projectId)).asData?.value;
+    final String? token = ref
+        .watch(projectShareTokenProvider(widget.projectId))
+        .asData
+        ?.value;
     return AlertDialog(
       title: const Text('Share project'),
       content: SizedBox(
@@ -89,8 +91,11 @@ class _ProjectShareDialogState extends ConsumerState<_ProjectShareDialog> {
             if (token == null)
               Row(
                 children: <Widget>[
-                  Icon(Icons.lock_outline,
-                      size: 18, color: scheme.onSurfaceVariant),
+                  Icon(
+                    Icons.lock_outline,
+                    size: 18,
+                    color: scheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 8),
                   const Expanded(child: Text('Not shared')),
                   FilledButton.icon(
@@ -102,7 +107,10 @@ class _ProjectShareDialogState extends ConsumerState<_ProjectShareDialog> {
               )
             else ...<Widget>[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(10),
@@ -122,8 +130,9 @@ class _ProjectShareDialogState extends ConsumerState<_ProjectShareDialog> {
                       tooltip: 'Copy link',
                       icon: const Icon(Icons.copy_rounded, size: 18),
                       onPressed: () => context.copyToClipboard(
-                          _shareUrl(token),
-                          label: 'Link copied'),
+                        _shareUrl(token),
+                        label: 'Link copied',
+                      ),
                     ),
                   ],
                 ),

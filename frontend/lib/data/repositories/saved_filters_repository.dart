@@ -25,6 +25,5 @@ class SavedFiltersRepository {
         data: <String, dynamic>{'name': name, 'config': config},
       );
 
-  Future<void> delete(int id) =>
-      _dio.delete<void>('/api/v1/saved-filters/$id');
+  Future<void> delete(int id) => _dio.delete<void>('/api/v1/saved-filters/$id');
 }

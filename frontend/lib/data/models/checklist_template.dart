@@ -16,8 +16,7 @@ class ChecklistTemplate {
   });
 
   /// The checklist rendered as Markdown task items (`- [ ] item`).
-  String get asMarkdown =>
-      items.map((String i) => '- [ ] $i').join('\n');
+  String get asMarkdown => items.map((String i) => '- [ ] $i').join('\n');
 
   factory ChecklistTemplate.fromJson(Map<String, dynamic> json) =>
       ChecklistTemplate(
@@ -25,20 +24,20 @@ class ChecklistTemplate {
         name: json['name'] as String? ?? '',
         category: json['category'] as String? ?? '',
         items: <String>[
-          for (final dynamic e in (json['items'] as List<dynamic>? ??
-              <dynamic>[]))
+          for (final dynamic e
+              in (json['items'] as List<dynamic>? ?? <dynamic>[]))
             e as String,
         ],
         createdAt: DateTime.parse(json['created_at'] as String),
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'name': name,
-        'category': category,
-        'items': items,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'category': category,
+    'items': items,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() =>

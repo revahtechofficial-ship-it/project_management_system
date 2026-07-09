@@ -96,10 +96,10 @@ Future<({String prompt, int? projectId})?> showCreateTasksDialog(
                 if (controller.text.trim().isEmpty) {
                   return;
                 }
-                Navigator.pop(
-                  context,
-                  (prompt: controller.text.trim(), projectId: projectId),
-                );
+                Navigator.pop(context, (
+                  prompt: controller.text.trim(),
+                  projectId: projectId,
+                ));
               },
               child: const Text('Create'),
             ),
@@ -168,10 +168,10 @@ Future<({String action, String text})?> showWriteDialog(BuildContext context) {
                 if (controller.text.trim().isEmpty) {
                   return;
                 }
-                Navigator.pop(
-                  context,
-                  (action: action, text: controller.text.trim()),
-                );
+                Navigator.pop(context, (
+                  action: action,
+                  text: controller.text.trim(),
+                ));
               },
               child: const Text('Rewrite'),
             ),

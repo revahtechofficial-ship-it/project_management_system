@@ -42,17 +42,14 @@ class AnimatedNumberText extends StatelessWidget {
     if (value == null) {
       return Text(text, style: style);
     }
-    final int decimals =
-        clean.contains('.') ? clean.split('.')[1].length : 0;
+    final int decimals = clean.contains('.') ? clean.split('.')[1].length : 0;
 
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: value),
       duration: duration,
       curve: Curves.easeOutCubic,
-      builder: (BuildContext context, double v, _) => Text(
-        '$prefix${_format(v, decimals, commas)}$suffix',
-        style: style,
-      ),
+      builder: (BuildContext context, double v, _) =>
+          Text('$prefix${_format(v, decimals, commas)}$suffix', style: style),
     );
   }
 
@@ -122,8 +119,7 @@ class _HoverLiftState extends State<HoverLift> {
             boxShadow: _hover
                 ? <BoxShadow>[
                     BoxShadow(
-                      color:
-                          Colors.black.withValues(alpha: dark ? 0.35 : 0.12),
+                      color: Colors.black.withValues(alpha: dark ? 0.35 : 0.12),
                       blurRadius: 22,
                       offset: const Offset(0, 10),
                     ),
@@ -161,10 +157,14 @@ class FadeSlideIn extends StatefulWidget {
 
 class _FadeSlideInState extends State<FadeSlideIn>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: widget.duration);
-  late final Animation<double> _fade =
-      CurvedAnimation(parent: _c, curve: Curves.easeOut);
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: widget.duration,
+  );
+  late final Animation<double> _fade = CurvedAnimation(
+    parent: _c,
+    curve: Curves.easeOut,
+  );
   Timer? _delay;
   bool _started = false;
 
@@ -276,8 +276,9 @@ class _CompletionBurstState extends State<_CompletionBurst>
             final double pop = Curves.elasticOut.transform(
               (t / 0.5).clamp(0.0, 1.0),
             );
-            final double fade =
-                t < 0.7 ? 1.0 : (1 - (t - 0.7) / 0.3).clamp(0.0, 1.0);
+            final double fade = t < 0.7
+                ? 1.0
+                : (1 - (t - 0.7) / 0.3).clamp(0.0, 1.0);
             final double ring = Curves.easeOut.transform(t);
             return Opacity(
               opacity: fade,
@@ -294,8 +295,9 @@ class _CompletionBurstState extends State<_CompletionBurst>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: AppColors.green
-                              .withValues(alpha: (1 - ring) * 0.6),
+                          color: AppColors.green.withValues(
+                            alpha: (1 - ring) * 0.6,
+                          ),
                           width: 3,
                         ),
                       ),
@@ -314,7 +316,10 @@ class _CompletionBurstState extends State<_CompletionBurst>
                           gradient: LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
-                            colors: <Color>[Color(0xFF22C55E), Color(0xFF16A34A)],
+                            colors: <Color>[
+                              Color(0xFF22C55E),
+                              Color(0xFF16A34A),
+                            ],
                           ),
                         ),
                         child: const Icon(

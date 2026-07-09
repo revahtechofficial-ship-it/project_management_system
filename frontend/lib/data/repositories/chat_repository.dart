@@ -77,9 +77,8 @@ class ChatRepository {
   }
 
   /// Joins a public channel by id.
-  Future<void> joinChannel(int conversationId) => _dio.post<void>(
-    '/api/v1/chat/conversations/$conversationId/join',
-  );
+  Future<void> joinChannel(int conversationId) =>
+      _dio.post<void>('/api/v1/chat/conversations/$conversationId/join');
 
   /// Messages in a conversation, newest first (server order).
   Future<List<ChatMessage>> messages(

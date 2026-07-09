@@ -86,18 +86,24 @@ class StatCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
-                AnimatedNumberText(value,
-                    style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                        fontFeatures: tabularFigures)),
+                AnimatedNumberText(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    fontFeatures: tabularFigures,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(label,
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurfaceVariant)),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
                 if (progress != null) ...<Widget>[
                   const SizedBox(height: 12),
                   ClipRRect(
@@ -113,12 +119,12 @@ class StatCard extends StatelessWidget {
                       curve: Curves.easeOutCubic,
                       builder: (BuildContext context, double v, _) =>
                           LinearProgressIndicator(
-                        value: v,
-                        minHeight: 6,
-                        backgroundColor: scheme.surfaceContainerHighest
-                            .withValues(alpha: 0.6),
-                        color: color,
-                      ),
+                            value: v,
+                            minHeight: 6,
+                            backgroundColor: scheme.surfaceContainerHighest
+                                .withValues(alpha: 0.6),
+                            color: color,
+                          ),
                     ),
                   ),
                 ] else if (trend != null) ...<Widget>[
@@ -126,9 +132,13 @@ class StatCard extends StatelessWidget {
                   _TrendPill(text: trend!, positive: trendPositive),
                 ] else if (footer != null) ...<Widget>[
                   const SizedBox(height: 8),
-                  Text(footer!,
-                      style: TextStyle(
-                          fontSize: 12, color: scheme.onSurfaceVariant)),
+                  Text(
+                    footer!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 ],
                 if (spark != null && spark!.length >= 2) ...<Widget>[
                   const SizedBox(height: 12),
@@ -140,9 +150,7 @@ class StatCard extends StatelessWidget {
         ),
       ),
     );
-    return onTap != null
-        ? HoverLift(borderRadius: 18, child: card)
-        : card;
+    return onTap != null ? HoverLift(borderRadius: 18, child: card) : card;
   }
 }
 

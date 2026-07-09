@@ -12,8 +12,9 @@ class CustomFieldsRepository {
 
   /// All workspace custom-field definitions.
   Future<List<CustomField>> list() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/custom-fields');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/custom-fields',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => CustomField.fromJson(e as Map<String, dynamic>))
@@ -26,34 +27,36 @@ class CustomFieldsRepository {
     required CustomFieldType type,
     List<String> options = const <String>[],
   }) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.post<Map<String, dynamic>>(
-      '/api/v1/custom-fields',
-      data: <String, dynamic>{
-        'name': name,
-        'type': type.toJson(),
-        'options': options,
-      },
-    );
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/custom-fields',
+          data: <String, dynamic>{
+            'name': name,
+            'type': type.toJson(),
+            'options': options,
+          },
+        );
     return CustomField.fromJson(res.data ?? const <String, dynamic>{});
   }
 
   /// Renames a field or changes its options (admin only).
-  Future<void> update(int id,
-          {required String name, List<String> options = const <String>[]}) =>
-      _dio.put<void>(
-        '/api/v1/custom-fields/$id',
-        data: <String, dynamic>{'name': name, 'options': options},
-      );
+  Future<void> update(
+    int id, {
+    required String name,
+    List<String> options = const <String>[],
+  }) => _dio.put<void>(
+    '/api/v1/custom-fields/$id',
+    data: <String, dynamic>{'name': name, 'options': options},
+  );
 
   /// Deletes a field definition and all its values (admin only).
-  Future<void> delete(int id) =>
-      _dio.delete<void>('/api/v1/custom-fields/$id');
+  Future<void> delete(int id) => _dio.delete<void>('/api/v1/custom-fields/$id');
 
   /// A task's field values, keyed by field id.
   Future<Map<int, String>> taskValues(int taskId) async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/tasks/$taskId/fields');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/tasks/$taskId/fields',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return <int, String>{
       for (final dynamic e in data)

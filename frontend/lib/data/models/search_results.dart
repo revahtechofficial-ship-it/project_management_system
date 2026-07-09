@@ -15,18 +15,18 @@ class SearchResults {
   bool get isEmpty => tasks.isEmpty && projects.isEmpty;
 
   factory SearchResults.fromJson(Map<String, dynamic> json) => SearchResults(
-        tasks: (json['tasks'] as List<dynamic>? ?? <dynamic>[])
-            .map((dynamic e) => Task.fromJson(e as Map<String, dynamic>))
-            .toList(growable: false),
-        projects: (json['projects'] as List<dynamic>? ?? <dynamic>[])
-            .map((dynamic e) => ProjectHit.fromJson(e as Map<String, dynamic>))
-            .toList(growable: false),
-      );
+    tasks: (json['tasks'] as List<dynamic>? ?? <dynamic>[])
+        .map((dynamic e) => Task.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false),
+    projects: (json['projects'] as List<dynamic>? ?? <dynamic>[])
+        .map((dynamic e) => ProjectHit.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'tasks': tasks.map((Task t) => t.toJson()).toList(),
-        'projects': projects.map((ProjectHit p) => p.toJson()).toList(),
-      };
+    'tasks': tasks.map((Task t) => t.toJson()).toList(),
+    'projects': projects.map((ProjectHit p) => p.toJson()).toList(),
+  };
 
   @override
   String toString() =>
@@ -40,7 +40,8 @@ class SearchResults {
           _listEq(other.projects, projects);
 
   @override
-  int get hashCode => Object.hash(Object.hashAll(tasks), Object.hashAll(projects));
+  int get hashCode =>
+      Object.hash(Object.hashAll(tasks), Object.hashAll(projects));
 
   static bool _listEq(List<Object?> a, List<Object?> b) {
     if (a.length != b.length) {

@@ -24,7 +24,12 @@ import 'user_avatar.dart';
 
 /// A navigation item in the sidebar.
 class _NavItem {
-  const _NavItem(this.icon, this.label, this.location, {this.adminOnly = false});
+  const _NavItem(
+    this.icon,
+    this.label,
+    this.location, {
+    this.adminOnly = false,
+  });
   final IconData icon;
   final String label;
   final String location;
@@ -117,8 +122,7 @@ class AppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final String location = GoRouterState.of(context).matchedLocation;
-    final bool wide =
-        MediaQuery.sizeOf(context).width >= AppBreakpoints.medium;
+    final bool wide = MediaQuery.sizeOf(context).width >= AppBreakpoints.medium;
 
     // Record the visit for the command palette's "Recent" list (after the
     // frame, so we never mutate a provider mid-build).
@@ -236,15 +240,15 @@ class _RoutedPage extends StatelessWidget {
       switchOutCurve: Curves.easeIn,
       transitionBuilder: (Widget child, Animation<double> animation) =>
           FadeTransition(
-        opacity: animation,
-        child: SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 0.02),
-            end: Offset.zero,
-          ).animate(animation),
-          child: child,
-        ),
-      ),
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.02),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          ),
       child: KeyedSubtree(key: ValueKey<String>(location), child: child),
     );
   }
@@ -303,18 +307,21 @@ class _SidebarState extends ConsumerState<_Sidebar> {
     final bool isAdmin = user?.isAdmin ?? false;
     // Auto-collapse to the icon rail on tighter widths; above the breakpoint the
     // user's manual toggle decides.
-    final bool autoRail = widget.collapsible &&
+    final bool autoRail =
+        widget.collapsible &&
         MediaQuery.sizeOf(context).width < AppBreakpoints.expanded;
     final bool rail =
         autoRail || (widget.collapsible && ref.watch(sidebarCollapsedProvider));
 
-    final bool reduceMotion =
-        ref.watch(settingsControllerProvider).reduceMotion;
+    final bool reduceMotion = ref
+        .watch(settingsControllerProvider)
+        .reduceMotion;
     return _Chrome(
       border: Border(right: BorderSide(color: scheme.outlineVariant)),
       child: AnimatedSize(
-        duration:
-            reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
+        duration: reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 180),
         curve: Curves.easeInOut,
         alignment: Alignment.centerLeft,
         child: SizedBox(
@@ -719,10 +726,7 @@ class _NavTile extends ConsumerWidget {
           value: 'pin',
           child: Row(
             children: <Widget>[
-              Icon(
-                pinned ? Icons.push_pin : Icons.push_pin_outlined,
-                size: 18,
-              ),
+              Icon(pinned ? Icons.push_pin : Icons.push_pin_outlined, size: 18),
               const SizedBox(width: 10),
               Text(pinned ? 'Unpin from sidebar' : 'Pin to sidebar'),
             ],
@@ -892,14 +896,16 @@ class _Breadcrumbs extends StatelessWidget {
       final _Crumb crumb = crumbs[i];
       final bool last = i == crumbs.length - 1;
       if (i > 0) {
-        row.add(Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Icon(
-            Icons.chevron_right,
-            size: 16,
-            color: scheme.onSurfaceVariant,
+        row.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: scheme.onSurfaceVariant,
+            ),
           ),
-        ));
+        );
       }
       final TextStyle style = TextStyle(
         fontSize: last ? 16 : 13.5,
@@ -907,14 +913,16 @@ class _Breadcrumbs extends StatelessWidget {
         color: last ? scheme.onSurface : scheme.onSurfaceVariant,
       );
       if (crumb.route != null && !last) {
-        row.add(InkWell(
-          borderRadius: BorderRadius.circular(6),
-          onTap: () => context.go(crumb.route!),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            child: Text(crumb.label, style: style),
+        row.add(
+          InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: () => context.go(crumb.route!),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Text(crumb.label, style: style),
+            ),
           ),
-        ));
+        );
       } else {
         row.add(Text(crumb.label, style: style));
       }
@@ -1039,9 +1047,7 @@ class _ThemeToggleButton extends ConsumerWidget {
         : mode == ThemeMode.dark;
     return IconButton(
       tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
-      icon: Icon(
-        isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-      ),
+      icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
       onPressed: () => ref
           .read(themeModeProvider.notifier)
           .setMode(isDark ? ThemeMode.light : ThemeMode.dark),

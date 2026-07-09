@@ -181,7 +181,10 @@ class _MemberRow extends ConsumerWidget {
                   member.email,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -202,10 +205,7 @@ class _MemberRow extends ConsumerWidget {
                     },
               items: <DropdownMenuItem<MemberRole>>[
                 for (final MemberRole r in MemberRole.assignable)
-                  DropdownMenuItem<MemberRole>(
-                    value: r,
-                    child: Text(r.label),
-                  ),
+                  DropdownMenuItem<MemberRole>(value: r, child: Text(r.label)),
               ],
             ),
           const SizedBox(width: 12),
@@ -301,10 +301,8 @@ class _AuditViewState extends ConsumerState<_AuditView> {
     final AsyncValue<List<AuditEvent>> async = ref.watch(auditLogProvider);
     return async.when(
       loading: () => const LoadingView(),
-      error: (Object e, _) => ErrorView(
-        error: e,
-        onRetry: () => ref.invalidate(auditLogProvider),
-      ),
+      error: (Object e, _) =>
+          ErrorView(error: e, onRetry: () => ref.invalidate(auditLogProvider)),
       data: (List<AuditEvent> events) {
         if (events.isEmpty) {
           return const EmptyState(
@@ -314,10 +312,11 @@ class _AuditViewState extends ConsumerState<_AuditView> {
         }
         final List<String> actions = <String>{
           for (final AuditEvent e in events) e.action,
-        }.toList()
-          ..sort();
-        final List<AuditEvent> filtered =
-            <AuditEvent>[for (final AuditEvent e in events) if (_matches(e)) e];
+        }.toList()..sort();
+        final List<AuditEvent> filtered = <AuditEvent>[
+          for (final AuditEvent e in events)
+            if (_matches(e)) e,
+        ];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -343,10 +342,14 @@ class _AuditViewState extends ConsumerState<_AuditView> {
                       initialValue: _action.isEmpty ? null : _action,
                       isExpanded: true,
                       decoration: const InputDecoration(
-                          isDense: true, hintText: 'All actions'),
+                        isDense: true,
+                        hintText: 'All actions',
+                      ),
                       items: <DropdownMenuItem<String>>[
                         const DropdownMenuItem<String>(
-                            value: '', child: Text('All actions')),
+                          value: '',
+                          child: Text('All actions'),
+                        ),
                         for (final String a in actions)
                           DropdownMenuItem<String>(value: a, child: Text(a)),
                       ],
@@ -390,14 +393,16 @@ class _AuditViewState extends ConsumerState<_AuditView> {
                                       ? 'Someone'
                                       : e.actorName,
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.w700),
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                                 TextSpan(text: '  ${e.action}'),
                                 if (e.target.isNotEmpty)
                                   TextSpan(
                                     text: '  ${e.target}',
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.w600),
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                               ],
                             ),
@@ -406,7 +411,9 @@ class _AuditViewState extends ConsumerState<_AuditView> {
                           trailing: Text(
                             relativeTime(e.createdAt),
                             style: TextStyle(
-                                fontSize: 11, color: scheme.onSurfaceVariant),
+                              fontSize: 11,
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
                         );
                       },
@@ -458,7 +465,9 @@ class _SecurityViewState extends ConsumerState<_SecurityView> {
   Future<void> _save(WorkspaceSettings current) async {
     setState(() => _saving = true);
     try {
-      await ref.read(adminRepositoryProvider).updateSettings(
+      await ref
+          .read(adminRepositoryProvider)
+          .updateSettings(
             current.copyWith(
               name: _name.text.trim(),
               allowedDomains: _domains.text.trim(),
@@ -555,8 +564,12 @@ class _SecurityViewState extends ConsumerState<_SecurityView> {
               child: Row(
                 children: <Widget>[
                   Icon(
-                    s.ssoConfigured ? Icons.check_circle : Icons.cancel_outlined,
-                    color: s.ssoConfigured ? AppColors.green : scheme.onSurfaceVariant,
+                    s.ssoConfigured
+                        ? Icons.check_circle
+                        : Icons.cancel_outlined,
+                    color: s.ssoConfigured
+                        ? AppColors.green
+                        : scheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 10),
                   Expanded(

@@ -24,22 +24,22 @@ class UserPresence {
   UserStatus get effective => online ? status : UserStatus.offline;
 
   factory UserPresence.fromJson(Map<String, dynamic> json) => UserPresence(
-        userId: json['user_id'] as int,
-        online: json['online'] as bool? ?? false,
-        status: UserStatus.fromJson(json['status'] as String? ?? 'active'),
-        statusMessage: json['status_message'] as String? ?? '',
-        lastSeen: json['last_seen_at'] == null
-            ? null
-            : DateTime.tryParse(json['last_seen_at'] as String),
-      );
+    userId: json['user_id'] as int,
+    online: json['online'] as bool? ?? false,
+    status: UserStatus.fromJson(json['status'] as String? ?? 'active'),
+    statusMessage: json['status_message'] as String? ?? '',
+    lastSeen: json['last_seen_at'] == null
+        ? null
+        : DateTime.tryParse(json['last_seen_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'user_id': userId,
-        'online': online,
-        'status': status.toJson(),
-        'status_message': statusMessage,
-        'last_seen_at': lastSeen?.toIso8601String(),
-      };
+    'user_id': userId,
+    'online': online,
+    'status': status.toJson(),
+    'status_message': statusMessage,
+    'last_seen_at': lastSeen?.toIso8601String(),
+  };
 
   @override
   String toString() => 'UserPresence($userId, ${effective.name})';

@@ -15,8 +15,10 @@ import '../providers/incidents_providers.dart';
 
 /// Opens the report/edit dialog for an [Incident]. Pass [existing] to edit;
 /// omit it to report a new bug or incident. Returns true when saved.
-Future<bool?> showIncidentFormDialog(BuildContext context,
-    {Incident? existing}) {
+Future<bool?> showIncidentFormDialog(
+  BuildContext context, {
+  Incident? existing,
+}) {
   return showDialog<bool>(
     context: context,
     builder: (BuildContext _) => _IncidentFormDialog(existing: existing),
@@ -82,8 +84,7 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
       assigneeId: _assigneeId,
     );
     try {
-      final IncidentsRepository repo =
-          ref.read(incidentsRepositoryProvider);
+      final IncidentsRepository repo = ref.read(incidentsRepositoryProvider);
       if (widget.existing == null) {
         await repo.create(payload);
       } else {
@@ -122,9 +123,13 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                   Icon(_kind.icon, color: _kind.color),
                   const SizedBox(width: 10),
                   Text(
-                    editing ? 'Edit issue' : 'Report ${_kind.label.toLowerCase()}',
+                    editing
+                        ? 'Edit issue'
+                        : 'Report ${_kind.label.toLowerCase()}',
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
@@ -140,7 +145,9 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                       controller: _title,
                       autofocus: !editing,
                       decoration: const InputDecoration(
-                          labelText: 'Title', isDense: true),
+                        labelText: 'Title',
+                        isDense: true,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -150,7 +157,9 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                             initialValue: _kind,
                             isExpanded: true,
                             decoration: const InputDecoration(
-                                labelText: 'Type', isDense: true),
+                              labelText: 'Type',
+                              isDense: true,
+                            ),
                             items: <DropdownMenuItem<IncidentKind>>[
                               for (final IncidentKind k in IncidentKind.values)
                                 DropdownMenuItem<IncidentKind>(
@@ -168,7 +177,9 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                             initialValue: _severity,
                             isExpanded: true,
                             decoration: const InputDecoration(
-                                labelText: 'Severity', isDense: true),
+                              labelText: 'Severity',
+                              isDense: true,
+                            ),
                             items: <DropdownMenuItem<IncidentSeverity>>[
                               for (final IncidentSeverity s
                                   in IncidentSeverity.values)
@@ -187,24 +198,27 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                     TextField(
                       controller: _component,
                       decoration: const InputDecoration(
-                          labelText: 'Component / area (optional)',
-                          isDense: true),
+                        labelText: 'Component / area (optional)',
+                        isDense: true,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<int?>(
                       initialValue: _projectId,
                       isExpanded: true,
                       decoration: const InputDecoration(
-                          labelText: 'Project (optional)', isDense: true),
+                        labelText: 'Project (optional)',
+                        isDense: true,
+                      ),
                       items: <DropdownMenuItem<int?>>[
-                        const DropdownMenuItem<int?>(
-                          child: Text('No project'),
-                        ),
+                        const DropdownMenuItem<int?>(child: Text('No project')),
                         for (final Project p in projects)
                           DropdownMenuItem<int?>(
                             value: p.id,
-                            child:
-                                Text(p.name, overflow: TextOverflow.ellipsis),
+                            child: Text(
+                              p.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                       ],
                       onChanged: (int? v) => setState(() => _projectId = v),
@@ -214,16 +228,18 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                       initialValue: _assigneeId,
                       isExpanded: true,
                       decoration: const InputDecoration(
-                          labelText: 'Assignee (optional)', isDense: true),
+                        labelText: 'Assignee (optional)',
+                        isDense: true,
+                      ),
                       items: <DropdownMenuItem<int?>>[
-                        const DropdownMenuItem<int?>(
-                          child: Text('Unassigned'),
-                        ),
+                        const DropdownMenuItem<int?>(child: Text('Unassigned')),
                         for (final TeamMember m in members)
                           DropdownMenuItem<int?>(
                             value: m.id,
-                            child: Text(m.name.isEmpty ? m.email : m.name,
-                                overflow: TextOverflow.ellipsis),
+                            child: Text(
+                              m.name.isEmpty ? m.email : m.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                       ],
                       onChanged: (int? v) => setState(() => _assigneeId = v),
@@ -234,7 +250,9 @@ class _IncidentFormDialogState extends ConsumerState<_IncidentFormDialog> {
                       minLines: 3,
                       maxLines: 6,
                       decoration: const InputDecoration(
-                          labelText: 'Description', isDense: true),
+                        labelText: 'Description',
+                        isDense: true,
+                      ),
                     ),
                   ],
                 ),

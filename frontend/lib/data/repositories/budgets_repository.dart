@@ -11,8 +11,9 @@ class BudgetsRepository {
 
   /// Every project budget with its rolled-up actual cost.
   Future<List<Budget>> list() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/budgets');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/budgets',
+    );
     return <Budget>[
       for (final dynamic e in res.data ?? <dynamic>[])
         Budget.fromJson(e as Map<String, dynamic>),
@@ -25,16 +26,15 @@ class BudgetsRepository {
     required int amountCents,
     required int hourlyRateCents,
     String notes = '',
-  }) =>
-      _dio.put<void>(
-        '/api/v1/budgets',
-        data: <String, dynamic>{
-          'project_id': projectId,
-          'amount_cents': amountCents,
-          'hourly_rate_cents': hourlyRateCents,
-          'notes': notes,
-        },
-      );
+  }) => _dio.put<void>(
+    '/api/v1/budgets',
+    data: <String, dynamic>{
+      'project_id': projectId,
+      'amount_cents': amountCents,
+      'hourly_rate_cents': hourlyRateCents,
+      'notes': notes,
+    },
+  );
 
   /// Removes a project budget.
   Future<void> delete(int id) => _dio.delete<void>('/api/v1/budgets/$id');

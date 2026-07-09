@@ -24,11 +24,11 @@ class CallCredentials {
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'token': token,
-        'url': url,
-        'room': room,
-        'mode': mode,
-      };
+    'token': token,
+    'url': url,
+    'room': room,
+    'mode': mode,
+  };
 
   @override
   String toString() => 'CallCredentials(room: $room, mode: $mode)';

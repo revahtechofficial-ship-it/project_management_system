@@ -34,12 +34,14 @@ class TwoFactorRequiredException implements Exception {
 /// session in shared_preferences (AGENTS.md §1 `core/services`).
 class AuthService {
   AuthService()
-      : _dio = Dio(BaseOptions(
+    : _dio = Dio(
+        BaseOptions(
           baseUrl: AppConfig.apiBaseUrl,
           connectTimeout: const Duration(seconds: 12),
           receiveTimeout: const Duration(seconds: 12),
           contentType: 'application/json',
-        ));
+        ),
+      );
 
   final Dio _dio;
 
@@ -74,9 +76,14 @@ class AuthService {
   }
 
   /// Confirms a signup OTP; the user must then sign in.
-  Future<void> verifyEmail({required String email, required String code}) async {
-    await _post('/api/v1/auth/verify-email',
-        <String, dynamic>{'email': email, 'code': code});
+  Future<void> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    await _post('/api/v1/auth/verify-email', <String, dynamic>{
+      'email': email,
+      'code': code,
+    });
   }
 
   /// Signs in and persists the returned session.
@@ -109,8 +116,9 @@ class AuthService {
 
   Future<AuthSession> _persistSession(Map<String, dynamic> data) async {
     final String token = data['token'] as String;
-    final AuthUser user =
-        AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+    final AuthUser user = AuthUser.fromJson(
+      data['user'] as Map<String, dynamic>,
+    );
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kToken, token);
     await prefs.setString(_kUser, jsonEncode(user.toJson()));
@@ -121,12 +129,9 @@ class AuthService {
   /// user.
   Future<void> setTwoFactor(bool enabled) async {
     final String token = await _token();
-    await _send(
-      'PATCH',
-      '/api/v1/security/two-factor',
-      <String, dynamic>{'enabled': enabled},
-      token,
-    );
+    await _send('PATCH', '/api/v1/security/two-factor', <String, dynamic>{
+      'enabled': enabled,
+    }, token);
   }
 
   /// Enables or disables emailing the signed-in user's notifications.
@@ -142,7 +147,9 @@ class AuthService {
 
   /// Requests a password-reset OTP.
   Future<void> forgotPassword(String email) async {
-    await _post('/api/v1/auth/forgot-password', <String, dynamic>{'email': email});
+    await _post('/api/v1/auth/forgot-password', <String, dynamic>{
+      'email': email,
+    });
   }
 
   /// Sets a new password using a reset OTP; the user must then sign in.
@@ -159,9 +166,14 @@ class AuthService {
   }
 
   /// Re-issues a signup or reset OTP.
-  Future<void> resendOtp({required String email, required String purpose}) async {
-    await _post('/api/v1/auth/resend-otp',
-        <String, dynamic>{'email': email, 'purpose': purpose});
+  Future<void> resendOtp({
+    required String email,
+    required String purpose,
+  }) async {
+    await _post('/api/v1/auth/resend-otp', <String, dynamic>{
+      'email': email,
+      'purpose': purpose,
+    });
   }
 
   /// Saves the signed-in user's editable profile fields and re-persists it.
@@ -174,19 +186,15 @@ class AuthService {
     String bio = '',
   }) async {
     final String token = await _token();
-    final Map<String, dynamic> data = await _send(
-      'PATCH',
-      '/api/v1/profile',
-      <String, dynamic>{
-        'full_name': fullName,
-        'phone': phone,
-        'job_title': jobTitle,
-        'department': department,
-        'location': location,
-        'bio': bio,
-      },
-      token,
-    );
+    final Map<String, dynamic> data =
+        await _send('PATCH', '/api/v1/profile', <String, dynamic>{
+          'full_name': fullName,
+          'phone': phone,
+          'job_title': jobTitle,
+          'department': department,
+          'location': location,
+          'bio': bio,
+        }, token);
     final AuthUser user = AuthUser.fromJson(data);
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kUser, jsonEncode(user.toJson()));
@@ -200,13 +208,14 @@ class AuthService {
       'file': MultipartFile.fromBytes(bytes, filename: filename),
     });
     try {
-      final Response<Map<String, dynamic>> res =
-          await _dio.post<Map<String, dynamic>>(
-        '/api/v1/profile/avatar',
-        data: form,
-        options: Options(
-            headers: <String, dynamic>{'Authorization': 'Bearer $token'}),
-      );
+      final Response<Map<String, dynamic>> res = await _dio
+          .post<Map<String, dynamic>>(
+            '/api/v1/profile/avatar',
+            data: form,
+            options: Options(
+              headers: <String, dynamic>{'Authorization': 'Bearer $token'},
+            ),
+          );
       final AuthUser user = AuthUser.fromJson(res.data ?? <String, dynamic>{});
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString(_kUser, jsonEncode(user.toJson()));
@@ -222,15 +231,10 @@ class AuthService {
     required String newPassword,
   }) async {
     final String token = await _token();
-    await _send(
-      'POST',
-      '/api/v1/auth/change-password',
-      <String, dynamic>{
-        'current_password': currentPassword,
-        'new_password': newPassword,
-      },
-      token,
-    );
+    await _send('POST', '/api/v1/auth/change-password', <String, dynamic>{
+      'current_password': currentPassword,
+      'new_password': newPassword,
+    }, token);
   }
 
   /// Clears the stored session.
@@ -256,15 +260,15 @@ class AuthService {
     String token,
   ) async {
     try {
-      final Response<Map<String, dynamic>> res =
-          await _dio.request<Map<String, dynamic>>(
-        path,
-        data: body,
-        options: Options(
-          method: method,
-          headers: <String, dynamic>{'Authorization': 'Bearer $token'},
-        ),
-      );
+      final Response<Map<String, dynamic>> res = await _dio
+          .request<Map<String, dynamic>>(
+            path,
+            data: body,
+            options: Options(
+              method: method,
+              headers: <String, dynamic>{'Authorization': 'Bearer $token'},
+            ),
+          );
       return res.data ?? <String, dynamic>{};
     } on DioException catch (e) {
       throw AuthException(_messageFrom(e));
@@ -276,8 +280,8 @@ class AuthService {
     Map<String, dynamic> body,
   ) async {
     try {
-      final Response<Map<String, dynamic>> res =
-          await _dio.post<Map<String, dynamic>>(path, data: body);
+      final Response<Map<String, dynamic>> res = await _dio
+          .post<Map<String, dynamic>>(path, data: body);
       return res.data ?? <String, dynamic>{};
     } on DioException catch (e) {
       throw AuthException(_messageFrom(e));

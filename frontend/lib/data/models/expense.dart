@@ -46,38 +46,36 @@ class Expense {
   }
 
   factory Expense.fromJson(Map<String, dynamic> json) => Expense(
-        id: json['id'] as int,
-        userId: json['user_id'] as int?,
-        submitterName: json['submitter_name'] as String? ?? '',
-        projectId: json['project_id'] as int?,
-        projectName: json['project_name'] as String? ?? '',
-        category:
-            ExpenseCategory.fromJson(json['category'] as String? ?? 'other'),
-        amountCents: json['amount_cents'] as int? ?? 0,
-        spentOn: _date(json['spent_on']),
-        description: json['description'] as String? ?? '',
-        merchant: json['merchant'] as String? ?? '',
-        receiptUrl: json['receipt_url'] as String? ?? '',
-        status:
-            ExpenseStatus.fromJson(json['status'] as String? ?? 'pending'),
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    userId: json['user_id'] as int?,
+    submitterName: json['submitter_name'] as String? ?? '',
+    projectId: json['project_id'] as int?,
+    projectName: json['project_name'] as String? ?? '',
+    category: ExpenseCategory.fromJson(json['category'] as String? ?? 'other'),
+    amountCents: json['amount_cents'] as int? ?? 0,
+    spentOn: _date(json['spent_on']),
+    description: json['description'] as String? ?? '',
+    merchant: json['merchant'] as String? ?? '',
+    receiptUrl: json['receipt_url'] as String? ?? '',
+    status: ExpenseStatus.fromJson(json['status'] as String? ?? 'pending'),
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'user_id': userId,
-        'submitter_name': submitterName,
-        'project_id': projectId,
-        'project_name': projectName,
-        'category': category.toJson(),
-        'amount_cents': amountCents,
-        'spent_on': spentOn?.toIso8601String(),
-        'description': description,
-        'merchant': merchant,
-        'receipt_url': receiptUrl,
-        'status': status.toJson(),
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'user_id': userId,
+    'submitter_name': submitterName,
+    'project_id': projectId,
+    'project_name': projectName,
+    'category': category.toJson(),
+    'amount_cents': amountCents,
+    'spent_on': spentOn?.toIso8601String(),
+    'description': description,
+    'merchant': merchant,
+    'receipt_url': receiptUrl,
+    'status': status.toJson(),
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() =>
@@ -103,18 +101,18 @@ class Expense {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        userId,
-        submitterName,
-        projectId,
-        projectName,
-        category,
-        amountCents,
-        spentOn,
-        description,
-        merchant,
-        receiptUrl,
-        status,
-        createdAt,
-      );
+    id,
+    userId,
+    submitterName,
+    projectId,
+    projectName,
+    category,
+    amountCents,
+    spentOn,
+    description,
+    merchant,
+    receiptUrl,
+    status,
+    createdAt,
+  );
 }

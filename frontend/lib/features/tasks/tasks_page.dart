@@ -283,7 +283,9 @@ class _TaskTile extends ConsumerWidget {
 
   /// Persists an inline title change by re-sending the task's current fields.
   Future<void> _rename(WidgetRef ref, String title) async {
-    await ref.read(tasksRepositoryProvider).update(
+    await ref
+        .read(tasksRepositoryProvider)
+        .update(
           task.id,
           title: title,
           description: task.description,
@@ -398,78 +400,78 @@ class _TaskTile extends ConsumerWidget {
             color: task.done ? scheme.onSurfaceVariant : null,
           ),
         ),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 6),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          children: <Widget>[
-            StatusPill(label: ws.label, color: ws.color),
-            if (task.issueType != IssueType.task)
-              _Chip(
-                icon: task.issueType.icon,
-                label: task.issueType.label,
-                color: task.issueType.color,
-              ),
-            if (task.issueType == IssueType.bug && task.severity.isSet)
-              _Chip(
-                icon: Icons.priority_high,
-                label: task.severity.label,
-                color: task.severity.color,
-              ),
-            if (task.priority.isSet)
-              _Chip(
-                icon: Icons.flag_rounded,
-                label: task.priority.label,
-                color: task.priority.color,
-              ),
-            if (task.projectName != null)
-              _Chip(
-                icon: Icons.folder_outlined,
-                label: task.projectName!,
-                color: AppColors.brand,
-              ),
-            if (task.assigneeNames.isNotEmpty)
-              _Chip(
-                icon: Icons.person_outline,
-                label: task.assigneeLabel,
-                color: AppColors.teal,
-              ),
-            if (task.dueDate != null)
-              _Chip(
-                icon: Icons.event,
-                label: 'Due ${shortDate(task.dueDate!.toLocal())}',
-                color: overdue ? AppColors.rose : AppColors.slate,
-              ),
-            if (task.subtaskCount > 0)
-              _Chip(
-                icon: Icons.checklist_rounded,
-                label: '${task.subtaskDoneCount}/${task.subtaskCount}',
-                color: AppColors.violet,
-              ),
-            if (task.estimateLabel.isNotEmpty)
-              _Chip(
-                icon: Icons.timer_outlined,
-                label: task.estimateLabel,
-                color: AppColors.sky,
-              ),
-            if (task.points > 0)
-              _Chip(
-                icon: Icons.bolt_outlined,
-                label: '${task.points} pts',
-                color: AppColors.amber,
-              ),
-            if (task.recurrence.repeats)
-              _Chip(
-                icon: Icons.repeat,
-                label: task.recurrence.label,
-                color: AppColors.slate,
-              ),
-            for (final String tag in task.tags.take(4))
-              StatusPill(label: tag, color: avatarColor(tag)),
-          ],
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: <Widget>[
+              StatusPill(label: ws.label, color: ws.color),
+              if (task.issueType != IssueType.task)
+                _Chip(
+                  icon: task.issueType.icon,
+                  label: task.issueType.label,
+                  color: task.issueType.color,
+                ),
+              if (task.issueType == IssueType.bug && task.severity.isSet)
+                _Chip(
+                  icon: Icons.priority_high,
+                  label: task.severity.label,
+                  color: task.severity.color,
+                ),
+              if (task.priority.isSet)
+                _Chip(
+                  icon: Icons.flag_rounded,
+                  label: task.priority.label,
+                  color: task.priority.color,
+                ),
+              if (task.projectName != null)
+                _Chip(
+                  icon: Icons.folder_outlined,
+                  label: task.projectName!,
+                  color: AppColors.brand,
+                ),
+              if (task.assigneeNames.isNotEmpty)
+                _Chip(
+                  icon: Icons.person_outline,
+                  label: task.assigneeLabel,
+                  color: AppColors.teal,
+                ),
+              if (task.dueDate != null)
+                _Chip(
+                  icon: Icons.event,
+                  label: 'Due ${shortDate(task.dueDate!.toLocal())}',
+                  color: overdue ? AppColors.rose : AppColors.slate,
+                ),
+              if (task.subtaskCount > 0)
+                _Chip(
+                  icon: Icons.checklist_rounded,
+                  label: '${task.subtaskDoneCount}/${task.subtaskCount}',
+                  color: AppColors.violet,
+                ),
+              if (task.estimateLabel.isNotEmpty)
+                _Chip(
+                  icon: Icons.timer_outlined,
+                  label: task.estimateLabel,
+                  color: AppColors.sky,
+                ),
+              if (task.points > 0)
+                _Chip(
+                  icon: Icons.bolt_outlined,
+                  label: '${task.points} pts',
+                  color: AppColors.amber,
+                ),
+              if (task.recurrence.repeats)
+                _Chip(
+                  icon: Icons.repeat,
+                  label: task.recurrence.label,
+                  color: AppColors.slate,
+                ),
+              for (final String tag in task.tags.take(4))
+                StatusPill(label: tag, color: avatarColor(tag)),
+            ],
+          ),
         ),
-      ),
         trailing: IconButton(
           tooltip: 'Delete',
           icon: Icon(Icons.delete_outline, color: scheme.onSurfaceVariant),

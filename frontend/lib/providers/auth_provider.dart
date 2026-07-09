@@ -34,8 +34,9 @@ class AuthController extends AsyncNotifier<AuthState> {
   }
 
   Future<void> login({required String email, required String password}) async {
-    final AuthSession session =
-        await ref.read(authServiceProvider).login(email: email, password: password);
+    final AuthSession session = await ref
+        .read(authServiceProvider)
+        .login(email: email, password: password);
     state = AsyncData<AuthState>(AuthState(session: session));
   }
 
@@ -55,12 +56,14 @@ class AuthController extends AsyncNotifier<AuthState> {
     await ref.read(authServiceProvider).setTwoFactor(enabled);
     final AuthSession? current = state.asData?.value.session;
     if (current != null) {
-      state = AsyncData<AuthState>(AuthState(
-        session: AuthSession(
-          token: current.token,
-          user: current.user.copyWith(twoFactorEnabled: enabled),
+      state = AsyncData<AuthState>(
+        AuthState(
+          session: AuthSession(
+            token: current.token,
+            user: current.user.copyWith(twoFactorEnabled: enabled),
+          ),
         ),
-      ));
+      );
     }
   }
 
@@ -70,12 +73,14 @@ class AuthController extends AsyncNotifier<AuthState> {
     await ref.read(authServiceProvider).setEmailNotifications(enabled);
     final AuthSession? current = state.asData?.value.session;
     if (current != null) {
-      state = AsyncData<AuthState>(AuthState(
-        session: AuthSession(
-          token: current.token,
-          user: current.user.copyWith(emailNotifications: enabled),
+      state = AsyncData<AuthState>(
+        AuthState(
+          session: AuthSession(
+            token: current.token,
+            user: current.user.copyWith(emailNotifications: enabled),
+          ),
         ),
-      ));
+      );
     }
   }
 
@@ -93,33 +98,39 @@ class AuthController extends AsyncNotifier<AuthState> {
     String location = '',
     String bio = '',
   }) async {
-    final AuthUser user =
-        await ref.read(authServiceProvider).updateProfile(
-              fullName: fullName,
-              phone: phone,
-              jobTitle: jobTitle,
-              department: department,
-              location: location,
-              bio: bio,
-            );
+    final AuthUser user = await ref
+        .read(authServiceProvider)
+        .updateProfile(
+          fullName: fullName,
+          phone: phone,
+          jobTitle: jobTitle,
+          department: department,
+          location: location,
+          bio: bio,
+        );
     final AuthSession? current = state.asData?.value.session;
     if (current != null) {
-      state = AsyncData<AuthState>(AuthState(
-        session: AuthSession(token: current.token, user: user),
-      ));
+      state = AsyncData<AuthState>(
+        AuthState(
+          session: AuthSession(token: current.token, user: user),
+        ),
+      );
     }
   }
 
   /// Uploads a new profile photo and refreshes the in-memory session so the
   /// avatar updates everywhere immediately.
   Future<void> updateAvatar(Uint8List bytes, String filename) async {
-    final AuthUser user =
-        await ref.read(authServiceProvider).uploadAvatar(bytes, filename);
+    final AuthUser user = await ref
+        .read(authServiceProvider)
+        .uploadAvatar(bytes, filename);
     final AuthSession? current = state.asData?.value.session;
     if (current != null) {
-      state = AsyncData<AuthState>(AuthState(
-        session: AuthSession(token: current.token, user: user),
-      ));
+      state = AsyncData<AuthState>(
+        AuthState(
+          session: AuthSession(token: current.token, user: user),
+        ),
+      );
     }
   }
 
@@ -128,7 +139,9 @@ class AuthController extends AsyncNotifier<AuthState> {
     required String currentPassword,
     required String newPassword,
   }) async {
-    await ref.read(authServiceProvider).changePassword(
+    await ref
+        .read(authServiceProvider)
+        .changePassword(
           currentPassword: currentPassword,
           newPassword: newPassword,
         );

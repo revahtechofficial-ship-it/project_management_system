@@ -8,7 +8,10 @@ import '../providers/checklist_templates_providers.dart';
 
 /// Opens a picker to apply a checklist template to a task. Returns the number
 /// of items added (null if dismissed).
-Future<int?> showApplyChecklistTemplateDialog(BuildContext context, int taskId) {
+Future<int?> showApplyChecklistTemplateDialog(
+  BuildContext context,
+  int taskId,
+) {
   return showDialog<int>(
     context: context,
     builder: (BuildContext _) => _ApplyDialog(taskId: taskId),
@@ -20,7 +23,10 @@ class _ApplyDialog extends ConsumerWidget {
   final int taskId;
 
   Future<void> _apply(
-      BuildContext context, WidgetRef ref, ChecklistTemplate t) async {
+    BuildContext context,
+    WidgetRef ref,
+    ChecklistTemplate t,
+  ) async {
     try {
       final int added = await ref
           .read(checklistTemplatesRepositoryProvider)
@@ -37,8 +43,9 @@ class _ApplyDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<ChecklistTemplate>> async =
-        ref.watch(checklistTemplatesProvider);
+    final AsyncValue<List<ChecklistTemplate>> async = ref.watch(
+      checklistTemplatesProvider,
+    );
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: ConstrainedBox(
@@ -52,9 +59,10 @@ class _ApplyDialog extends ConsumerWidget {
                 children: <Widget>[
                   Icon(Icons.playlist_add_check),
                   SizedBox(width: 10),
-                  Text('Apply checklist template',
-                      style: TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w700)),
+                  Text(
+                    'Apply checklist template',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                  ),
                 ],
               ),
             ),
@@ -72,7 +80,8 @@ class _ApplyDialog extends ConsumerWidget {
                     return const EmptyState(
                       icon: Icons.checklist,
                       title: 'No templates yet',
-                      message: 'Create checklist templates from the Checklists '
+                      message:
+                          'Create checklist templates from the Checklists '
                           'page, then apply them here.',
                     );
                   }
@@ -87,9 +96,8 @@ class _ApplyDialog extends ConsumerWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                           side: BorderSide(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outlineVariant),
+                            color: Theme.of(context).colorScheme.outlineVariant,
+                          ),
                         ),
                         leading: const Icon(Icons.checklist),
                         title: Text(t.name),

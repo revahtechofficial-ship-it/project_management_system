@@ -67,12 +67,19 @@ class _Header extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Icon(Icons.handshake_outlined,
-                    size: 14, color: scheme.onSurfaceVariant),
+                Icon(
+                  Icons.handshake_outlined,
+                  size: 14,
+                  color: scheme.onSurfaceVariant,
+                ),
                 const SizedBox(width: 6),
-                Text('Client portal',
-                    style: TextStyle(
-                        fontSize: 12, color: scheme.onSurfaceVariant)),
+                Text(
+                  'Client portal',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
           ),
@@ -101,16 +108,19 @@ class _Body extends StatelessWidget {
               style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
             ),
             if (data.clientName.isNotEmpty && data.clientCompany.isNotEmpty)
-              Text(data.clientName,
-                  style: TextStyle(color: scheme.onSurfaceVariant)),
+              Text(
+                data.clientName,
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
             const SizedBox(height: 20),
             if (data.outstandingCents > 0) ...<Widget>[
               _OutstandingBanner(cents: data.outstandingCents),
               const SizedBox(height: 20),
             ],
-            Text('Projects',
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w700)),
+            Text(
+              'Projects',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 10),
             if (data.projects.isEmpty)
               const EmptyState(
@@ -124,9 +134,10 @@ class _Body extends StatelessWidget {
                   child: _ProjectCard(project: p),
                 ),
             const SizedBox(height: 20),
-            Text('Invoices',
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w700)),
+            Text(
+              'Invoices',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 10),
             if (data.invoices.isEmpty)
               const EmptyState(
@@ -166,9 +177,10 @@ class _OutstandingBanner extends StatelessWidget {
           const Icon(Icons.account_balance_outlined, color: amber),
           const SizedBox(width: 12),
           Expanded(
-            child: Text('${formatCents(cents)} outstanding',
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700, color: amber)),
+            child: Text(
+              '${formatCents(cents)} outstanding',
+              style: const TextStyle(fontWeight: FontWeight.w700, color: amber),
+            ),
           ),
         ],
       ),
@@ -192,21 +204,31 @@ class _ProjectCard extends StatelessWidget {
           Row(
             children: <Widget>[
               Expanded(
-                child: Text(p.name.isEmpty ? 'Project' : p.name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 15)),
-              ),
-              Text('${(p.progress * 100).round()}%',
+                child: Text(
+                  p.name.isEmpty ? 'Project' : p.name,
                   style: const TextStyle(
-                      fontWeight: FontWeight.w800, fontSize: 15)),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              Text(
+                '${(p.progress * 100).round()}%',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
+              ),
             ],
           ),
           if (p.description.isNotEmpty) ...<Widget>[
             const SizedBox(height: 4),
-            Text(p.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
+            Text(
+              p.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+            ),
           ],
           const SizedBox(height: 10),
           ClipRRect(
@@ -214,8 +236,9 @@ class _ProjectCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: p.progress,
               minHeight: 6,
-              backgroundColor:
-                  scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+              backgroundColor: scheme.surfaceContainerHighest.withValues(
+                alpha: 0.6,
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -249,12 +272,18 @@ class _InvoiceCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text(i.number,
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  i.number,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
                 if (i.dueDate case final DateTime d)
-                  Text('Due ${shortDate(d)} ${d.year}',
-                      style: TextStyle(
-                          fontSize: 12, color: scheme.onSurfaceVariant)),
+                  Text(
+                    'Due ${shortDate(d)} ${d.year}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -263,22 +292,31 @@ class _InvoiceCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Text(formatCents(i.totalCents),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w800, fontSize: 15)),
+              Text(
+                formatCents(i.totalCents),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
+              ),
               const SizedBox(height: 4),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
+                ),
                 decoration: BoxDecoration(
                   color: i.status.color.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(i.status.label,
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: i.status.color)),
+                child: Text(
+                  i.status.label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: i.status.color,
+                  ),
+                ),
               ),
             ],
           ),

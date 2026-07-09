@@ -96,7 +96,10 @@ class _ConnectDialogState extends ConsumerState<_ConnectDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(info.description, style: TextStyle(color: scheme.onSurfaceVariant)),
+            Text(
+              info.description,
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _primary,
@@ -129,7 +132,9 @@ class _ConnectDialogState extends ConsumerState<_ConnectDialog> {
                   Icon(
                     info.isLive ? Icons.bolt : Icons.info_outline,
                     size: 16,
-                    color: info.isLive ? AppColors.green : scheme.onSurfaceVariant,
+                    color: info.isLive
+                        ? AppColors.green
+                        : scheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -170,11 +175,10 @@ class _ConnectDialogState extends ConsumerState<_ConnectDialog> {
 }
 
 /// Create an API key, then reveal the plaintext token exactly once.
-Future<void> showCreateApiKeyDialog(BuildContext context) =>
-    showDialog<void>(
-      context: context,
-      builder: (BuildContext context) => const _ApiKeyDialog(),
-    );
+Future<void> showCreateApiKeyDialog(BuildContext context) => showDialog<void>(
+  context: context,
+  builder: (BuildContext context) => const _ApiKeyDialog(),
+);
 
 class _ApiKeyDialog extends ConsumerStatefulWidget {
   const _ApiKeyDialog();

@@ -56,11 +56,9 @@ class _CustomFieldDialogState extends ConsumerState<_CustomFieldDialog> {
     }
     setState(() => _saving = true);
     try {
-      await ref.read(customFieldsRepositoryProvider).create(
-            name: name,
-            type: _type,
-            options: _options,
-          );
+      await ref
+          .read(customFieldsRepositoryProvider)
+          .create(name: name, type: _type, options: _options);
       ref.invalidate(customFieldsProvider);
       if (mounted) {
         Navigator.of(context).pop(true);
@@ -147,8 +145,9 @@ class _CustomFieldDialogState extends ConsumerState<_CustomFieldDialog> {
       ),
       actions: <Widget>[
         TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel')),
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: _saving ? null : _create,
           child: Text(_saving ? 'Creating…' : 'Create'),

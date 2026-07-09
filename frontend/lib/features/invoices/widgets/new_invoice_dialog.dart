@@ -76,7 +76,9 @@ class _NewInvoiceDialogState extends ConsumerState<_NewInvoiceDialog> {
     try {
       final Invoice inv;
       if (_fromTime) {
-        inv = await ref.read(invoicesRepositoryProvider).generate(
+        inv = await ref
+            .read(invoicesRepositoryProvider)
+            .generate(
               projectId: _projectId!,
               clientName: _client.text.trim(),
               clientEmail: _email.text.trim(),
@@ -85,7 +87,9 @@ class _NewInvoiceDialogState extends ConsumerState<_NewInvoiceDialog> {
               dueDate: _dueDate,
             );
       } else {
-        inv = await ref.read(invoicesRepositoryProvider).create(
+        inv = await ref
+            .read(invoicesRepositoryProvider)
+            .create(
               projectId: _projectId,
               clientName: _client.text.trim(),
               clientEmail: _email.text.trim(),
@@ -122,21 +126,27 @@ class _NewInvoiceDialogState extends ConsumerState<_NewInvoiceDialog> {
                 controller: _client,
                 autofocus: true,
                 decoration: const InputDecoration(
-                    labelText: 'Bill to (client)', isDense: true),
+                  labelText: 'Bill to (client)',
+                  isDense: true,
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
-                    labelText: 'Client email (optional)', isDense: true),
+                  labelText: 'Client email (optional)',
+                  isDense: true,
+                ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<int?>(
                 initialValue: _projectId,
                 isExpanded: true,
                 decoration: const InputDecoration(
-                    labelText: 'Project', isDense: true),
+                  labelText: 'Project',
+                  isDense: true,
+                ),
                 items: <DropdownMenuItem<int?>>[
                   const DropdownMenuItem<int?>(child: Text('No project')),
                   for (final Project p in projects)
@@ -173,14 +183,16 @@ class _NewInvoiceDialogState extends ConsumerState<_NewInvoiceDialog> {
                 value: _fromTime,
                 title: const Text('Bill unbilled time from this project'),
                 subtitle: const Text(
-                    'Pulls billable hours not yet on an invoice'),
+                  'Pulls billable hours not yet on an invoice',
+                ),
                 onChanged: (bool v) => setState(() => _fromTime = v),
               ),
               if (_fromTime)
                 TextField(
                   controller: _rate,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   inputFormatters: <TextInputFormatter>[
                     FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                   ],

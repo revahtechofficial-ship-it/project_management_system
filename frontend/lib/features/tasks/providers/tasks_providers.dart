@@ -48,11 +48,11 @@ final AsyncNotifierProvider<TasksNotifier, List<Task>> tasksProvider =
 /// task id; invalidate after watch/unwatch to refresh.
 final taskWatchProvider =
     FutureProvider.family<({int count, bool watching}), int>((ref, int id) {
-  return ref.watch(tasksRepositoryProvider).watchers(id);
-});
+      return ref.watch(tasksRepositoryProvider).watchers(id);
+    });
 
 /// The ids of tasks the current user follows.
 final FutureProvider<Set<int>> watchedTaskIdsProvider =
     FutureProvider<Set<int>>((ref) {
-  return ref.watch(tasksRepositoryProvider).watching();
-});
+      return ref.watch(tasksRepositoryProvider).watching();
+    });

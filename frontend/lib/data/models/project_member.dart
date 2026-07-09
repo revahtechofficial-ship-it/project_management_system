@@ -19,20 +19,20 @@ class ProjectMember {
   String get displayName => userName.isNotEmpty ? userName : userEmail;
 
   factory ProjectMember.fromJson(Map<String, dynamic> json) => ProjectMember(
-        userId: json['user_id'] as int,
-        userName: json['user_name'] as String? ?? '',
-        userEmail: json['user_email'] as String? ?? '',
-        role: json['role'] as String? ?? 'editor',
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    userId: json['user_id'] as int,
+    userName: json['user_name'] as String? ?? '',
+    userEmail: json['user_email'] as String? ?? '',
+    role: json['role'] as String? ?? 'editor',
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'user_id': userId,
-        'user_name': userName,
-        'user_email': userEmail,
-        'role': role,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'user_id': userId,
+    'user_name': userName,
+    'user_email': userEmail,
+    'role': role,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'ProjectMember(user: $userId, role: $role)';
@@ -48,8 +48,7 @@ class ProjectMember {
           other.createdAt == createdAt;
 
   @override
-  int get hashCode =>
-      Object.hash(userId, userName, userEmail, role, createdAt);
+  int get hashCode => Object.hash(userId, userName, userEmail, role, createdAt);
 }
 
 /// A project's members plus the caller's effective role on that project.
@@ -76,13 +75,12 @@ class ProjectMembership {
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'my_role': myRole,
-        'members': members.map((ProjectMember m) => m.toJson()).toList(),
-      };
+    'my_role': myRole,
+    'members': members.map((ProjectMember m) => m.toJson()).toList(),
+  };
 
   @override
-  String toString() =>
-      'ProjectMembership($myRole, ${members.length} members)';
+  String toString() => 'ProjectMembership($myRole, ${members.length} members)';
 
   @override
   bool operator ==(Object other) =>

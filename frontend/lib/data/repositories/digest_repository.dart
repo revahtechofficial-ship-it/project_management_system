@@ -14,16 +14,16 @@ class DigestRepository {
 
   /// Your current digest: unread notifications and tasks due soon or overdue.
   Future<DigestData> get() async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.get<Map<String, dynamic>>('/api/v1/digest');
+    final Response<Map<String, dynamic>> res = await _dio
+        .get<Map<String, dynamic>>('/api/v1/digest');
     return DigestData.fromJson(res.data ?? <String, dynamic>{});
   }
 
   /// Emails the digest to yourself. Returns whether it was sent and, if not,
   /// why (e.g. email notifications turned off).
   Future<DigestEmailResult> emailToMe() async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.post<Map<String, dynamic>>('/api/v1/digest/email');
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>('/api/v1/digest/email');
     final Map<String, dynamic> data = res.data ?? <String, dynamic>{};
     return (
       sent: data['sent'] as bool? ?? false,

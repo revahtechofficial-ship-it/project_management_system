@@ -12,8 +12,9 @@ class AttachmentsRepository {
 
   /// Attachments on a task, newest first.
   Future<List<Attachment>> list(int taskId) async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/tasks/$taskId/attachments');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/tasks/$taskId/attachments',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => Attachment.fromJson(e as Map<String, dynamic>))
@@ -32,6 +33,5 @@ class AttachmentsRepository {
   }
 
   /// Deletes an attachment (uploader or admin on the server).
-  Future<void> delete(int id) =>
-      _dio.delete<void>('/api/v1/attachments/$id');
+  Future<void> delete(int id) => _dio.delete<void>('/api/v1/attachments/$id');
 }

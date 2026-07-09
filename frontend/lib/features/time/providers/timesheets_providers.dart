@@ -7,17 +7,17 @@ import '../../../providers/dio_provider.dart';
 /// The timesheets repository, from the shared Dio client (AGENTS.md §1).
 final Provider<TimesheetsRepository> timesheetsRepositoryProvider =
     Provider<TimesheetsRepository>((ref) {
-  return TimesheetsRepository(ref.watch(dioProvider));
-});
+      return TimesheetsRepository(ref.watch(dioProvider));
+    });
 
 /// The current user's recent timesheet submissions. Invalidate to refresh.
 final FutureProvider<List<TimesheetSubmission>> myTimesheetsProvider =
     FutureProvider<List<TimesheetSubmission>>((ref) {
-  return ref.watch(timesheetsRepositoryProvider).listMine();
-});
+      return ref.watch(timesheetsRepositoryProvider).listMine();
+    });
 
 /// Pending submissions awaiting approval (admin-only). Invalidate to refresh.
 final FutureProvider<List<TimesheetSubmission>> pendingTimesheetsProvider =
     FutureProvider<List<TimesheetSubmission>>((ref) {
-  return ref.watch(timesheetsRepositoryProvider).pending();
-});
+      return ref.watch(timesheetsRepositoryProvider).pending();
+    });

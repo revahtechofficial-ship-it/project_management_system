@@ -46,7 +46,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     });
     final String email = _email.text.trim();
     try {
-      await ref.read(authServiceProvider).register(
+      await ref
+          .read(authServiceProvider)
+          .register(
             email: email,
             password: _password.text,
             fullName: _name.text.trim(),
@@ -117,7 +119,11 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             ),
             if (_error != null) AuthError(_error!),
             const SizedBox(height: 16),
-            SubmitButton(label: 'Create account', busy: _busy, onPressed: _submit),
+            SubmitButton(
+              label: 'Create account',
+              busy: _busy,
+              onPressed: _submit,
+            ),
             const SizedBox(height: 12),
             Wrap(
               alignment: WrapAlignment.center,

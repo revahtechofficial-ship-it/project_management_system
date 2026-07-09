@@ -21,14 +21,19 @@ class _PageHistoryDialog extends ConsumerWidget {
   final int pageId;
 
   Future<void> _restore(
-      BuildContext context, WidgetRef ref, PageVersion v) async {
-    final bool ok = await showDialog<bool>(
+    BuildContext context,
+    WidgetRef ref,
+    PageVersion v,
+  ) async {
+    final bool ok =
+        await showDialog<bool>(
           context: context,
           builder: (BuildContext ctx) => AlertDialog(
             title: const Text('Restore this version?'),
             content: const Text(
-                'The current content is saved to history first, so you can '
-                'undo this.'),
+              'The current content is saved to history first, so you can '
+              'undo this.',
+            ),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
@@ -60,8 +65,9 @@ class _PageHistoryDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<PageVersion>> async =
-        ref.watch(pageVersionsProvider(pageId));
+    final AsyncValue<List<PageVersion>> async = ref.watch(
+      pageVersionsProvider(pageId),
+    );
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: ConstrainedBox(
@@ -75,9 +81,10 @@ class _PageHistoryDialog extends ConsumerWidget {
                 children: <Widget>[
                   const Icon(Icons.history),
                   const SizedBox(width: 10),
-                  const Text('Version history',
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w700)),
+                  const Text(
+                    'Version history',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
                   const Spacer(),
                   IconButton(
                     tooltip: 'Close',
@@ -101,7 +108,8 @@ class _PageHistoryDialog extends ConsumerWidget {
                     return const EmptyState(
                       icon: Icons.history_toggle_off,
                       title: 'No history yet',
-                      message: 'Earlier revisions appear here as the document '
+                      message:
+                          'Earlier revisions appear here as the document '
                           'is edited over time.',
                     );
                   }
@@ -161,8 +169,10 @@ class _VersionTile extends StatelessWidget {
                     if (v.editorName.isNotEmpty) v.editorName,
                     relativeTime(v.createdAt),
                   ].join(' · '),
-                  style:
-                      TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 if (v.preview.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 6),
@@ -171,7 +181,9 @@ class _VersionTile extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 12.5, color: scheme.onSurfaceVariant),
+                      fontSize: 12.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],

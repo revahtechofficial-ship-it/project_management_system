@@ -84,9 +84,9 @@ class ProjectsRepository {
 
   /// Adds a member or changes their role (`viewer`, `editor` or `manager`).
   Future<void> setMember(int id, int userId, String role) => _dio.put<void>(
-        '/api/v1/projects/$id/members/$userId',
-        data: <String, dynamic>{'role': role},
-      );
+    '/api/v1/projects/$id/members/$userId',
+    data: <String, dynamic>{'role': role},
+  );
 
   /// Removes a member from the project.
   Future<void> removeMember(int id, int userId) =>

@@ -55,24 +55,114 @@ const List<_QuickAction> _quickActions = <_QuickAction>[
     icon: Icons.notifications_active_outlined,
     kind: _ActionKind.reminder,
   ),
-  _QuickAction(label: 'Ask AI Assistant', icon: Icons.auto_awesome, kind: _ActionKind.navigate, route: '/ai'),
-  _QuickAction(label: 'Go to Dashboard', icon: Icons.dashboard_outlined, kind: _ActionKind.navigate, route: '/'),
-  _QuickAction(label: 'Go to Tasks', icon: Icons.check_circle_outline, kind: _ActionKind.navigate, route: '/tasks'),
-  _QuickAction(label: 'Go to Projects', icon: Icons.folder_outlined, kind: _ActionKind.navigate, route: '/projects'),
-  _QuickAction(label: 'Go to Sprints', icon: Icons.directions_run, kind: _ActionKind.navigate, route: '/sprints'),
-  _QuickAction(label: 'Go to Pages', icon: Icons.description_outlined, kind: _ActionKind.navigate, route: '/pages'),
-  _QuickAction(label: 'Go to Chat', icon: Icons.chat_bubble_outline, kind: _ActionKind.navigate, route: '/chat'),
-  _QuickAction(label: 'Go to Inbox', icon: Icons.inbox_outlined, kind: _ActionKind.navigate, route: '/notifications'),
-  _QuickAction(label: 'Go to Dashboards', icon: Icons.space_dashboard_outlined, kind: _ActionKind.navigate, route: '/dashboards'),
-  _QuickAction(label: 'Go to Planning', icon: Icons.insights_outlined, kind: _ActionKind.navigate, route: '/planning'),
-  _QuickAction(label: 'Go to Resources', icon: Icons.event_available_outlined, kind: _ActionKind.navigate, route: '/resources'),
-  _QuickAction(label: 'Go to Goals', icon: Icons.flag_outlined, kind: _ActionKind.navigate, route: '/goals'),
-  _QuickAction(label: 'Go to Time', icon: Icons.timer_outlined, kind: _ActionKind.navigate, route: '/time'),
-  _QuickAction(label: 'Go to Reports', icon: Icons.bar_chart_outlined, kind: _ActionKind.navigate, route: '/reports'),
-  _QuickAction(label: 'Go to Activity', icon: Icons.history, kind: _ActionKind.navigate, route: '/activity'),
-  _QuickAction(label: 'Go to Automation', icon: Icons.bolt_outlined, kind: _ActionKind.navigate, route: '/automation'),
-  _QuickAction(label: 'Go to Integrations', icon: Icons.extension_outlined, kind: _ActionKind.navigate, route: '/integrations'),
-  _QuickAction(label: 'Go to Settings', icon: Icons.settings_outlined, kind: _ActionKind.navigate, route: '/settings'),
+  _QuickAction(
+    label: 'Ask AI Assistant',
+    icon: Icons.auto_awesome,
+    kind: _ActionKind.navigate,
+    route: '/ai',
+  ),
+  _QuickAction(
+    label: 'Go to Dashboard',
+    icon: Icons.dashboard_outlined,
+    kind: _ActionKind.navigate,
+    route: '/',
+  ),
+  _QuickAction(
+    label: 'Go to Tasks',
+    icon: Icons.check_circle_outline,
+    kind: _ActionKind.navigate,
+    route: '/tasks',
+  ),
+  _QuickAction(
+    label: 'Go to Projects',
+    icon: Icons.folder_outlined,
+    kind: _ActionKind.navigate,
+    route: '/projects',
+  ),
+  _QuickAction(
+    label: 'Go to Sprints',
+    icon: Icons.directions_run,
+    kind: _ActionKind.navigate,
+    route: '/sprints',
+  ),
+  _QuickAction(
+    label: 'Go to Pages',
+    icon: Icons.description_outlined,
+    kind: _ActionKind.navigate,
+    route: '/pages',
+  ),
+  _QuickAction(
+    label: 'Go to Chat',
+    icon: Icons.chat_bubble_outline,
+    kind: _ActionKind.navigate,
+    route: '/chat',
+  ),
+  _QuickAction(
+    label: 'Go to Inbox',
+    icon: Icons.inbox_outlined,
+    kind: _ActionKind.navigate,
+    route: '/notifications',
+  ),
+  _QuickAction(
+    label: 'Go to Dashboards',
+    icon: Icons.space_dashboard_outlined,
+    kind: _ActionKind.navigate,
+    route: '/dashboards',
+  ),
+  _QuickAction(
+    label: 'Go to Planning',
+    icon: Icons.insights_outlined,
+    kind: _ActionKind.navigate,
+    route: '/planning',
+  ),
+  _QuickAction(
+    label: 'Go to Resources',
+    icon: Icons.event_available_outlined,
+    kind: _ActionKind.navigate,
+    route: '/resources',
+  ),
+  _QuickAction(
+    label: 'Go to Goals',
+    icon: Icons.flag_outlined,
+    kind: _ActionKind.navigate,
+    route: '/goals',
+  ),
+  _QuickAction(
+    label: 'Go to Time',
+    icon: Icons.timer_outlined,
+    kind: _ActionKind.navigate,
+    route: '/time',
+  ),
+  _QuickAction(
+    label: 'Go to Reports',
+    icon: Icons.bar_chart_outlined,
+    kind: _ActionKind.navigate,
+    route: '/reports',
+  ),
+  _QuickAction(
+    label: 'Go to Activity',
+    icon: Icons.history,
+    kind: _ActionKind.navigate,
+    route: '/activity',
+  ),
+  _QuickAction(
+    label: 'Go to Automation',
+    icon: Icons.bolt_outlined,
+    kind: _ActionKind.navigate,
+    route: '/automation',
+  ),
+  _QuickAction(
+    label: 'Go to Integrations',
+    icon: Icons.extension_outlined,
+    kind: _ActionKind.navigate,
+    route: '/integrations',
+  ),
+  _QuickAction(
+    label: 'Go to Settings',
+    icon: Icons.settings_outlined,
+    kind: _ActionKind.navigate,
+    route: '/settings',
+  ),
 ];
 
 /// The navigate quick-action for [route], if one exists (used to render the
@@ -184,8 +274,10 @@ class _CommandPaletteState extends ConsumerState<CommandPalette> {
 
   void _runAction(_QuickAction action) {
     final GoRouter router = GoRouter.of(context);
-    final BuildContext appContext =
-        Navigator.of(context, rootNavigator: true).context;
+    final BuildContext appContext = Navigator.of(
+      context,
+      rootNavigator: true,
+    ).context;
     Navigator.of(context).pop();
     switch (action.kind) {
       case _ActionKind.navigate:
@@ -227,8 +319,7 @@ class _CommandPaletteState extends ConsumerState<CommandPalette> {
       alignment: Alignment.topCenter,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 80),
       clipBehavior: Clip.antiAlias,
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 580, maxHeight: 520),
         child: Column(
@@ -245,8 +336,10 @@ class _CommandPaletteState extends ConsumerState<CommandPalette> {
             const Divider(height: 1),
             _Footer(
               onShortcuts: () {
-                final BuildContext appContext =
-                    Navigator.of(context, rootNavigator: true).context;
+                final BuildContext appContext = Navigator.of(
+                  context,
+                  rootNavigator: true,
+                ).context;
                 Navigator.of(context).pop();
                 showShortcutsHelp(appContext);
               },
@@ -275,7 +368,11 @@ class _CommandPaletteState extends ConsumerState<CommandPalette> {
             for (final Favorite f in favorites)
               ListTile(
                 dense: true,
-                leading: const Icon(Icons.star, color: AppColors.amber, size: 20),
+                leading: const Icon(
+                  Icons.star,
+                  color: AppColors.amber,
+                  size: 20,
+                ),
                 title: Text(
                   f.label.isEmpty ? f.kind : f.label,
                   maxLines: 1,
@@ -341,7 +438,8 @@ class _CommandPaletteState extends ConsumerState<CommandPalette> {
                       ? const SizedBox(
                           width: 14,
                           height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.expand_more, size: 18),
                   label: const Text('Show more'),
                 ),
@@ -353,12 +451,11 @@ class _CommandPaletteState extends ConsumerState<CommandPalette> {
   }
 
   Widget _hint(ColorScheme scheme, String text) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-        child: Center(
-          child: Text(text,
-              style: TextStyle(color: scheme.onSurfaceVariant)),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+    child: Center(
+      child: Text(text, style: TextStyle(color: scheme.onSurfaceVariant)),
+    ),
+  );
 }
 
 class _SearchField extends StatelessWidget {
@@ -400,9 +497,10 @@ class _SearchField extends StatelessWidget {
             const Padding(
               padding: EdgeInsets.only(right: 4),
               child: SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2)),
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
             )
           else
             IconButton(
@@ -479,8 +577,7 @@ class _TaskRow extends StatelessWidget {
         color: task.done ? AppColors.green : task.status.color,
         size: 20,
       ),
-      title: Text(task.title,
-          maxLines: 1, overflow: TextOverflow.ellipsis),
+      title: Text(task.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         <String>[
           task.status.label,
@@ -504,10 +601,12 @@ class _ProjectRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       dense: true,
-      leading: const Icon(Icons.folder_outlined,
-          color: AppColors.brand, size: 20),
-      title:
-          Text(project.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      leading: const Icon(
+        Icons.folder_outlined,
+        color: AppColors.brand,
+        size: 20,
+      ),
+      title: Text(project.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: project.status.isEmpty ? null : Text(project.status),
       onTap: onTap,
     );

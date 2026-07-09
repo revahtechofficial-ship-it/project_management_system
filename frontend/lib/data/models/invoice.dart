@@ -45,42 +45,41 @@ class Invoice {
   }
 
   factory Invoice.fromJson(Map<String, dynamic> json) => Invoice(
-        id: json['id'] as int,
-        number: json['number'] as String? ?? '',
-        projectId: json['project_id'] as int?,
-        projectName: json['project_name'] as String? ?? '',
-        clientName: json['client_name'] as String? ?? '',
-        clientEmail: json['client_email'] as String? ?? '',
-        status: InvoiceStatus.fromJson(json['status'] as String? ?? 'draft'),
-        issueDate: _date(json['issue_date']),
-        dueDate: _date(json['due_date']),
-        notes: json['notes'] as String? ?? '',
-        totalCents: json['total_cents'] as int? ?? 0,
-        lineCount: json['line_count'] as int? ?? 0,
-        lines: <InvoiceLine>[
-          for (final dynamic e in (json['lines'] as List<dynamic>? ??
-              <dynamic>[]))
-            InvoiceLine.fromJson(e as Map<String, dynamic>),
-        ],
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    number: json['number'] as String? ?? '',
+    projectId: json['project_id'] as int?,
+    projectName: json['project_name'] as String? ?? '',
+    clientName: json['client_name'] as String? ?? '',
+    clientEmail: json['client_email'] as String? ?? '',
+    status: InvoiceStatus.fromJson(json['status'] as String? ?? 'draft'),
+    issueDate: _date(json['issue_date']),
+    dueDate: _date(json['due_date']),
+    notes: json['notes'] as String? ?? '',
+    totalCents: json['total_cents'] as int? ?? 0,
+    lineCount: json['line_count'] as int? ?? 0,
+    lines: <InvoiceLine>[
+      for (final dynamic e in (json['lines'] as List<dynamic>? ?? <dynamic>[]))
+        InvoiceLine.fromJson(e as Map<String, dynamic>),
+    ],
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'number': number,
-        'project_id': projectId,
-        'project_name': projectName,
-        'client_name': clientName,
-        'client_email': clientEmail,
-        'status': status.toJson(),
-        'issue_date': issueDate?.toIso8601String(),
-        'due_date': dueDate?.toIso8601String(),
-        'notes': notes,
-        'total_cents': totalCents,
-        'line_count': lineCount,
-        'lines': lines.map((InvoiceLine l) => l.toJson()).toList(),
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'number': number,
+    'project_id': projectId,
+    'project_name': projectName,
+    'client_name': clientName,
+    'client_email': clientEmail,
+    'status': status.toJson(),
+    'issue_date': issueDate?.toIso8601String(),
+    'due_date': dueDate?.toIso8601String(),
+    'notes': notes,
+    'total_cents': totalCents,
+    'line_count': lineCount,
+    'lines': lines.map((InvoiceLine l) => l.toJson()).toList(),
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'Invoice($number, ${status.name}, $totalCents)';
@@ -105,18 +104,18 @@ class Invoice {
 
   @override
   int get hashCode => Object.hashAll(<Object?>[
-        id,
-        number,
-        projectId,
-        projectName,
-        clientName,
-        clientEmail,
-        status,
-        issueDate,
-        dueDate,
-        notes,
-        totalCents,
-        lineCount,
-        createdAt,
-      ]);
+    id,
+    number,
+    projectId,
+    projectName,
+    clientName,
+    clientEmail,
+    status,
+    issueDate,
+    dueDate,
+    notes,
+    totalCents,
+    lineCount,
+    createdAt,
+  ]);
 }

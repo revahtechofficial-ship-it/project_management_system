@@ -58,7 +58,9 @@ class _RequestApprovalDialogState
     }
     setState(() => _busy = true);
     try {
-      await ref.read(approvalsRepositoryProvider).request(
+      await ref
+          .read(approvalsRepositoryProvider)
+          .request(
             subjectType: widget.subjectType,
             subjectId: widget.subjectId,
             subjectTitle: widget.subjectTitle,
@@ -66,8 +68,12 @@ class _RequestApprovalDialogState
             note: _note.text.trim(),
           );
       ref.invalidate(myApprovalRequestsProvider);
-      ref.invalidate(approvalsForSubjectProvider(
-          (type: widget.subjectType, id: widget.subjectId)));
+      ref.invalidate(
+        approvalsForSubjectProvider((
+          type: widget.subjectType,
+          id: widget.subjectId,
+        )),
+      );
       if (mounted) {
         Navigator.of(context).pop(true);
       }
@@ -100,7 +106,8 @@ class _RequestApprovalDialogState
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<int>(
@@ -111,8 +118,10 @@ class _RequestApprovalDialogState
                 for (final TeamMember m in members)
                   DropdownMenuItem<int>(
                     value: m.id,
-                    child: Text(m.name.isEmpty ? m.email : m.name,
-                        overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      m.name.isEmpty ? m.email : m.name,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
               ],
               onChanged: (int? v) => setState(() => _approverId = v),
@@ -160,9 +169,14 @@ class ApprovalStatusChip extends StatelessWidget {
         color: color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(label,
-          style: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
     );
   }
 }

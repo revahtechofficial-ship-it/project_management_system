@@ -31,8 +31,11 @@ class AuthScaffold extends StatelessWidget {
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
             final bool wide = constraints.maxWidth >= 980;
-            final Widget form =
-                _FormSide(title: title, subtitle: subtitle, child: child);
+            final Widget form = _FormSide(
+              title: title,
+              subtitle: subtitle,
+              child: child,
+            );
             if (!wide) {
               return form;
             }
@@ -50,8 +53,11 @@ class AuthScaffold extends StatelessWidget {
 }
 
 class _FormSide extends StatelessWidget {
-  const _FormSide(
-      {required this.title, required this.subtitle, required this.child});
+  const _FormSide({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
 
   final String title;
   final String subtitle;
@@ -83,22 +89,30 @@ class _FormSide extends StatelessWidget {
                   curve: Curves.easeOutCubic,
                   builder: (BuildContext context, double t, Widget? c) =>
                       Opacity(
-                    opacity: t,
-                    child: Transform.translate(
-                        offset: Offset(0, (1 - t) * 16), child: c),
-                  ),
+                        opacity: t,
+                        child: Transform.translate(
+                          offset: Offset(0, (1 - t) * 16),
+                          child: c,
+                        ),
+                      ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      Text(title,
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.6)),
+                      Text(
+                        title,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.6,
+                        ),
+                      ),
                       const SizedBox(height: 8),
-                      Text(subtitle,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                              color: scheme.onSurfaceVariant)),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
                       const SizedBox(height: 28),
                       child,
                     ],
@@ -175,30 +189,39 @@ class _ShowcaseState extends State<_Showcase>
               curve: Curves.easeOutCubic,
               builder: (BuildContext context, double t, Widget? child) =>
                   Opacity(
-                opacity: t,
-                child: Transform.translate(
-                  offset: Offset(0, (1 - t) * 26),
-                  child: Transform.scale(scale: 0.96 + 0.04 * t, child: child),
-                ),
-              ),
+                    opacity: t,
+                    child: Transform.translate(
+                      offset: Offset(0, (1 - t) * 26),
+                      child: Transform.scale(
+                        scale: 0.96 + 0.04 * t,
+                        child: child,
+                      ),
+                    ),
+                  ),
               child: Padding(
                 padding: const EdgeInsets.all(40),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Text('YOUR WORKSPACE',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.6,
-                            color: AppColors.brand)),
+                    Text(
+                      'YOUR WORKSPACE',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.6,
+                        color: AppColors.brand,
+                      ),
+                    ),
                     const SizedBox(height: 10),
-                    Text('Run projects with clarity.',
-                        style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.6,
-                            color: scheme.onSurface)),
+                    Text(
+                      'Run projects with clarity.',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.6,
+                        color: scheme.onSurface,
+                      ),
+                    ),
                     const SizedBox(height: 28),
                     _bob(
                       0.0,
@@ -216,31 +239,37 @@ class _ShowcaseState extends State<_Showcase>
             top: 110,
             right: 50,
             child: _bob(
-                0.3,
-                const _Chip(
-                    icon: Icons.account_tree_rounded,
-                    label: 'Critical path',
-                    color: AppColors.teal)),
+              0.3,
+              const _Chip(
+                icon: Icons.account_tree_rounded,
+                label: 'Critical path',
+                color: AppColors.teal,
+              ),
+            ),
           ),
           Positioned(
             bottom: 120,
             left: 40,
             child: _bob(
-                0.6,
-                const _Chip(
-                    icon: Icons.flag_rounded,
-                    label: 'Milestones',
-                    color: AppColors.rose)),
+              0.6,
+              const _Chip(
+                icon: Icons.flag_rounded,
+                label: 'Milestones',
+                color: AppColors.rose,
+              ),
+            ),
           ),
           Positioned(
             bottom: 220,
             right: 30,
             child: _bob(
-                0.85,
-                const _Chip(
-                    icon: Icons.repeat_rounded,
-                    label: 'Recurring',
-                    color: AppColors.sky)),
+              0.85,
+              const _Chip(
+                icon: Icons.repeat_rounded,
+                label: 'Recurring',
+                color: AppColors.sky,
+              ),
+            ),
           ),
         ],
       ),
@@ -260,8 +289,7 @@ class _ShowcaseState extends State<_Showcase>
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip(
-      {required this.icon, required this.label, required this.color});
+  const _Chip({required this.icon, required this.label, required this.color});
   final IconData icon;
   final String label;
   final Color color;
@@ -285,9 +313,10 @@ class _Chip extends StatelessWidget {
               child: Icon(icon, color: Colors.white, size: 16),
             ),
             const SizedBox(width: 10),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w700)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            ),
           ],
         ),
       ),

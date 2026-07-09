@@ -119,9 +119,8 @@ class PagesRepository {
 
   /// Restores a page to an earlier revision (the current content is snapshotted
   /// first, so the restore can itself be undone).
-  Future<void> restoreVersion(int id, int versionId) => _dio.post<void>(
-        '/api/v1/pages/$id/versions/$versionId/restore',
-      );
+  Future<void> restoreVersion(int id, int versionId) =>
+      _dio.post<void>('/api/v1/pages/$id/versions/$versionId/restore');
 
   /// Lists the pages that link to this page via `[[wiki links]]`.
   Future<List<PageBacklink>> backlinks(int id) async {

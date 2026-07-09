@@ -6,13 +6,14 @@ import '../../../providers/dio_provider.dart';
 
 /// The notification-preferences repository, from the shared Dio client.
 final Provider<NotificationPrefsRepository>
-    notificationPrefsRepositoryProvider =
-    Provider<NotificationPrefsRepository>((ref) {
+notificationPrefsRepositoryProvider = Provider<NotificationPrefsRepository>((
+  ref,
+) {
   return NotificationPrefsRepository(ref.watch(dioProvider));
 });
 
 /// The current user's notification preferences. Invalidate to refresh.
 final FutureProvider<NotificationPrefs> notificationPrefsProvider =
     FutureProvider<NotificationPrefs>((ref) {
-  return ref.watch(notificationPrefsRepositoryProvider).get();
-});
+      return ref.watch(notificationPrefsRepositoryProvider).get();
+    });

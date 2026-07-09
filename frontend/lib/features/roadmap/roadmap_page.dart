@@ -92,7 +92,8 @@ class _Board extends StatelessWidget {
       return const EmptyState(
         icon: Icons.map_outlined,
         title: 'No projects yet',
-        message: 'Create projects with target dates to see them on the '
+        message:
+            'Create projects with target dates to see them on the '
             'roadmap.',
       );
     }
@@ -161,33 +162,45 @@ class _Column extends StatelessWidget {
                   Container(
                     width: 10,
                     height: 10,
-                    decoration:
-                        BoxDecoration(color: color, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                   const SizedBox(width: 8),
-                  Text(title,
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w800)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const SizedBox(width: 6),
-                  Text('${projects.length}',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurfaceVariant)),
+                  Text(
+                    '${projects.length}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                   const Spacer(),
                 ],
               ),
             ),
             Padding(
               padding: const EdgeInsets.only(left: 22, bottom: 10),
-              child: Text(subtitle,
-                  style: TextStyle(
-                      fontSize: 12, color: scheme.onSurfaceVariant)),
+              child: Text(
+                subtitle,
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
             ),
             Expanded(
               child: projects.isEmpty
                   ? Center(
-                      child: Text('—',
-                          style: TextStyle(color: scheme.onSurfaceVariant)),
+                      child: Text(
+                        '—',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
                     )
                   : ListView(
                       padding: EdgeInsets.zero,
@@ -211,7 +224,8 @@ class _ProjectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final bool overdue = project.dueDate != null &&
+    final bool overdue =
+        project.dueDate != null &&
         project.status != ProjectStatus.completed &&
         project.dueDate!.toLocal().isBefore(DateTime.now());
     return Padding(
@@ -234,8 +248,9 @@ class _ProjectCard extends StatelessWidget {
               Row(
                 children: <Widget>[
                   StatusPill(
-                      label: project.status.label,
-                      color: project.status.color),
+                    label: project.status.label,
+                    color: project.status.color,
+                  ),
                   const Spacer(),
                   if (project.dueDate != null)
                     Text(
@@ -256,8 +271,9 @@ class _ProjectCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: project.progress,
                   minHeight: 5,
-                  backgroundColor:
-                      scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                  backgroundColor: scheme.surfaceContainerHighest.withValues(
+                    alpha: 0.6,
+                  ),
                   color: project.status.color,
                 ),
               ),

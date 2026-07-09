@@ -26,8 +26,7 @@ class _ExpenseFormDialog extends ConsumerStatefulWidget {
   final Expense? existing;
 
   @override
-  ConsumerState<_ExpenseFormDialog> createState() =>
-      _ExpenseFormDialogState();
+  ConsumerState<_ExpenseFormDialog> createState() => _ExpenseFormDialogState();
 }
 
 class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
@@ -140,7 +139,9 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
                   Text(
                     editing ? 'Edit expense' : 'New expense',
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
@@ -158,12 +159,13 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
                           child: TextField(
                             controller: _amount,
                             autofocus: !editing,
-                            keyboardType:
-                                const TextInputType.numberWithOptions(
-                                    decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             inputFormatters: <TextInputFormatter>[
                               FilteringTextInputFormatter.allow(
-                                  RegExp(r'[0-9.]')),
+                                RegExp(r'[0-9.]'),
+                              ),
                             ],
                             decoration: const InputDecoration(
                               labelText: 'Amount',
@@ -178,7 +180,9 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
                             initialValue: _category,
                             isExpanded: true,
                             decoration: const InputDecoration(
-                                labelText: 'Category', isDense: true),
+                              labelText: 'Category',
+                              isDense: true,
+                            ),
                             items: <DropdownMenuItem<ExpenseCategory>>[
                               for (final ExpenseCategory c
                                   in ExpenseCategory.values)
@@ -197,7 +201,9 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
                     TextField(
                       controller: _merchant,
                       decoration: const InputDecoration(
-                          labelText: 'Merchant / payee', isDense: true),
+                        labelText: 'Merchant / payee',
+                        isDense: true,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     _DateField(
@@ -210,15 +216,18 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
                       initialValue: _projectId,
                       isExpanded: true,
                       decoration: const InputDecoration(
-                          labelText: 'Project (optional)', isDense: true),
+                        labelText: 'Project (optional)',
+                        isDense: true,
+                      ),
                       items: <DropdownMenuItem<int?>>[
-                        const DropdownMenuItem<int?>(
-                          child: Text('No project'),
-                        ),
+                        const DropdownMenuItem<int?>(child: Text('No project')),
                         for (final Project p in projects)
                           DropdownMenuItem<int?>(
                             value: p.id,
-                            child: Text(p.name, overflow: TextOverflow.ellipsis),
+                            child: Text(
+                              p.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                       ],
                       onChanged: (int? v) => setState(() => _projectId = v),
@@ -229,7 +238,9 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
                       minLines: 2,
                       maxLines: 4,
                       decoration: const InputDecoration(
-                          labelText: 'Description', isDense: true),
+                        labelText: 'Description',
+                        isDense: true,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(

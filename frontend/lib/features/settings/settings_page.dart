@@ -207,9 +207,9 @@ class _AppearanceCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final SettingsController c = ref.read(settingsControllerProvider.notifier);
-    final bool isCustom = !AppColors.accentPresets
-        .any((({String name, Color color}) p) =>
-            p.color.toARGB32() == settings.accent);
+    final bool isCustom = !AppColors.accentPresets.any(
+      (({String name, Color color}) p) => p.color.toARGB32() == settings.accent,
+    );
 
     return DashboardCard(
       title: 'Appearance',
@@ -234,11 +234,8 @@ class _AppearanceCard extends ConsumerWidget {
                 color: Color(settings.accent),
                 selected: isCustom,
                 icon: Icons.tune,
-                onTap: () => showAccentPicker(
-                  context,
-                  ref,
-                  Color(settings.accent),
-                ),
+                onTap: () =>
+                    showAccentPicker(context, ref, Color(settings.accent)),
               ),
             ],
           ),
@@ -339,12 +336,12 @@ class _AppearanceCard extends ConsumerWidget {
   }
 
   Widget _label(BuildContext context, String text) => Text(
-        text,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      );
+    text,
+    style: TextStyle(
+      fontWeight: FontWeight.w600,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    ),
+  );
 }
 
 /// A tappable accent swatch used in the Appearance card.
@@ -388,8 +385,8 @@ class _AccentDot extends StatelessWidget {
         child: icon != null
             ? Icon(icon, color: Colors.white, size: 18)
             : (selected
-                ? const Icon(Icons.check, color: Colors.white, size: 18)
-                : null),
+                  ? const Icon(Icons.check, color: Colors.white, size: 18)
+                  : null),
       ),
     );
   }
@@ -405,7 +402,8 @@ class _NotificationsCard extends ConsumerWidget {
     // Email notifications are a server-side per-user preference (they drive
     // actual outbound email), so this switch reflects the account, not the
     // local-only settings.
-    final bool emailOn = ref
+    final bool emailOn =
+        ref
             .watch(authControllerProvider)
             .asData
             ?.value
@@ -421,9 +419,9 @@ class _NotificationsCard extends ConsumerWidget {
             title: const Text('Email notifications'),
             subtitle: const Text('Get your notifications by email too'),
             value: emailOn,
-            onChanged: (bool v) =>
-                ref.read(authControllerProvider.notifier)
-                    .setEmailNotifications(v),
+            onChanged: (bool v) => ref
+                .read(authControllerProvider.notifier)
+                .setEmailNotifications(v),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -498,8 +496,10 @@ class _NotificationMatrixCardState
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final NotificationPrefs? loaded =
-        ref.watch(notificationPrefsProvider).asData?.value;
+    final NotificationPrefs? loaded = ref
+        .watch(notificationPrefsProvider)
+        .asData
+        ?.value;
     if (loaded != null && !_seeded) {
       _prefs = loaded;
       _seeded = true;
@@ -565,16 +565,17 @@ class _NotificationMatrixCardState
   }
 
   Widget _colHeader(String text, ColorScheme scheme) => SizedBox(
-        width: 64,
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurfaceVariant),
-        ),
-      );
+    width: 64,
+    child: Text(
+      text,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: scheme.onSurfaceVariant,
+      ),
+    ),
+  );
 }
 
 /// A read-only iCalendar feed of your due tasks, to subscribe to in Google,
@@ -650,7 +651,9 @@ class _CalendarFeedCard extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: 12, color: scheme.onSurfaceVariant),
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -659,7 +662,8 @@ class _CalendarFeedCard extends ConsumerWidget {
                     icon: const Icon(Icons.copy, size: 16),
                     onPressed: () async {
                       await Clipboard.setData(
-                          ClipboardData(text: _feedUrl(token)));
+                        ClipboardData(text: _feedUrl(token)),
+                      );
                       if (context.mounted) {
                         context.showSuccess('Feed URL copied');
                       }
@@ -679,8 +683,7 @@ class _CalendarFeedCard extends ConsumerWidget {
                 const Spacer(),
                 TextButton(
                   onPressed: () => _revoke(context, ref),
-                  child: Text('Disable',
-                      style: TextStyle(color: scheme.error)),
+                  child: Text('Disable', style: TextStyle(color: scheme.error)),
                 ),
               ],
             ),
@@ -771,7 +774,8 @@ class _SecurityCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bool twoFactor = ref
+    final bool twoFactor =
+        ref
             .watch(authControllerProvider)
             .asData
             ?.value
@@ -792,9 +796,7 @@ class _SecurityCard extends ConsumerWidget {
             contentPadding: EdgeInsets.zero,
             secondary: const Icon(Icons.shield_outlined),
             title: const Text('Two-factor authentication'),
-            subtitle: const Text(
-              'Email a verification code at each sign-in',
-            ),
+            subtitle: const Text('Email a verification code at each sign-in'),
             value: twoFactor,
             onChanged: (bool v) => _setTwoFactor(context, ref, v),
           ),
@@ -876,8 +878,9 @@ class _DataExportCardState extends ConsumerState<_DataExportCard> {
   Future<void> _export() async {
     setState(() => _busy = true);
     try {
-      final Map<String, dynamic> data =
-          await ref.read(accountDataRepositoryProvider).export();
+      final Map<String, dynamic> data = await ref
+          .read(accountDataRepositoryProvider)
+          .export();
       downloadTextFile(
         'revah-my-data.json',
         const JsonEncoder.withIndent('  ').convert(data),
@@ -984,14 +987,17 @@ class _InstallAppCardState extends State<_InstallAppCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  const Text('Install the app',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 15)),
+                  const Text(
+                    'Install the app',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  ),
                   Text(
                     'Add Revah to your desktop or home screen for a '
                     'full-screen, app-like experience.',
                     style: TextStyle(
-                        fontSize: 12.5, color: scheme.onSurfaceVariant),
+                      fontSize: 12.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),

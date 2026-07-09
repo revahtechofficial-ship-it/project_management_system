@@ -46,10 +46,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _error = null;
     });
     try {
-      await ref.read(authControllerProvider.notifier).login(
-            email: _email.text.trim(),
-            password: _password.text,
-          );
+      await ref
+          .read(authControllerProvider.notifier)
+          .login(email: _email.text.trim(), password: _password.text);
       // The router redirect navigates to the app once authenticated.
     } on TwoFactorRequiredException catch (e) {
       setState(() => _twoFactorEmail = e.email);
@@ -72,10 +71,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _error = null;
     });
     try {
-      await ref.read(authControllerProvider.notifier).verifyLoginOtp(
-            email: _twoFactorEmail!,
-            code: _code.text.trim(),
-          );
+      await ref
+          .read(authControllerProvider.notifier)
+          .verifyLoginOtp(email: _twoFactorEmail!, code: _code.text.trim());
     } catch (e) {
       setState(() => _error = '$e');
     } finally {
@@ -87,10 +85,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   Future<void> _resendCode() async {
     try {
-      await ref.read(authServiceProvider).resendOtp(
-            email: _twoFactorEmail!,
-            purpose: 'login',
-          );
+      await ref
+          .read(authServiceProvider)
+          .resendOtp(email: _twoFactorEmail!, purpose: 'login');
       if (mounted) {
         context.showSuccess('A new code is on its way.');
       }

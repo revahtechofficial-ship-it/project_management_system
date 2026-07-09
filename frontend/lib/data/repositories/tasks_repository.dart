@@ -199,8 +199,9 @@ class TasksRepository {
 
   /// The ids of tasks the current user follows.
   Future<Set<int>> watching() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/tasks/watching');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/tasks/watching',
+    );
     return <int>{for (final dynamic e in res.data ?? <dynamic>[]) e as int};
   }
 

@@ -16,24 +16,23 @@ class ChecklistItem {
   });
 
   factory ChecklistItem.fromJson(Map<String, dynamic> json) => ChecklistItem(
-        id: json['id'] as int,
-        taskId: json['task_id'] as int,
-        content: json['content'] as String? ?? '',
-        done: json['done'] as bool? ?? false,
-        position: json['position'] as int? ?? 0,
-      );
+    id: json['id'] as int,
+    taskId: json['task_id'] as int,
+    content: json['content'] as String? ?? '',
+    done: json['done'] as bool? ?? false,
+    position: json['position'] as int? ?? 0,
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'task_id': taskId,
-        'content': content,
-        'done': done,
-        'position': position,
-      };
+    'id': id,
+    'task_id': taskId,
+    'content': content,
+    'done': done,
+    'position': position,
+  };
 
   @override
-  String toString() =>
-      'ChecklistItem(id: $id, content: $content, done: $done)';
+  String toString() => 'ChecklistItem(id: $id, content: $content, done: $done)';
 
   @override
   bool operator ==(Object other) =>

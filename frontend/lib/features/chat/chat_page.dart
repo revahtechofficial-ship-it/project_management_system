@@ -1408,9 +1408,11 @@ class _ThreadPane extends StatelessWidget {
                     itemBuilder: (BuildContext context, int i) {
                       final ChatMessage m = state._messages[i];
                       final bool isMine = m.senderId == state._myId;
-                      final ChatMessage? prev =
-                          i > 0 ? state._messages[i - 1] : null;
-                      final bool firstOfGroup = prev == null ||
+                      final ChatMessage? prev = i > 0
+                          ? state._messages[i - 1]
+                          : null;
+                      final bool firstOfGroup =
+                          prev == null ||
                           prev.senderId != m.senderId ||
                           m.createdAt.difference(prev.createdAt).inMinutes >= 5;
                       final bool seen =
@@ -1874,7 +1876,9 @@ class _MessageBubble extends StatelessWidget {
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: <Widget>[
-                if (isGroup && !isMine && firstOfGroup &&
+                if (isGroup &&
+                    !isMine &&
+                    firstOfGroup &&
                     message.senderName != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2),

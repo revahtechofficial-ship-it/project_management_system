@@ -57,7 +57,8 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                   return EmptyState(
                     icon: Icons.handshake_outlined,
                     title: 'No clients yet',
-                    message: 'Add a client, assign their projects, and share a '
+                    message:
+                        'Add a client, assign their projects, and share a '
                         'read-only portal link so they can track progress and '
                         'invoices.',
                     actionLabel: 'Add a client',
@@ -75,8 +76,7 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                           width: 360,
                           child: _ClientCard(
                             client: c,
-                            onTap: () =>
-                                showClientDetailDialog(context, c.id),
+                            onTap: () => showClientDetailDialog(context, c.id),
                           ),
                         ),
                     ],
@@ -112,7 +112,9 @@ class _ClientCard extends StatelessWidget {
               child: Text(
                 c.displayName.characters.first.toUpperCase(),
                 style: TextStyle(
-                    fontWeight: FontWeight.w800, color: scheme.primary),
+                  fontWeight: FontWeight.w800,
+                  color: scheme.primary,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -126,7 +128,9 @@ class _ClientCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 15),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
                   ),
                   Text(
                     <String>[
@@ -137,8 +141,10 @@ class _ClientCard extends StatelessWidget {
                     ].join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style:
-                        TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -188,7 +194,9 @@ class _CreateClientDialogState extends ConsumerState<_CreateClientDialog> {
     }
     setState(() => _busy = true);
     try {
-      final Client c = await ref.read(clientsRepositoryProvider).create(
+      final Client c = await ref
+          .read(clientsRepositoryProvider)
+          .create(
             name: _name.text.trim(),
             company: _company.text.trim(),
             email: _email.text.trim(),
@@ -218,20 +226,26 @@ class _CreateClientDialogState extends ConsumerState<_CreateClientDialog> {
               controller: _company,
               autofocus: true,
               decoration: const InputDecoration(
-                  labelText: 'Company', isDense: true),
+                labelText: 'Company',
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _name,
               decoration: const InputDecoration(
-                  labelText: 'Contact name', isDense: true),
+                labelText: 'Contact name',
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
-              decoration:
-                  const InputDecoration(labelText: 'Email', isDense: true),
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                isDense: true,
+              ),
             ),
           ],
         ),

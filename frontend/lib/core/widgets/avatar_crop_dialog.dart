@@ -34,11 +34,13 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
     try {
       // Let the final transform settle before capturing.
       await Future<void>.delayed(const Duration(milliseconds: 50));
-      final RenderRepaintBoundary boundary = _boundaryKey.currentContext!
-          .findRenderObject()! as RenderRepaintBoundary;
+      final RenderRepaintBoundary boundary =
+          _boundaryKey.currentContext!.findRenderObject()!
+              as RenderRepaintBoundary;
       final ui.Image image = await boundary.toImage(pixelRatio: 3);
-      final ByteData? data =
-          await image.toByteData(format: ui.ImageByteFormat.png);
+      final ByteData? data = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
       if (!mounted) {
         return;
       }
@@ -59,8 +61,10 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text('Drag to reposition · scroll or pinch to zoom',
-              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+          Text(
+            'Drag to reposition · scroll or pinch to zoom',
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
@@ -101,8 +105,9 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
       ),
       actions: <Widget>[
         TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel')),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: _saving ? null : _save,
           child: Text(_saving ? 'Saving…' : 'Use photo'),
@@ -126,7 +131,10 @@ class _CircleGuidePainter extends CustomPainter {
       ..addRect(rect)
       ..addOval(Rect.fromCircle(center: center, radius: radius))
       ..fillType = PathFillType.evenOdd;
-    canvas.drawPath(overlay, Paint()..color = Colors.black.withValues(alpha: 0.4));
+    canvas.drawPath(
+      overlay,
+      Paint()..color = Colors.black.withValues(alpha: 0.4),
+    );
 
     // The crop ring.
     canvas.drawCircle(

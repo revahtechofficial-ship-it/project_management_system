@@ -56,9 +56,7 @@ class _LandingNav extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: scheme.surface.withValues(alpha: dark ? 0.40 : 0.55),
-            border: Border(
-              bottom: BorderSide(color: scheme.outlineVariant),
-            ),
+            border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
           ),
           child: SafeArea(
             bottom: false,
@@ -123,8 +121,10 @@ class _Footer extends StatelessWidget {
             children: <Widget>[
               const _Brand(height: 30),
               const SizedBox(height: 10),
-              Text('Built in-house for the Revah Tech team.',
-                  style: TextStyle(color: scheme.onSurfaceVariant)),
+              Text(
+                'Built in-house for the Revah Tech team.',
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
               const SizedBox(height: 16),
               Wrap(
                 spacing: 8,
@@ -141,9 +141,13 @@ class _Footer extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              Text('© 2026 Revah Tech',
-                  style: TextStyle(
-                      fontSize: 12.5, color: scheme.onSurfaceVariant)),
+              Text(
+                '© 2026 Revah Tech',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
             ],
           ),
         ),

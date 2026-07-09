@@ -47,32 +47,32 @@ class Budget {
   bool get overBudget => amountCents > 0 && actualCents > amountCents;
 
   factory Budget.fromJson(Map<String, dynamic> json) => Budget(
-        id: json['id'] as int,
-        projectId: json['project_id'] as int,
-        projectName: json['project_name'] as String? ?? '',
-        amountCents: json['amount_cents'] as int? ?? 0,
-        hourlyRateCents: json['hourly_rate_cents'] as int? ?? 0,
-        notes: json['notes'] as String? ?? '',
-        expenseCents: json['expense_cents'] as int? ?? 0,
-        billableMinutes: json['billable_minutes'] as int? ?? 0,
-        laborCents: json['labor_cents'] as int? ?? 0,
-        actualCents: json['actual_cents'] as int? ?? 0,
-        updatedAt: DateTime.parse(json['updated_at'] as String),
-      );
+    id: json['id'] as int,
+    projectId: json['project_id'] as int,
+    projectName: json['project_name'] as String? ?? '',
+    amountCents: json['amount_cents'] as int? ?? 0,
+    hourlyRateCents: json['hourly_rate_cents'] as int? ?? 0,
+    notes: json['notes'] as String? ?? '',
+    expenseCents: json['expense_cents'] as int? ?? 0,
+    billableMinutes: json['billable_minutes'] as int? ?? 0,
+    laborCents: json['labor_cents'] as int? ?? 0,
+    actualCents: json['actual_cents'] as int? ?? 0,
+    updatedAt: DateTime.parse(json['updated_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'project_id': projectId,
-        'project_name': projectName,
-        'amount_cents': amountCents,
-        'hourly_rate_cents': hourlyRateCents,
-        'notes': notes,
-        'expense_cents': expenseCents,
-        'billable_minutes': billableMinutes,
-        'labor_cents': laborCents,
-        'actual_cents': actualCents,
-        'updated_at': updatedAt.toIso8601String(),
-      };
+    'id': id,
+    'project_id': projectId,
+    'project_name': projectName,
+    'amount_cents': amountCents,
+    'hourly_rate_cents': hourlyRateCents,
+    'notes': notes,
+    'expense_cents': expenseCents,
+    'billable_minutes': billableMinutes,
+    'labor_cents': laborCents,
+    'actual_cents': actualCents,
+    'updated_at': updatedAt.toIso8601String(),
+  };
 
   @override
   String toString() =>
@@ -96,16 +96,16 @@ class Budget {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        projectId,
-        projectName,
-        amountCents,
-        hourlyRateCents,
-        notes,
-        expenseCents,
-        billableMinutes,
-        laborCents,
-        actualCents,
-        updatedAt,
-      );
+    id,
+    projectId,
+    projectName,
+    amountCents,
+    hourlyRateCents,
+    notes,
+    expenseCents,
+    billableMinutes,
+    laborCents,
+    actualCents,
+    updatedAt,
+  );
 }

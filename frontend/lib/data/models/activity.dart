@@ -20,24 +20,24 @@ class Activity {
   });
 
   factory Activity.fromJson(Map<String, dynamic> json) => Activity(
-        id: json['id'] as int,
-        taskId: json['task_id'] as int,
-        actorId: json['actor_id'] as int?,
-        actorName: json['actor_name'] as String?,
-        action: json['action'] as String? ?? '',
-        detail: json['detail'] as String? ?? '',
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    taskId: json['task_id'] as int,
+    actorId: json['actor_id'] as int?,
+    actorName: json['actor_name'] as String?,
+    action: json['action'] as String? ?? '',
+    detail: json['detail'] as String? ?? '',
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'task_id': taskId,
-        'actor_id': actorId,
-        'actor_name': actorName,
-        'action': action,
-        'detail': detail,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'task_id': taskId,
+    'actor_id': actorId,
+    'actor_name': actorName,
+    'action': action,
+    'detail': detail,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'Activity(id: $id, action: $action)';
@@ -55,6 +55,6 @@ class Activity {
           other.createdAt == createdAt;
 
   @override
-  int get hashCode => Object.hash(
-      id, taskId, actorId, actorName, action, detail, createdAt);
+  int get hashCode =>
+      Object.hash(id, taskId, actorId, actorName, action, detail, createdAt);
 }

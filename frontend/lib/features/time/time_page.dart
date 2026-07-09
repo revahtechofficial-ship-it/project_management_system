@@ -356,8 +356,9 @@ class _EstimatesView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final List<Task> tasks =
         ref.watch(tasksProvider).asData?.value ?? const <Task>[];
-    final AsyncValue<List<TimeEntry>> entriesAsync =
-        ref.watch(myTimeEntriesProvider);
+    final AsyncValue<List<TimeEntry>> entriesAsync = ref.watch(
+      myTimeEntriesProvider,
+    );
 
     return entriesAsync.when(
       loading: () => const LoadingView(),
@@ -375,37 +376,49 @@ class _EstimatesView extends ConsumerWidget {
         }
         final List<({Task task, int estimate, int actual})> rows =
             <({Task task, int estimate, int actual})>[
-          for (final Task t in tasks)
-            if (t.estimateMinutes > 0 || (actualByTask[t.id] ?? 0) > 0)
+              for (final Task t in tasks)
+                if (t.estimateMinutes > 0 || (actualByTask[t.id] ?? 0) > 0)
+                  (
+                    task: t,
+                    estimate: t.estimateMinutes,
+                    actual: actualByTask[t.id] ?? 0,
+                  ),
+            ]..sort(
               (
-                task: t,
-                estimate: t.estimateMinutes,
-                actual: actualByTask[t.id] ?? 0,
-              ),
-        ]..sort((({Task task, int estimate, int actual}) a,
-                ({Task task, int estimate, int actual}) b) =>
-            (b.actual - b.estimate).compareTo(a.actual - a.estimate));
+                ({Task task, int estimate, int actual}) a,
+                ({Task task, int estimate, int actual}) b,
+              ) => (b.actual - b.estimate).compareTo(a.actual - a.estimate),
+            );
 
         if (rows.isEmpty) {
           return const EmptyState(
             icon: Icons.balance_outlined,
             title: 'Nothing to compare yet',
-            message: 'Add an estimate to a task and log time against it to see '
+            message:
+                'Add an estimate to a task and log time against it to see '
                 'estimate vs actual here.',
           );
         }
 
-        final int totalEst =
-            rows.fold<int>(0, (int s, ({Task task, int estimate, int actual}) r) => s + r.estimate);
-        final int totalAct =
-            rows.fold<int>(0, (int s, ({Task task, int estimate, int actual}) r) => s + r.actual);
+        final int totalEst = rows.fold<int>(
+          0,
+          (int s, ({Task task, int estimate, int actual}) r) => s + r.estimate,
+        );
+        final int totalAct = rows.fold<int>(
+          0,
+          (int s, ({Task task, int estimate, int actual}) r) => s + r.actual,
+        );
 
         return ListView(
           children: <Widget>[
             _EstimateSummary(estimate: totalEst, actual: totalAct),
             const SizedBox(height: 16),
             for (final ({Task task, int estimate, int actual}) r in rows)
-              _EstimateRow(task: r.task, estimate: r.estimate, actual: r.actual),
+              _EstimateRow(
+                task: r.task,
+                estimate: r.estimate,
+                actual: r.actual,
+              ),
           ],
         );
       },
@@ -441,21 +454,21 @@ class _EstimateSummary extends StatelessWidget {
   }
 
   Widget _summaryStat(String label, String value, Color? color) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: color,
-              fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
-            ),
-          ),
-          Text(label, style: const TextStyle(fontSize: 12)),
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisSize: MainAxisSize.min,
+    children: <Widget>[
+      Text(
+        value,
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
+          color: color,
+          fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+        ),
+      ),
+      Text(label, style: const TextStyle(fontSize: 12)),
+    ],
+  );
 }
 
 class _EstimateRow extends StatelessWidget {
@@ -474,8 +487,9 @@ class _EstimateRow extends StatelessWidget {
     final bool over = estimate > 0 && actual > estimate;
     final Color color = over ? AppColors.rose : AppColors.green;
     // Fill relative to the estimate; when there's no estimate, show it full.
-    final double ratio =
-        estimate <= 0 ? 1 : (actual / estimate).clamp(0.0, 1.0);
+    final double ratio = estimate <= 0
+        ? 1
+        : (actual / estimate).clamp(0.0, 1.0);
     final int variance = actual - estimate;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -497,12 +511,13 @@ class _EstimateRow extends StatelessWidget {
                   estimate <= 0
                       ? '${TimeEntry.formatMinutes(actual)} (no estimate)'
                       : '${TimeEntry.formatMinutes(actual)} / '
-                          '${TimeEntry.formatMinutes(estimate)}',
+                            '${TimeEntry.formatMinutes(estimate)}',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     color: scheme.onSurfaceVariant,
-                    fontFeatures:
-                        const <FontFeature>[FontFeature.tabularFigures()],
+                    fontFeatures: const <FontFeature>[
+                      FontFeature.tabularFigures(),
+                    ],
                   ),
                 ),
               ],
@@ -513,8 +528,9 @@ class _EstimateRow extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: ratio,
                 minHeight: 6,
-                backgroundColor:
-                    scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                backgroundColor: scheme.surfaceContainerHighest.withValues(
+                  alpha: 0.6,
+                ),
                 color: color,
               ),
             ),
@@ -524,8 +540,8 @@ class _EstimateRow extends StatelessWidget {
                 over
                     ? '${TimeEntry.formatMinutes(variance)} over estimate'
                     : variance == 0
-                        ? 'On estimate'
-                        : '${TimeEntry.formatMinutes(-variance)} remaining',
+                    ? 'On estimate'
+                    : '${TimeEntry.formatMinutes(-variance)} remaining',
                 style: TextStyle(fontSize: 12, color: color),
               ),
             ],
@@ -547,7 +563,10 @@ class _WeekSubmitBar extends ConsumerWidget {
   }
 
   Future<void> _submit(
-      BuildContext context, WidgetRef ref, DateTime monday) async {
+    BuildContext context,
+    WidgetRef ref,
+    DateTime monday,
+  ) async {
     try {
       await ref.read(timesheetsRepositoryProvider).submit(monday);
       ref.invalidate(myTimesheetsProvider);
@@ -569,15 +588,17 @@ class _WeekSubmitBar extends ConsumerWidget {
     final List<TimeEntry> entries =
         ref.watch(myTimeEntriesProvider).asData?.value ?? const <TimeEntry>[];
     final int weekMinutes = entries
-        .where((TimeEntry e) =>
-            !e.running &&
-            !e.startedAt.toLocal().isBefore(monday) &&
-            e.startedAt.toLocal().isBefore(nextMonday))
+        .where(
+          (TimeEntry e) =>
+              !e.running &&
+              !e.startedAt.toLocal().isBefore(monday) &&
+              e.startedAt.toLocal().isBefore(nextMonday),
+        )
         .fold<int>(0, (int s, TimeEntry e) => s + e.minutes);
 
     final List<TimesheetSubmission> mine =
         ref.watch(myTimesheetsProvider).asData?.value ??
-            const <TimesheetSubmission>[];
+        const <TimesheetSubmission>[];
     TimesheetSubmission? current;
     for (final TimesheetSubmission t in mine) {
       if (_mondayOf(t.weekStart.toLocal()) == monday) {
@@ -596,13 +617,18 @@ class _WeekSubmitBar extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                const Text('This week',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
+                const Text(
+                  'This week',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
                 Text(
                   '${shortDate(monday)} – '
                   '${shortDate(nextMonday.subtract(const Duration(days: 1)))}'
                   '  ·  ${TimeEntry.formatMinutes(weekMinutes)} logged',
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -657,8 +683,9 @@ class _ApprovalsView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<TimesheetSubmission>> async =
-        ref.watch(pendingTimesheetsProvider);
+    final AsyncValue<List<TimesheetSubmission>> async = ref.watch(
+      pendingTimesheetsProvider,
+    );
     return async.when(
       loading: () => const LoadingView(),
       error: (Object e, _) => ErrorView(
@@ -688,14 +715,19 @@ class _ApprovalCard extends ConsumerWidget {
   final TimesheetSubmission sub;
 
   Future<void> _decide(
-      BuildContext context, WidgetRef ref, bool approved) async {
+    BuildContext context,
+    WidgetRef ref,
+    bool approved,
+  ) async {
     try {
       await ref
           .read(timesheetsRepositoryProvider)
           .decide(sub.id, approved: approved);
       ref.invalidate(pendingTimesheetsProvider);
       if (context.mounted) {
-        context.showSuccess(approved ? 'Timesheet approved' : 'Timesheet rejected');
+        context.showSuccess(
+          approved ? 'Timesheet approved' : 'Timesheet rejected',
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -726,14 +758,18 @@ class _ApprovalCard extends ConsumerWidget {
                   Text(
                     'Week of ${shortDate(sub.weekStart.toLocal())}'
                     '  ·  ${TimeEntry.formatMinutes(sub.minutes)}',
-                    style:
-                        TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                   if (sub.note.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text(sub.note,
-                          style: TextStyle(color: scheme.onSurfaceVariant)),
+                      child: Text(
+                        sub.note,
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
                     ),
                 ],
               ),

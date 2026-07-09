@@ -77,8 +77,7 @@ class _AssetFormDialogState extends ConsumerState<_AssetFormDialog> {
 
   Future<void> _pickDate(bool purchase) async {
     final DateTime now = DateTime.now();
-    final DateTime initial =
-        (purchase ? _purchasedOn : _expiresOn) ?? now;
+    final DateTime initial = (purchase ? _purchasedOn : _expiresOn) ?? now;
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -155,7 +154,9 @@ class _AssetFormDialogState extends ConsumerState<_AssetFormDialog> {
                   Text(
                     editing ? 'Edit asset' : 'New asset',
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
@@ -171,7 +172,9 @@ class _AssetFormDialogState extends ConsumerState<_AssetFormDialog> {
                       controller: _name,
                       autofocus: !editing,
                       decoration: const InputDecoration(
-                          labelText: 'Name', isDense: true),
+                        labelText: 'Name',
+                        isDense: true,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -181,7 +184,9 @@ class _AssetFormDialogState extends ConsumerState<_AssetFormDialog> {
                             initialValue: _kind,
                             isExpanded: true,
                             decoration: const InputDecoration(
-                                labelText: 'Type', isDense: true),
+                              labelText: 'Type',
+                              isDense: true,
+                            ),
                             items: <DropdownMenuItem<AssetKind>>[
                               for (final AssetKind k in AssetKind.values)
                                 DropdownMenuItem<AssetKind>(
@@ -199,7 +204,9 @@ class _AssetFormDialogState extends ConsumerState<_AssetFormDialog> {
                             initialValue: _status,
                             isExpanded: true,
                             decoration: const InputDecoration(
-                                labelText: 'Status', isDense: true),
+                              labelText: 'Status',
+                              isDense: true,
+                            ),
                             items: <DropdownMenuItem<AssetStatus>>[
                               for (final AssetStatus s in AssetStatus.values)
                                 DropdownMenuItem<AssetStatus>(
@@ -217,29 +224,35 @@ class _AssetFormDialogState extends ConsumerState<_AssetFormDialog> {
                     TextField(
                       controller: _identifier,
                       decoration: InputDecoration(
-                          labelText: _kind.identifierLabel, isDense: true),
+                        labelText: _kind.identifierLabel,
+                        isDense: true,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _vendor,
                       decoration: const InputDecoration(
-                          labelText: 'Vendor', isDense: true),
+                        labelText: 'Vendor',
+                        isDense: true,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<int?>(
                       initialValue: _assigneeId,
                       isExpanded: true,
                       decoration: const InputDecoration(
-                          labelText: 'Assigned to', isDense: true),
+                        labelText: 'Assigned to',
+                        isDense: true,
+                      ),
                       items: <DropdownMenuItem<int?>>[
-                        const DropdownMenuItem<int?>(
-                          child: Text('Unassigned'),
-                        ),
+                        const DropdownMenuItem<int?>(child: Text('Unassigned')),
                         for (final TeamMember m in members)
                           DropdownMenuItem<int?>(
                             value: m.id,
-                            child: Text(m.name.isEmpty ? m.email : m.name,
-                                overflow: TextOverflow.ellipsis),
+                            child: Text(
+                              m.name.isEmpty ? m.email : m.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                       ],
                       onChanged: (int? v) => setState(() => _assigneeId = v),
@@ -248,10 +261,10 @@ class _AssetFormDialogState extends ConsumerState<_AssetFormDialog> {
                     TextField(
                       controller: _cost,
                       keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
+                        decimal: true,
+                      ),
                       inputFormatters: <TextInputFormatter>[
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'[0-9.]')),
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                       ],
                       decoration: const InputDecoration(
                         labelText: 'Cost',
@@ -279,7 +292,9 @@ class _AssetFormDialogState extends ConsumerState<_AssetFormDialog> {
                       minLines: 2,
                       maxLines: 4,
                       decoration: const InputDecoration(
-                          labelText: 'Notes', isDense: true),
+                        labelText: 'Notes',
+                        isDense: true,
+                      ),
                     ),
                   ],
                 ),

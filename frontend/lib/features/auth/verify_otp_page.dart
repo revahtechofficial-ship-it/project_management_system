@@ -93,7 +93,10 @@ class _VerifyOtpPageState extends ConsumerState<VerifyOtpPage> {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: <Widget>[
                 const Text("Didn't get it?"),
-                TextButton(onPressed: _resend, child: const Text('Resend code')),
+                TextButton(
+                  onPressed: _resend,
+                  child: const Text('Resend code'),
+                ),
               ],
             ),
             Center(

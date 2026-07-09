@@ -36,16 +36,22 @@ class _TeamPageState extends ConsumerState<TeamPage> {
 
   @override
   Widget build(BuildContext context) {
-    final AsyncValue<List<TeamMember>> teamAsync =
-        ref.watch(teamMembersProvider);
+    final AsyncValue<List<TeamMember>> teamAsync = ref.watch(
+      teamMembersProvider,
+    );
     final List<TeamMember> members =
         teamAsync.asData?.value ?? const <TeamMember>[];
-    final int open =
-        members.fold<int>(0, (int s, TeamMember m) => s + m.openTasks);
-    final int done =
-        members.fold<int>(0, (int s, TeamMember m) => s + m.completedTasks);
-    final int rate =
-        (open + done) == 0 ? 0 : ((done / (open + done)) * 100).round();
+    final int open = members.fold<int>(
+      0,
+      (int s, TeamMember m) => s + m.openTasks,
+    );
+    final int done = members.fold<int>(
+      0,
+      (int s, TeamMember m) => s + m.completedTasks,
+    );
+    final int rate = (open + done) == 0
+        ? 0
+        : ((done / (open + done)) * 100).round();
 
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -153,7 +159,9 @@ class _TeamPageState extends ConsumerState<TeamPage> {
                 children: <Widget>[
                   for (final TeamMember member in members)
                     SizedBox(
-                        width: cardW, child: _MemberCard(member: member)),
+                      width: cardW,
+                      child: _MemberCard(member: member),
+                    ),
                 ],
               );
             },
@@ -177,7 +185,10 @@ class _MemberCard extends ConsumerWidget {
   final TeamMember member;
 
   Future<void> _setRole(
-      BuildContext context, WidgetRef ref, MemberRole role) async {
+    BuildContext context,
+    WidgetRef ref,
+    MemberRole role,
+  ) async {
     try {
       await ref.read(teamRepositoryProvider).setRole(member.id, role);
       ref.invalidate(teamMembersProvider);
@@ -193,7 +204,7 @@ class _MemberCard extends ConsumerWidget {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final bool canManage =
         (ref.watch(authControllerProvider).asData?.value.isAdmin ?? false) &&
-            member.role != MemberRole.owner;
+        member.role != MemberRole.owner;
 
     return DashboardCard(
       child: Column(
@@ -202,42 +213,55 @@ class _MemberCard extends ConsumerWidget {
           Row(
             children: <Widget>[
               UserAvatar(
-                  name: member.name, radius: 24, imageUrl: member.avatarUrl),
+                name: member.name,
+                radius: 24,
+                imageUrl: member.avatarUrl,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(member.name.isEmpty ? member.email : member.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w700)),
+                    Text(
+                      member.name.isEmpty ? member.email : member.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(member.email,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: scheme.onSurfaceVariant)),
+                    Text(
+                      member.email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
               ),
               if (canManage)
                 PopupMenuButton<MemberRole>(
                   tooltip: 'Change role',
-                  icon: Icon(Icons.more_vert,
-                      size: 20, color: scheme.onSurfaceVariant),
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 20,
+                    color: scheme.onSurfaceVariant,
+                  ),
                   onSelected: (MemberRole r) => _setRole(context, ref, r),
                   itemBuilder: (BuildContext context) =>
                       <PopupMenuEntry<MemberRole>>[
-                    for (final MemberRole r in MemberRole.assignable)
-                      if (r != member.role)
-                        PopupMenuItem<MemberRole>(
-                          value: r,
-                          child: Text('Make ${r.label.toLowerCase()}'),
-                        ),
-                  ],
+                        for (final MemberRole r in MemberRole.assignable)
+                          if (r != member.role)
+                            PopupMenuItem<MemberRole>(
+                              value: r,
+                              child: Text('Make ${r.label.toLowerCase()}'),
+                            ),
+                      ],
                 ),
             ],
           ),
@@ -246,9 +270,10 @@ class _MemberCard extends ConsumerWidget {
             children: <Widget>[
               StatusPill(label: member.role.label, color: member.role.color),
               const Spacer(),
-              Text('Joined ${shortDate(member.createdAt)}',
-                  style: TextStyle(
-                      fontSize: 12, color: scheme.onSurfaceVariant)),
+              Text(
+                'Joined ${shortDate(member.createdAt)}',
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -270,9 +295,10 @@ class _MemberCard extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text('${(member.progress * 100).round()}% completed',
-              style: TextStyle(
-                  fontSize: 11, color: scheme.onSurfaceVariant)),
+          Text(
+            '${(member.progress * 100).round()}% completed',
+            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -289,8 +315,9 @@ class _OrgChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final Map<String, List<TeamMember>> byDept = <String, List<TeamMember>>{};
     for (final TeamMember m in members) {
-      final String dept =
-          m.department.trim().isEmpty ? 'Unassigned' : m.department.trim();
+      final String dept = m.department.trim().isEmpty
+          ? 'Unassigned'
+          : m.department.trim();
       byDept.putIfAbsent(dept, () => <TeamMember>[]).add(m);
     }
     final List<String> depts = byDept.keys.toList()
@@ -315,8 +342,10 @@ class _OrgChart extends StatelessWidget {
                 child: _OrgDeptCard(
                   department: dept,
                   members: byDept[dept]!
-                    ..sort((TeamMember a, TeamMember b) =>
-                        a.role.index.compareTo(b.role.index)),
+                    ..sort(
+                      (TeamMember a, TeamMember b) =>
+                          a.role.index.compareTo(b.role.index),
+                    ),
                 ),
               ),
           ],
@@ -348,13 +377,18 @@ class _OrgDeptCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w700),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-              Text('${members.length}',
-                  style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600)),
+              Text(
+                '${members.length}',
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const Divider(height: 20),
@@ -396,16 +430,22 @@ class _OrgMemberRow extends StatelessWidget {
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
           ),
-          if (member.role == MemberRole.owner || member.role == MemberRole.admin)
+          if (member.role == MemberRole.owner ||
+              member.role == MemberRole.admin)
             Padding(
               padding: const EdgeInsets.only(left: 8),
               child: StatusPill(
-                  label: member.role.label, color: member.role.color),
+                label: member.role.label,
+                color: member.role.color,
+              ),
             ),
         ],
       ),
@@ -421,26 +461,26 @@ class _SkillsView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<Skill>> allAsync = ref.watch(allSkillsProvider);
-    final int? myId =
-        ref.watch(authControllerProvider).asData?.value.user?.id;
+    final int? myId = ref.watch(authControllerProvider).asData?.value.user?.id;
     return allAsync.when(
       loading: () => const LoadingView(),
-      error: (Object e, _) => ErrorView(
-        error: e,
-        onRetry: () => ref.invalidate(allSkillsProvider),
-      ),
+      error: (Object e, _) =>
+          ErrorView(error: e, onRetry: () => ref.invalidate(allSkillsProvider)),
       data: (List<Skill> skills) {
         final Map<int, List<Skill>> byUser = <int, List<Skill>>{};
         for (final Skill s in skills) {
           byUser.putIfAbsent(s.userId, () => <Skill>[]).add(s);
         }
-        final List<MapEntry<int, List<Skill>>> others = byUser.entries
-            .where((MapEntry<int, List<Skill>> e) => e.key != myId)
-            .toList()
-          ..sort((MapEntry<int, List<Skill>> a, MapEntry<int, List<Skill>> b) =>
-              a.value.first.userName
-                  .toLowerCase()
-                  .compareTo(b.value.first.userName.toLowerCase()));
+        final List<MapEntry<int, List<Skill>>> others =
+            byUser.entries
+                .where((MapEntry<int, List<Skill>> e) => e.key != myId)
+                .toList()
+              ..sort(
+                (MapEntry<int, List<Skill>> a, MapEntry<int, List<Skill>> b) =>
+                    a.value.first.userName.toLowerCase().compareTo(
+                      b.value.first.userName.toLowerCase(),
+                    ),
+              );
 
         return ListView(
           children: <Widget>[
@@ -464,8 +504,9 @@ class _SkillsView extends ConsumerWidget {
             else
               LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints c) {
-                  final int cols =
-                      c.maxWidth >= 1080 ? 3 : (c.maxWidth >= 680 ? 2 : 1);
+                  final int cols = c.maxWidth >= 1080
+                      ? 3
+                      : (c.maxWidth >= 680 ? 2 : 1);
                   const double gap = 16;
                   final double w = (c.maxWidth - gap * (cols - 1)) / cols;
                   return Wrap(
@@ -552,7 +593,8 @@ class _MySkillsCardState extends ConsumerState<_MySkillsCard> {
             Text(
               'Add the skills you can help with — teammates can find you by them.',
               style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             )
           else
             Wrap(
@@ -649,11 +691,7 @@ class _MemberSkillsCard extends StatelessWidget {
 }
 
 class _SkillChip extends StatelessWidget {
-  const _SkillChip({
-    required this.skill,
-    required this.level,
-    this.onRemove,
-  });
+  const _SkillChip({required this.skill, required this.level, this.onRemove});
   final String skill;
   final int level;
   final VoidCallback? onRemove;
@@ -671,9 +709,10 @@ class _SkillChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text(skill,
-              style: const TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(
+            skill,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(width: 8),
           _LevelDots(level: level),
           if (onRemove != null)
@@ -682,8 +721,11 @@ class _SkillChip extends StatelessWidget {
               onTap: onRemove,
               child: Padding(
                 padding: const EdgeInsets.all(2),
-                child: Icon(Icons.close,
-                    size: 14, color: scheme.onSurfaceVariant),
+                child: Icon(
+                  Icons.close,
+                  size: 14,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ),
         ],
@@ -710,9 +752,7 @@ class _LevelDots extends StatelessWidget {
               height: 6,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: i <= level
-                    ? scheme.primary
-                    : scheme.outlineVariant,
+                color: i <= level ? scheme.primary : scheme.outlineVariant,
               ),
             ),
           ),
@@ -739,12 +779,14 @@ class _MiniStat extends StatelessWidget {
         ),
         child: Column(
           children: <Widget>[
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w800)),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 11, color: scheme.onSurfaceVariant)),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            Text(
+              label,
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+            ),
           ],
         ),
       ),

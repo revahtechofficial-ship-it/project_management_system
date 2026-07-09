@@ -27,14 +27,16 @@ class PageHeader extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 24, fontWeight: FontWeight.w800)),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+            ),
             if (subtitle != null) ...<Widget>[
               const SizedBox(height: 4),
-              Text(subtitle!,
-                  style: TextStyle(
-                      fontSize: 14, color: scheme.onSurfaceVariant)),
+              Text(
+                subtitle!,
+                style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
+              ),
             ],
           ],
         ),

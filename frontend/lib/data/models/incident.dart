@@ -48,41 +48,42 @@ class Incident {
   }
 
   factory Incident.fromJson(Map<String, dynamic> json) => Incident(
-        id: json['id'] as int,
-        title: json['title'] as String? ?? '',
-        description: json['description'] as String? ?? '',
-        kind: IncidentKind.fromJson(json['kind'] as String? ?? 'bug'),
-        severity:
-            IncidentSeverity.fromJson(json['severity'] as String? ?? 'medium'),
-        status: IncidentStatus.fromJson(json['status'] as String? ?? 'open'),
-        projectId: json['project_id'] as int?,
-        projectName: json['project_name'] as String? ?? '',
-        assigneeId: json['assignee_id'] as int?,
-        assigneeName: json['assignee_name'] as String? ?? '',
-        reporterId: json['reporter_id'] as int?,
-        reporterName: json['reporter_name'] as String? ?? '',
-        component: json['component'] as String? ?? '',
-        resolvedAt: _date(json['resolved_at']),
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    title: json['title'] as String? ?? '',
+    description: json['description'] as String? ?? '',
+    kind: IncidentKind.fromJson(json['kind'] as String? ?? 'bug'),
+    severity: IncidentSeverity.fromJson(
+      json['severity'] as String? ?? 'medium',
+    ),
+    status: IncidentStatus.fromJson(json['status'] as String? ?? 'open'),
+    projectId: json['project_id'] as int?,
+    projectName: json['project_name'] as String? ?? '',
+    assigneeId: json['assignee_id'] as int?,
+    assigneeName: json['assignee_name'] as String? ?? '',
+    reporterId: json['reporter_id'] as int?,
+    reporterName: json['reporter_name'] as String? ?? '',
+    component: json['component'] as String? ?? '',
+    resolvedAt: _date(json['resolved_at']),
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'title': title,
-        'description': description,
-        'kind': kind.toJson(),
-        'severity': severity.toJson(),
-        'status': status.toJson(),
-        'project_id': projectId,
-        'project_name': projectName,
-        'assignee_id': assigneeId,
-        'assignee_name': assigneeName,
-        'reporter_id': reporterId,
-        'reporter_name': reporterName,
-        'component': component,
-        'resolved_at': resolvedAt?.toIso8601String(),
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'title': title,
+    'description': description,
+    'kind': kind.toJson(),
+    'severity': severity.toJson(),
+    'status': status.toJson(),
+    'project_id': projectId,
+    'project_name': projectName,
+    'assignee_id': assigneeId,
+    'assignee_name': assigneeName,
+    'reporter_id': reporterId,
+    'reporter_name': reporterName,
+    'component': component,
+    'resolved_at': resolvedAt?.toIso8601String(),
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() =>
@@ -110,20 +111,20 @@ class Incident {
 
   @override
   int get hashCode => Object.hashAll(<Object?>[
-        id,
-        title,
-        description,
-        kind,
-        severity,
-        status,
-        projectId,
-        projectName,
-        assigneeId,
-        assigneeName,
-        reporterId,
-        reporterName,
-        component,
-        resolvedAt,
-        createdAt,
-      ]);
+    id,
+    title,
+    description,
+    kind,
+    severity,
+    status,
+    projectId,
+    projectName,
+    assigneeId,
+    assigneeName,
+    reporterId,
+    reporterName,
+    component,
+    resolvedAt,
+    createdAt,
+  ]);
 }

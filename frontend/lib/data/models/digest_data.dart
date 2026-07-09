@@ -27,13 +27,13 @@ class DigestNotification {
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'type': type,
-        'title': title,
-        'body': body,
-        'link': link,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'type': type,
+    'title': title,
+    'body': body,
+    'link': link,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'DigestNotification(id: $id, title: $title)';
@@ -68,18 +68,18 @@ class DigestTask {
   });
 
   factory DigestTask.fromJson(Map<String, dynamic> json) => DigestTask(
-        id: json['id'] as int,
-        title: json['title'] as String? ?? '',
-        status: json['status'] as String? ?? '',
-        dueDate: DateTime.parse(json['due_date'] as String),
-      );
+    id: json['id'] as int,
+    title: json['title'] as String? ?? '',
+    status: json['status'] as String? ?? '',
+    dueDate: DateTime.parse(json['due_date'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'title': title,
-        'status': status,
-        'due_date': dueDate.toIso8601String(),
-      };
+    'id': id,
+    'title': title,
+    'status': status,
+    'due_date': dueDate.toIso8601String(),
+  };
 
   @override
   String toString() => 'DigestTask(id: $id, title: $title)';
@@ -113,35 +113,35 @@ class DigestData {
   });
 
   /// True when there is nothing to summarise.
-  bool get isEmpty =>
-      unreadCount == 0 && overdue.isEmpty && upcoming.isEmpty;
+  bool get isEmpty => unreadCount == 0 && overdue.isEmpty && upcoming.isEmpty;
 
   factory DigestData.fromJson(Map<String, dynamic> json) => DigestData(
-        unreadCount: json['unread_count'] as int? ?? 0,
-        notifications: <DigestNotification>[
-          for (final dynamic e in (json['notifications'] as List<dynamic>? ??
-              <dynamic>[]))
-            DigestNotification.fromJson(e as Map<String, dynamic>),
-        ],
-        overdue: <DigestTask>[
-          for (final dynamic e
-              in (json['overdue'] as List<dynamic>? ?? <dynamic>[]))
-            DigestTask.fromJson(e as Map<String, dynamic>),
-        ],
-        upcoming: <DigestTask>[
-          for (final dynamic e
-              in (json['upcoming'] as List<dynamic>? ?? <dynamic>[]))
-            DigestTask.fromJson(e as Map<String, dynamic>),
-        ],
-      );
+    unreadCount: json['unread_count'] as int? ?? 0,
+    notifications: <DigestNotification>[
+      for (final dynamic e
+          in (json['notifications'] as List<dynamic>? ?? <dynamic>[]))
+        DigestNotification.fromJson(e as Map<String, dynamic>),
+    ],
+    overdue: <DigestTask>[
+      for (final dynamic e
+          in (json['overdue'] as List<dynamic>? ?? <dynamic>[]))
+        DigestTask.fromJson(e as Map<String, dynamic>),
+    ],
+    upcoming: <DigestTask>[
+      for (final dynamic e
+          in (json['upcoming'] as List<dynamic>? ?? <dynamic>[]))
+        DigestTask.fromJson(e as Map<String, dynamic>),
+    ],
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'unread_count': unreadCount,
-        'notifications':
-            notifications.map((DigestNotification n) => n.toJson()).toList(),
-        'overdue': overdue.map((DigestTask t) => t.toJson()).toList(),
-        'upcoming': upcoming.map((DigestTask t) => t.toJson()).toList(),
-      };
+    'unread_count': unreadCount,
+    'notifications': notifications
+        .map((DigestNotification n) => n.toJson())
+        .toList(),
+    'overdue': overdue.map((DigestTask t) => t.toJson()).toList(),
+    'upcoming': upcoming.map((DigestTask t) => t.toJson()).toList(),
+  };
 
   @override
   String toString() =>
@@ -159,11 +159,11 @@ class DigestData {
 
   @override
   int get hashCode => Object.hash(
-        unreadCount,
-        Object.hashAll(notifications),
-        Object.hashAll(overdue),
-        Object.hashAll(upcoming),
-      );
+    unreadCount,
+    Object.hashAll(notifications),
+    Object.hashAll(overdue),
+    Object.hashAll(upcoming),
+  );
 
   static bool _eq(List<Object?> a, List<Object?> b) {
     if (a.length != b.length) {

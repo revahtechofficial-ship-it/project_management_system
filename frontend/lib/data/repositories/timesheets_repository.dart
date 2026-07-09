@@ -11,22 +11,26 @@ class TimesheetsRepository {
 
   /// Submits (or re-submits) the timesheet for the week containing
   /// [weekStart]; the backend snaps to that week's Monday and totals the time.
-  Future<TimesheetSubmission> submit(DateTime weekStart, {String note = ''}) async {
-    final Response<Map<String, dynamic>> res =
-        await _dio.post<Map<String, dynamic>>(
-      '/api/v1/timesheets',
-      data: <String, dynamic>{
-        'week_start': weekStart.toIso8601String(),
-        'note': note,
-      },
-    );
+  Future<TimesheetSubmission> submit(
+    DateTime weekStart, {
+    String note = '',
+  }) async {
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/api/v1/timesheets',
+          data: <String, dynamic>{
+            'week_start': weekStart.toIso8601String(),
+            'note': note,
+          },
+        );
     return TimesheetSubmission.fromJson(res.data ?? <String, dynamic>{});
   }
 
   /// The current user's recent timesheet submissions.
   Future<List<TimesheetSubmission>> listMine() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/timesheets');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/timesheets',
+    );
     return <TimesheetSubmission>[
       for (final dynamic e in res.data ?? <dynamic>[])
         TimesheetSubmission.fromJson(e as Map<String, dynamic>),
@@ -35,8 +39,9 @@ class TimesheetsRepository {
 
   /// Pending submissions awaiting approval (admin-only server-side).
   Future<List<TimesheetSubmission>> pending() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/timesheets/pending');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/timesheets/pending',
+    );
     return <TimesheetSubmission>[
       for (final dynamic e in res.data ?? <dynamic>[])
         TimesheetSubmission.fromJson(e as Map<String, dynamic>),

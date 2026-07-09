@@ -20,8 +20,7 @@ class AppTheme {
     Color? seed,
     bool compact = false,
     bool reduceMotion = false,
-  }) =>
-      _build(Brightness.dark, seed ?? AppColors.brand, compact, reduceMotion);
+  }) => _build(Brightness.dark, seed ?? AppColors.brand, compact, reduceMotion);
 
   static ThemeData _build(
     Brightness brightness,
@@ -33,28 +32,25 @@ class AppTheme {
     // Tune the muted text + hairline borders from the seed: readable secondary
     // copy, and very light card edges so surfaces read as flat panels with
     // just a whisper of separation.
-    final ColorScheme scheme = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: brightness,
-    ).copyWith(
-      surface: dark ? const Color(0xFF161B27) : Colors.white,
-      onSurfaceVariant: dark
-          ? const Color(0xFFAEB6C6)
-          : const Color(0xFF5B6472),
-      outlineVariant: dark
-          ? const Color(0xFF2A3140)
-          : const Color(0xFFE4E9F1),
-    );
-    final Color base =
-        dark ? const Color(0xFF0B0F1A) : const Color(0xFFF3F5FB);
-    final Color inputFill =
-        dark ? const Color(0xFF1C2230) : const Color(0xFFF1F4F9);
-
-    OutlineInputBorder borderOf(Color c, [double w = 1]) =>
-        OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: c, width: w),
+    final ColorScheme scheme =
+        ColorScheme.fromSeed(seedColor: seed, brightness: brightness).copyWith(
+          surface: dark ? const Color(0xFF161B27) : Colors.white,
+          onSurfaceVariant: dark
+              ? const Color(0xFFAEB6C6)
+              : const Color(0xFF5B6472),
+          outlineVariant: dark
+              ? const Color(0xFF2A3140)
+              : const Color(0xFFE4E9F1),
         );
+    final Color base = dark ? const Color(0xFF0B0F1A) : const Color(0xFFF3F5FB);
+    final Color inputFill = dark
+        ? const Color(0xFF1C2230)
+        : const Color(0xFFF1F4F9);
+
+    OutlineInputBorder borderOf(Color c, [double w = 1]) => OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: c, width: w),
+    );
 
     // Inter across the app, with a codified type scale for a crisp SaaS feel.
     final TextTheme text = _typeScale(
@@ -68,8 +64,7 @@ class AppTheme {
       scaffoldBackgroundColor: base,
       // A visible focus tint so keyboard navigation is obvious.
       focusColor: scheme.primary.withValues(alpha: dark ? 0.32 : 0.18),
-      visualDensity:
-          compact ? VisualDensity.compact : VisualDensity.standard,
+      visualDensity: compact ? VisualDensity.compact : VisualDensity.standard,
       pageTransitionsTheme: reduceMotion
           ? const PageTransitionsTheme(
               builders: <TargetPlatform, PageTransitionsBuilder>{
@@ -113,8 +108,7 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -122,46 +116,49 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
       popupMenuTheme: PopupMenuThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       dialogTheme: DialogThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
   /// Codifies sizes/weights so headings and body copy stay consistent.
   static TextTheme _typeScale(TextTheme t) => t.copyWith(
-        titleLarge: t.titleLarge
-            ?.copyWith(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.4),
-        titleMedium: t.titleMedium
-            ?.copyWith(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -0.2),
-        titleSmall:
-            t.titleSmall?.copyWith(fontSize: 14, fontWeight: FontWeight.w600),
-        bodyLarge: t.bodyLarge?.copyWith(fontSize: 15, height: 1.4),
-        bodyMedium: t.bodyMedium?.copyWith(fontSize: 14, height: 1.4),
-        bodySmall: t.bodySmall?.copyWith(fontSize: 12.5, height: 1.35),
-        labelLarge:
-            t.labelLarge?.copyWith(fontSize: 14, fontWeight: FontWeight.w600),
-      );
+    titleLarge: t.titleLarge?.copyWith(
+      fontSize: 20,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.4,
+    ),
+    titleMedium: t.titleMedium?.copyWith(
+      fontSize: 16,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.2,
+    ),
+    titleSmall: t.titleSmall?.copyWith(
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+    ),
+    bodyLarge: t.bodyLarge?.copyWith(fontSize: 15, height: 1.4),
+    bodyMedium: t.bodyMedium?.copyWith(fontSize: 14, height: 1.4),
+    bodySmall: t.bodySmall?.copyWith(fontSize: 12.5, height: 1.35),
+    labelLarge: t.labelLarge?.copyWith(
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+    ),
+  );
 }
 
 /// A page transition that renders the destination instantly, used when the
@@ -176,6 +173,5 @@ class _NoTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
     Widget child,
-  ) =>
-      child;
+  ) => child;
 }

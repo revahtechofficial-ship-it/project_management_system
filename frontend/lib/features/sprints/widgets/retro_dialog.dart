@@ -27,8 +27,9 @@ class _RetroDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<RetroItem>> async =
-        ref.watch(sprintRetroProvider(sprintId));
+    final AsyncValue<List<RetroItem>> async = ref.watch(
+      sprintRetroProvider(sprintId),
+    );
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
@@ -40,8 +41,8 @@ class _RetroDialog extends ConsumerWidget {
             const Divider(height: 1),
             Flexible(
               child: async.when(
-                loading: () => const SizedBox(
-                    height: 200, child: LoadingView()),
+                loading: () =>
+                    const SizedBox(height: 200, child: LoadingView()),
                 error: (Object e, _) => Padding(
                   padding: const EdgeInsets.all(24),
                   child: ErrorNotice(error: e),
@@ -78,8 +79,9 @@ class _RetroDialog extends ConsumerWidget {
                                 children: <Widget>[
                                   for (final Widget col in columns)
                                     Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 16),
+                                      padding: const EdgeInsets.only(
+                                        bottom: 16,
+                                      ),
                                       child: col,
                                     ),
                                 ],
@@ -132,8 +134,7 @@ class _Header extends StatelessWidget {
               'Retrospective · $sprintName',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
           ),
           IconButton(
@@ -174,14 +175,21 @@ class _Column extends StatelessWidget {
             children: <Widget>[
               Icon(kind.icon, size: 16, color: kind.color),
               const SizedBox(width: 6),
-              Text(kind.label,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w800)),
+              Text(
+                kind.label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               const SizedBox(width: 6),
-              Text('${items.length}',
-                  style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600)),
+              Text(
+                '${items.length}',
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -221,8 +229,11 @@ class _RetroCard extends ConsumerWidget {
               },
               child: Padding(
                 padding: const EdgeInsets.all(4),
-                child: Icon(Icons.close,
-                    size: 15, color: scheme.onSurfaceVariant),
+                child: Icon(
+                  Icons.close,
+                  size: 15,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ),
           ],
@@ -245,19 +256,24 @@ class _ActionSection extends StatelessWidget {
         color: RetroKind.action.color.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-            color: RetroKind.action.color.withValues(alpha: 0.35)),
+          color: RetroKind.action.color.withValues(alpha: 0.35),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(RetroKind.action.icon, size: 16,
-                  color: RetroKind.action.color),
+              Icon(
+                RetroKind.action.icon,
+                size: 16,
+                color: RetroKind.action.color,
+              ),
               const SizedBox(width: 6),
-              const Text('Action items',
-                  style:
-                      TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+              const Text(
+                'Action items',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+              ),
             ],
           ),
           const SizedBox(height: 8),

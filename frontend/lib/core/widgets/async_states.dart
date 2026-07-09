@@ -93,7 +93,10 @@ class EmptyState extends StatelessWidget {
               Text(
                 title!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 6),
             ],
@@ -213,7 +216,10 @@ class ErrorView extends StatelessWidget {
               Text(
                 message ?? "Couldn't load this",
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               if (error != null) ...<Widget>[
                 const SizedBox(height: 6),
@@ -222,7 +228,10 @@ class ErrorView extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
+                  style: TextStyle(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 13,
+                  ),
                 ),
               ],
               if (onRetry != null) ...<Widget>[

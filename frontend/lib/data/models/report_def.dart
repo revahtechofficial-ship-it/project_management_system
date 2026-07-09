@@ -15,13 +15,16 @@ class ReportFilter {
       );
 
   factory ReportFilter.fromJson(Map<String, dynamic> json) => ReportFilter(
-        field: json['field'] as String? ?? 'status',
-        op: json['op'] as String? ?? 'is',
-        value: json['value'] as String? ?? '',
-      );
+    field: json['field'] as String? ?? 'status',
+    op: json['op'] as String? ?? 'is',
+    value: json['value'] as String? ?? '',
+  );
 
-  Map<String, dynamic> toJson() =>
-      <String, dynamic>{'field': field, 'op': op, 'value': value};
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'field': field,
+    'op': op,
+    'value': value,
+  };
 
   @override
   String toString() => 'ReportFilter($field $op $value)';
@@ -58,9 +61,9 @@ class ReportDef {
 
   /// The `config` object sent to / stored on the server.
   Map<String, dynamic> get config => <String, dynamic>{
-        'columns': columns,
-        'filters': filters.map((ReportFilter f) => f.toJson()).toList(),
-      };
+    'columns': columns,
+    'filters': filters.map((ReportFilter f) => f.toJson()).toList(),
+  };
 
   factory ReportDef.fromJson(Map<String, dynamic> json) {
     final Map<String, dynamic> cfg =
@@ -69,8 +72,8 @@ class ReportDef {
       id: json['id'] as int,
       name: json['name'] as String? ?? '',
       columns: <String>[
-        for (final dynamic e in (cfg['columns'] as List<dynamic>? ??
-            <dynamic>[]))
+        for (final dynamic e
+            in (cfg['columns'] as List<dynamic>? ?? <dynamic>[]))
           e as String,
       ],
       filters: <ReportFilter>[
@@ -83,11 +86,11 @@ class ReportDef {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'name': name,
-        'config': config,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'config': config,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'ReportDef(id: $id, name: $name)';
@@ -104,12 +107,12 @@ class ReportDef {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        name,
-        Object.hashAll(columns),
-        Object.hashAll(filters),
-        createdAt,
-      );
+    id,
+    name,
+    Object.hashAll(columns),
+    Object.hashAll(filters),
+    createdAt,
+  );
 
   static bool _eq(List<Object?> a, List<Object?> b) {
     if (a.length != b.length) {

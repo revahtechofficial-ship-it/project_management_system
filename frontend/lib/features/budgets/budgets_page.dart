@@ -73,17 +73,22 @@ class _Body extends StatelessWidget {
       return EmptyState(
         icon: Icons.account_balance_wallet_outlined,
         title: 'No budgets set',
-        message: 'Set a budget on a project to track spend from expenses and '
+        message:
+            'Set a budget on a project to track spend from expenses and '
             'billable time against a cap.',
         actionLabel: 'Set the first budget',
         actionIcon: Icons.add,
         onAction: onAdd,
       );
     }
-    final int totalBudget =
-        budgets.fold<int>(0, (int s, Budget b) => s + b.amountCents);
-    final int totalActual =
-        budgets.fold<int>(0, (int s, Budget b) => s + b.actualCents);
+    final int totalBudget = budgets.fold<int>(
+      0,
+      (int s, Budget b) => s + b.amountCents,
+    );
+    final int totalActual = budgets.fold<int>(
+      0,
+      (int s, Budget b) => s + b.actualCents,
+    );
     final int over = budgets.where((Budget b) => b.overBudget).length;
 
     return Column(
@@ -136,8 +141,9 @@ class _Stat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final Color color =
-        warn ? const Color(0xFFEA580C) : scheme.onSurfaceVariant;
+    final Color color = warn
+        ? const Color(0xFFEA580C)
+        : scheme.onSurfaceVariant;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -151,9 +157,14 @@ class _Stat extends StatelessWidget {
         children: <Widget>[
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
-          Text(label,
-              style: TextStyle(
-                  fontWeight: FontWeight.w700, color: color, fontSize: 13)),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: color,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
@@ -175,12 +186,15 @@ class _BudgetCard extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final bool ok = await showDialog<bool>(
+    final bool ok =
+        await showDialog<bool>(
           context: context,
           builder: (BuildContext ctx) => AlertDialog(
             title: const Text('Remove budget?'),
-            content: Text('Stop tracking a budget for '
-                '"${budget.projectName}"?'),
+            content: Text(
+              'Stop tracking a budget for '
+              '"${budget.projectName}"?',
+            ),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
@@ -224,11 +238,15 @@ class _BudgetCard extends ConsumerWidget {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  b.projectName.isEmpty ? 'Project #${b.projectId}' : b.projectName,
+                  b.projectName.isEmpty
+                      ? 'Project #${b.projectId}'
+                      : b.projectName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 15),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
               ),
               PopupMenuButton<String>(
@@ -244,10 +262,12 @@ class _BudgetCard extends ConsumerWidget {
                 },
                 itemBuilder: (BuildContext context) =>
                     const <PopupMenuEntry<String>>[
-                  PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
-                  PopupMenuItem<String>(
-                      value: 'delete', child: Text('Remove')),
-                ],
+                      PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
+                      PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Text('Remove'),
+                      ),
+                    ],
               ),
             ],
           ),
@@ -259,7 +279,10 @@ class _BudgetCard extends ConsumerWidget {
               Text(
                 formatCents(b.actualCents),
                 style: TextStyle(
-                    fontWeight: FontWeight.w800, fontSize: 22, color: health),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                  color: health,
+                ),
               ),
               const SizedBox(width: 6),
               Text(
@@ -302,7 +325,7 @@ class _BudgetCard extends ConsumerWidget {
             icon: Icons.schedule_outlined,
             label: b.hourlyRateCents > 0
                 ? 'Labor · ${b.billableHours.toStringAsFixed(1)}h @ '
-                    '${formatCents(b.hourlyRateCents)}/h'
+                      '${formatCents(b.hourlyRateCents)}/h'
                 : 'Labor · ${b.billableHours.toStringAsFixed(1)}h billable',
             value: formatCents(b.laborCents),
           ),
@@ -337,8 +360,10 @@ class _BreakdownRow extends StatelessWidget {
             style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
           ),
         ),
-        Text(value,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }

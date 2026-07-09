@@ -18,8 +18,7 @@ class TaskStatusChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final int total = completed + pending;
-    final int percent =
-        total == 0 ? 0 : ((completed / total) * 100).round();
+    final int percent = total == 0 ? 0 : ((completed / total) * 100).round();
 
     return Stack(
       alignment: Alignment.center,
@@ -50,14 +49,18 @@ class TaskStatusChart extends StatelessWidget {
         Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Text('$percent%',
-                style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: scheme.onSurface)),
-            Text('completed',
-                style: TextStyle(
-                    fontSize: 12, color: scheme.onSurfaceVariant)),
+            Text(
+              '$percent%',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurface,
+              ),
+            ),
+            Text(
+              'completed',
+              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            ),
           ],
         ),
       ],

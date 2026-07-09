@@ -154,30 +154,31 @@ class _BurndownChartState extends State<_BurndownChart> {
         }
 
         return Semantics(
-          label: 'Sprint burndown: remaining story points versus the ideal '
+          label:
+              'Sprint burndown: remaining story points versus the ideal '
               'trend',
           child: MouseRegion(
-          onHover: (e) => update(e.localPosition),
-          onExit: (_) => setState(() => _hover = null),
-          child: SizedBox(
-            height: 200,
-            width: double.infinity,
-            child: CustomPaint(
-              size: Size.infinite,
-              painter: _BurndownPainter(
-                ideal: widget.ideal,
-                remaining: widget.remaining,
-                actualUpTo: widget.actualUpTo,
-                total: widget.total,
-                axis: scheme.outlineVariant,
-                idealColor: scheme.onSurfaceVariant,
-                actualColor: AppColors.brand,
-                hoverIndex: _hover,
-                tooltipBg: scheme.inverseSurface,
-                tooltipFg: scheme.onInverseSurface,
+            onHover: (e) => update(e.localPosition),
+            onExit: (_) => setState(() => _hover = null),
+            child: SizedBox(
+              height: 200,
+              width: double.infinity,
+              child: CustomPaint(
+                size: Size.infinite,
+                painter: _BurndownPainter(
+                  ideal: widget.ideal,
+                  remaining: widget.remaining,
+                  actualUpTo: widget.actualUpTo,
+                  total: widget.total,
+                  axis: scheme.outlineVariant,
+                  idealColor: scheme.onSurfaceVariant,
+                  actualColor: AppColors.brand,
+                  hoverIndex: _hover,
+                  tooltipBg: scheme.inverseSurface,
+                  tooltipFg: scheme.onInverseSurface,
+                ),
               ),
             ),
-          ),
           ),
         );
       },
@@ -296,7 +297,11 @@ class _BurndownPainter extends CustomPainter {
           ..color = axis
           ..strokeWidth = 1,
       );
-      canvas.drawCircle(Offset(gx, y(ideal[hi])), 3, Paint()..color = idealColor);
+      canvas.drawCircle(
+        Offset(gx, y(ideal[hi])),
+        3,
+        Paint()..color = idealColor,
+      );
       final bool hasActual = hi <= actualUpTo;
       if (hasActual) {
         canvas.drawCircle(

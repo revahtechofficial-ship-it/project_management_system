@@ -19,7 +19,9 @@ final FutureProvider<List<Project>> projectsProvider =
 
 /// A project's members and the caller's role on it, keyed by project id.
 /// Invalidate after adding, changing or removing a member.
-final projectMembersProvider =
-    FutureProvider.family<ProjectMembership, int>((ref, int projectId) {
-      return ref.watch(projectsRepositoryProvider).members(projectId);
-    });
+final projectMembersProvider = FutureProvider.family<ProjectMembership, int>((
+  ref,
+  int projectId,
+) {
+  return ref.watch(projectsRepositoryProvider).members(projectId);
+});

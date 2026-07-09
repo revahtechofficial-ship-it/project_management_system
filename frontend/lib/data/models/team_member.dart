@@ -33,33 +33,34 @@ class TeamMember {
   double get progress => totalTasks == 0 ? 0 : completedTasks / totalTasks;
 
   factory TeamMember.fromJson(Map<String, dynamic> json) => TeamMember(
-        id: json['id'] as int,
-        name: json['full_name'] as String? ?? '',
-        email: json['email'] as String? ?? '',
-        role: MemberRole.fromJson(json['role'] as String? ?? ''),
-        avatarUrl: json['avatar_url'] as String?,
-        jobTitle: json['job_title'] as String? ?? '',
-        department: json['department'] as String? ?? '',
-        openTasks: json['open_tasks'] as int? ?? 0,
-        completedTasks: json['completed_tasks'] as int? ?? 0,
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    name: json['full_name'] as String? ?? '',
+    email: json['email'] as String? ?? '',
+    role: MemberRole.fromJson(json['role'] as String? ?? ''),
+    avatarUrl: json['avatar_url'] as String?,
+    jobTitle: json['job_title'] as String? ?? '',
+    department: json['department'] as String? ?? '',
+    openTasks: json['open_tasks'] as int? ?? 0,
+    completedTasks: json['completed_tasks'] as int? ?? 0,
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'full_name': name,
-        'email': email,
-        'role': role.toJson(),
-        'avatar_url': avatarUrl,
-        'job_title': jobTitle,
-        'department': department,
-        'open_tasks': openTasks,
-        'completed_tasks': completedTasks,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'full_name': name,
+    'email': email,
+    'role': role.toJson(),
+    'avatar_url': avatarUrl,
+    'job_title': jobTitle,
+    'department': department,
+    'open_tasks': openTasks,
+    'completed_tasks': completedTasks,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
-  String toString() => 'TeamMember('
+  String toString() =>
+      'TeamMember('
       'id: $id, name: $name, email: $email, role: $role, '
       'openTasks: $openTasks, completedTasks: $completedTasks)';
 
@@ -79,14 +80,14 @@ class TeamMember {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        name,
-        email,
-        role,
-        jobTitle,
-        department,
-        openTasks,
-        completedTasks,
-        createdAt,
-      );
+    id,
+    name,
+    email,
+    role,
+    jobTitle,
+    department,
+    openTasks,
+    completedTasks,
+    createdAt,
+  );
 }

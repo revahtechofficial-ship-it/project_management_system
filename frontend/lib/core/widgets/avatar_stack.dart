@@ -32,13 +32,10 @@ class AvatarStack extends StatelessWidget {
     final double width = diameter + step * (slots - 1);
 
     Widget ring(Widget child) => Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            shape: BoxShape.circle,
-          ),
-          child: child,
-        );
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(color: scheme.surface, shape: BoxShape.circle),
+      child: child,
+    );
 
     return SizedBox(
       width: width,

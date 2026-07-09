@@ -123,9 +123,14 @@ class _StatusChip extends StatelessWidget {
         color: color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(label,
-          style: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
     );
   }
 }
@@ -147,11 +152,14 @@ class _TypeChip extends StatelessWidget {
         children: <Widget>[
           Icon(type.icon, size: 12, color: type.color),
           const SizedBox(width: 4),
-          Text(type.label,
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: type.color)),
+          Text(
+            type.label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: type.color,
+            ),
+          ),
         ],
       ),
     );
@@ -187,8 +195,7 @@ class _MyLeaveView extends ConsumerWidget {
             }
             return Column(
               children: <Widget>[
-                for (final LeaveRequest l in items)
-                  _MyLeaveRow(leave: l),
+                for (final LeaveRequest l in items) _MyLeaveRow(leave: l),
               ],
             );
           },
@@ -219,23 +226,32 @@ class _BalanceCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text('$remaining vacation days left',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w800)),
+                Text(
+                  '$remaining vacation days left',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: frac,
                     minHeight: 6,
-                    backgroundColor:
-                        scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                    backgroundColor: scheme.surfaceContainerHighest.withValues(
+                      alpha: 0.6,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text('$used of $allowance days used this year',
-                    style: TextStyle(
-                        fontSize: 12, color: scheme.onSurfaceVariant)),
+                Text(
+                  '$used of $allowance days used this year',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
           ),
@@ -264,15 +280,21 @@ class _MyLeaveRow extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text('${_range(leave)}  ·  ${leave.days} '
-                      '${leave.days == 1 ? 'day' : 'days'}',
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    '${_range(leave)}  ·  ${leave.days} '
+                    '${leave.days == 1 ? 'day' : 'days'}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   if (leave.note.isNotEmpty)
-                    Text(leave.note,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12, color: scheme.onSurfaceVariant)),
+                    Text(
+                      leave.note,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -299,8 +321,9 @@ class _WhosOutView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<LeaveRequest>> async =
-        ref.watch(leaveCalendarProvider);
+    final AsyncValue<List<LeaveRequest>> async = ref.watch(
+      leaveCalendarProvider,
+    );
     return async.when(
       loading: () => const LoadingView(),
       error: (Object e, _) => ErrorView(
@@ -337,20 +360,29 @@ class _WhosOutRow extends StatelessWidget {
       child: DashboardCard(
         child: Row(
           children: <Widget>[
-            UserAvatar(name: leave.userName, radius: 20,
-                imageUrl: leave.avatarUrl),
+            UserAvatar(
+              name: leave.userName,
+              radius: 20,
+              imageUrl: leave.avatarUrl,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text(leave.userName.isEmpty ? 'Member' : leave.userName,
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
-                  Text('${_range(leave)}  ·  ${leave.days} '
-                      '${leave.days == 1 ? 'day' : 'days'}',
-                      style: TextStyle(
-                          fontSize: 12, color: scheme.onSurfaceVariant)),
+                  Text(
+                    leave.userName.isEmpty ? 'Member' : leave.userName,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    '${_range(leave)}  ·  ${leave.days} '
+                    '${leave.days == 1 ? 'day' : 'days'}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -366,7 +398,11 @@ class _LeaveApprovalsView extends ConsumerWidget {
   const _LeaveApprovalsView();
 
   Future<void> _decide(
-      BuildContext context, WidgetRef ref, int id, bool approved) async {
+    BuildContext context,
+    WidgetRef ref,
+    int id,
+    bool approved,
+  ) async {
     try {
       await ref.read(leaveRepositoryProvider).decide(id, approved: approved);
       ref.invalidate(pendingLeaveProvider);
@@ -384,8 +420,9 @@ class _LeaveApprovalsView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final AsyncValue<List<LeaveRequest>> async =
-        ref.watch(pendingLeaveProvider);
+    final AsyncValue<List<LeaveRequest>> async = ref.watch(
+      pendingLeaveProvider,
+    );
     return async.when(
       loading: () => const LoadingView(),
       error: (Object e, _) => ErrorView(
@@ -408,8 +445,11 @@ class _LeaveApprovalsView extends ConsumerWidget {
                 child: DashboardCard(
                   child: Row(
                     children: <Widget>[
-                      UserAvatar(name: l.userName, radius: 20,
-                          imageUrl: l.avatarUrl),
+                      UserAvatar(
+                        name: l.userName,
+                        radius: 20,
+                        imageUrl: l.avatarUrl,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -422,24 +462,31 @@ class _LeaveApprovalsView extends ConsumerWidget {
                                   child: Text(
                                     l.userName.isEmpty ? 'Member' : l.userName,
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.w700),
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 _TypeChip(type: l.type),
                               ],
                             ),
-                            Text('${_range(l)}  ·  ${l.days} '
-                                '${l.days == 1 ? 'day' : 'days'}',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: scheme.onSurfaceVariant)),
+                            Text(
+                              '${_range(l)}  ·  ${l.days} '
+                              '${l.days == 1 ? 'day' : 'days'}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
                             if (l.note.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: 2),
-                                child: Text(l.note,
-                                    style: TextStyle(
-                                        color: scheme.onSurfaceVariant)),
+                                child: Text(
+                                  l.note,
+                                  style: TextStyle(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
                               ),
                           ],
                         ),
@@ -520,7 +567,9 @@ class _RequestLeaveDialogState extends ConsumerState<_RequestLeaveDialog> {
     }
     setState(() => _busy = true);
     try {
-      await ref.read(leaveRepositoryProvider).create(
+      await ref
+          .read(leaveRepositoryProvider)
+          .create(
             type: _type,
             start: DateTime(_start.year, _start.month, _start.day),
             end: DateTime(_end.year, _end.month, _end.day),
@@ -589,9 +638,12 @@ class _RequestLeaveDialogState extends ConsumerState<_RequestLeaveDialog> {
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerLeft,
-              child: Text('$days ${days == 1 ? 'day' : 'days'}',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              child: Text(
+                '$days ${days == 1 ? 'day' : 'days'}',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
             ),
             const SizedBox(height: 8),
             TextField(

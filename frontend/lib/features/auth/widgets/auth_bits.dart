@@ -51,7 +51,9 @@ class AuthError extends StatelessWidget {
         children: <Widget>[
           Icon(Icons.error_outline, color: scheme.error, size: 18),
           const SizedBox(width: 8),
-          Expanded(child: Text(message, style: TextStyle(color: scheme.error))),
+          Expanded(
+            child: Text(message, style: TextStyle(color: scheme.error)),
+          ),
         ],
       ),
     );
@@ -81,7 +83,9 @@ class SubmitButton extends StatelessWidget {
               height: 20,
               width: 20,
               child: CircularProgressIndicator(
-                  strokeWidth: 2.4, color: Colors.white),
+                strokeWidth: 2.4,
+                color: Colors.white,
+              ),
             )
           : Text(label),
     );

@@ -5,11 +5,7 @@ class GiphyItem {
   final String url;
   final String preview;
 
-  const GiphyItem({
-    required this.id,
-    this.url = '',
-    this.preview = '',
-  });
+  const GiphyItem({required this.id, this.url = '', this.preview = ''});
 
   factory GiphyItem.fromJson(Map<String, dynamic> json) {
     final Map<String, dynamic> images =
@@ -33,10 +29,10 @@ class GiphyItem {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'url': url,
-        'preview': preview,
-      };
+    'id': id,
+    'url': url,
+    'preview': preview,
+  };
 
   @override
   String toString() => 'GiphyItem($id)';

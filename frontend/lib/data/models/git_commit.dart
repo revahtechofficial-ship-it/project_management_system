@@ -38,36 +38,36 @@ class GitCommit {
   }
 
   factory GitCommit.fromJson(Map<String, dynamic> json) => GitCommit(
-        id: json['id'] as int,
-        repoId: json['repo_id'] as int,
-        repoName: json['repo_name'] as String? ?? '',
-        sha: json['sha'] as String? ?? '',
-        shortSha: json['short_sha'] as String? ?? '',
-        message: json['message'] as String? ?? '',
-        authorName: json['author_name'] as String? ?? '',
-        authorEmail: json['author_email'] as String? ?? '',
-        url: json['url'] as String? ?? '',
-        branch: json['branch'] as String? ?? '',
-        taskRef: json['task_ref'] as int?,
-        taskTitle: json['task_title'] as String? ?? '',
-        committedAt: DateTime.parse(json['committed_at'] as String),
-      );
+    id: json['id'] as int,
+    repoId: json['repo_id'] as int,
+    repoName: json['repo_name'] as String? ?? '',
+    sha: json['sha'] as String? ?? '',
+    shortSha: json['short_sha'] as String? ?? '',
+    message: json['message'] as String? ?? '',
+    authorName: json['author_name'] as String? ?? '',
+    authorEmail: json['author_email'] as String? ?? '',
+    url: json['url'] as String? ?? '',
+    branch: json['branch'] as String? ?? '',
+    taskRef: json['task_ref'] as int?,
+    taskTitle: json['task_title'] as String? ?? '',
+    committedAt: DateTime.parse(json['committed_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'repo_id': repoId,
-        'repo_name': repoName,
-        'sha': sha,
-        'short_sha': shortSha,
-        'message': message,
-        'author_name': authorName,
-        'author_email': authorEmail,
-        'url': url,
-        'branch': branch,
-        'task_ref': taskRef,
-        'task_title': taskTitle,
-        'committed_at': committedAt.toIso8601String(),
-      };
+    'id': id,
+    'repo_id': repoId,
+    'repo_name': repoName,
+    'sha': sha,
+    'short_sha': shortSha,
+    'message': message,
+    'author_name': authorName,
+    'author_email': authorEmail,
+    'url': url,
+    'branch': branch,
+    'task_ref': taskRef,
+    'task_title': taskTitle,
+    'committed_at': committedAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'GitCommit(sha: $shortSha, $summary)';
@@ -91,17 +91,17 @@ class GitCommit {
 
   @override
   int get hashCode => Object.hashAll(<Object?>[
-        id,
-        repoId,
-        repoName,
-        sha,
-        message,
-        authorName,
-        authorEmail,
-        url,
-        branch,
-        taskRef,
-        taskTitle,
-        committedAt,
-      ]);
+    id,
+    repoId,
+    repoName,
+    sha,
+    message,
+    authorName,
+    authorEmail,
+    url,
+    branch,
+    taskRef,
+    taskTitle,
+    committedAt,
+  ]);
 }

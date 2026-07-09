@@ -24,10 +24,9 @@ class Webhook {
   factory Webhook.fromJson(Map<String, dynamic> json) => Webhook(
     id: json['id'] as int,
     url: json['url'] as String? ?? '',
-    events:
-        (json['events'] as List<dynamic>? ?? <dynamic>[])
-            .map((dynamic e) => e as String)
-            .toList(growable: false),
+    events: (json['events'] as List<dynamic>? ?? <dynamic>[])
+        .map((dynamic e) => e as String)
+        .toList(growable: false),
     active: json['active'] as bool? ?? true,
     provider: json['provider'] as String? ?? 'custom',
     hasSecret: json['has_secret'] as bool? ?? false,

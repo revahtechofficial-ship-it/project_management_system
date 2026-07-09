@@ -63,7 +63,8 @@ class GoalsPage extends ConsumerWidget {
                   return const EmptyState(
                     icon: Icons.flag_outlined,
                     title: 'No goals yet',
-                    message: 'Set an objective to align your team around '
+                    message:
+                        'Set an objective to align your team around '
                         'measurable outcomes.',
                   );
                 }

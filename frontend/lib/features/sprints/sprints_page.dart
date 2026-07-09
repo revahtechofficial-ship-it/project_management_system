@@ -184,8 +184,7 @@ class _SprintsPageState extends ConsumerState<SprintsPage> {
                     onStart: () => _start(s),
                     onComplete: () => _complete(s),
                     onDelete: () => _delete(s),
-                    onRetro: () =>
-                        showSprintRetroDialog(context, s.id, s.name),
+                    onRetro: () => showSprintRetroDialog(context, s.id, s.name),
                   ),
                 ),
             ],

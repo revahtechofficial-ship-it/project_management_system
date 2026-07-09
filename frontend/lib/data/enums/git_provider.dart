@@ -11,37 +11,37 @@ enum GitProvider {
   other;
 
   String get label => switch (this) {
-        GitProvider.github => 'GitHub',
-        GitProvider.gitlab => 'GitLab',
-        GitProvider.bitbucket => 'Bitbucket',
-        GitProvider.other => 'Other',
-      };
+    GitProvider.github => 'GitHub',
+    GitProvider.gitlab => 'GitLab',
+    GitProvider.bitbucket => 'Bitbucket',
+    GitProvider.other => 'Other',
+  };
 
   Color get color => switch (this) {
-        GitProvider.github => AppColors.slate,
-        GitProvider.gitlab => AppColors.orange,
-        GitProvider.bitbucket => AppColors.sky,
-        GitProvider.other => AppColors.violet,
-      };
+    GitProvider.github => AppColors.slate,
+    GitProvider.gitlab => AppColors.orange,
+    GitProvider.bitbucket => AppColors.sky,
+    GitProvider.other => AppColors.violet,
+  };
 
   IconData get icon => switch (this) {
-        GitProvider.github => Icons.hub_outlined,
-        GitProvider.gitlab => Icons.account_tree_outlined,
-        GitProvider.bitbucket => Icons.source_outlined,
-        GitProvider.other => Icons.commit,
-      };
+    GitProvider.github => Icons.hub_outlined,
+    GitProvider.gitlab => Icons.account_tree_outlined,
+    GitProvider.bitbucket => Icons.source_outlined,
+    GitProvider.other => Icons.commit,
+  };
 
   String toJson() => switch (this) {
-        GitProvider.github => 'github',
-        GitProvider.gitlab => 'gitlab',
-        GitProvider.bitbucket => 'bitbucket',
-        GitProvider.other => 'other',
-      };
+    GitProvider.github => 'github',
+    GitProvider.gitlab => 'gitlab',
+    GitProvider.bitbucket => 'bitbucket',
+    GitProvider.other => 'other',
+  };
 
   factory GitProvider.fromJson(String value) => switch (value) {
-        'gitlab' => GitProvider.gitlab,
-        'bitbucket' => GitProvider.bitbucket,
-        'other' => GitProvider.other,
-        _ => GitProvider.github,
-      };
+    'gitlab' => GitProvider.gitlab,
+    'bitbucket' => GitProvider.bitbucket,
+    'other' => GitProvider.other,
+    _ => GitProvider.github,
+  };
 }

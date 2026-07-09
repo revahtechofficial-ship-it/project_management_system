@@ -26,11 +26,12 @@ class AiMeetingResult {
   final int pageId;
   final int taskCount;
 
-  factory AiMeetingResult.fromJson(Map<String, dynamic> json) => AiMeetingResult(
-    summary: json['summary'] as String? ?? '',
-    pageId: json['page_id'] as int? ?? 0,
-    taskCount: json['count'] as int? ?? 0,
-  );
+  factory AiMeetingResult.fromJson(Map<String, dynamic> json) =>
+      AiMeetingResult(
+        summary: json['summary'] as String? ?? '',
+        pageId: json['page_id'] as int? ?? 0,
+        taskCount: json['count'] as int? ?? 0,
+      );
 }
 
 /// An AI-written "what happened this week" recap plus the activity it drew on.

@@ -16,20 +16,20 @@ class Milestone {
   });
 
   factory Milestone.fromJson(Map<String, dynamic> json) => Milestone(
-        id: json['id'] as int,
-        projectId: json['project_id'] as int?,
-        name: json['name'] as String? ?? '',
-        dueDate: DateTime.parse(json['due_date'] as String),
-        done: json['done'] as bool? ?? false,
-      );
+    id: json['id'] as int,
+    projectId: json['project_id'] as int?,
+    name: json['name'] as String? ?? '',
+    dueDate: DateTime.parse(json['due_date'] as String),
+    done: json['done'] as bool? ?? false,
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'project_id': projectId,
-        'name': name,
-        'due_date': dueDate.toIso8601String(),
-        'done': done,
-      };
+    'id': id,
+    'project_id': projectId,
+    'name': name,
+    'due_date': dueDate.toIso8601String(),
+    'done': done,
+  };
 
   @override
   String toString() =>

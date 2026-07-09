@@ -31,7 +31,11 @@ class Sparkline extends StatelessWidget {
 }
 
 class _SparkPainter extends CustomPainter {
-  _SparkPainter({required this.values, required this.color, required this.fill});
+  _SparkPainter({
+    required this.values,
+    required this.color,
+    required this.fill,
+  });
 
   final List<double> values;
   final Color color;

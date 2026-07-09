@@ -108,10 +108,12 @@ class ReportsPage extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const ChartLegend(items: <LegendItem>[
-                    LegendItem(AppColors.brand, 'Created'),
-                    LegendItem(AppColors.teal, 'Completed'),
-                  ]),
+                  const ChartLegend(
+                    items: <LegendItem>[
+                      LegendItem(AppColors.brand, 'Created'),
+                      LegendItem(AppColors.teal, 'Completed'),
+                    ],
+                  ),
                 ],
               ),
             );
@@ -127,20 +129,18 @@ class ReportsPage extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const ChartLegend(items: <LegendItem>[
-                    LegendItem(AppColors.teal, 'Completed'),
-                    LegendItem(AppColors.brand, 'Pending'),
-                  ]),
+                  const ChartLegend(
+                    items: <LegendItem>[
+                      LegendItem(AppColors.teal, 'Completed'),
+                      LegendItem(AppColors.brand, 'Pending'),
+                    ],
+                  ),
                 ],
               ),
             );
             if (constraints.maxWidth < 920) {
               return Column(
-                children: <Widget>[
-                  weekly,
-                  const SizedBox(height: 16),
-                  status,
-                ],
+                children: <Widget>[weekly, const SizedBox(height: 16), status],
               );
             }
             return Row(
@@ -171,8 +171,10 @@ class _Contributors extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final List<TeamMember> ranked = <TeamMember>[...team]
-      ..sort((TeamMember a, TeamMember b) =>
-          b.completedTasks.compareTo(a.completedTasks));
+      ..sort(
+        (TeamMember a, TeamMember b) =>
+            b.completedTasks.compareTo(a.completedTasks),
+      );
     final List<TeamMember> top = ranked.take(5).toList();
     final int max = top.isEmpty ? 1 : top.first.completedTasks;
 
@@ -187,10 +189,12 @@ class _Contributors extends StatelessWidget {
                 const SizedBox(width: 12),
                 SizedBox(
                   width: 130,
-                  child: Text(m.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  child: Text(
+                    m.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
                 Expanded(
                   child: ClipRRect(
@@ -204,8 +208,10 @@ class _Contributors extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text('${m.completedTasks}',
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  '${m.completedTasks}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
               ],
             ),
           ),
@@ -254,10 +260,12 @@ class _ReportData {
     for (int i = 13; i >= 0; i--) {
       final DateTime day = today.subtract(Duration(days: i));
       trendLabels.add('${day.day}');
-      trendValues.add(tasks
-          .where((Task t) => t.done && sameDay(t.updatedAt.toLocal(), day))
-          .length
-          .toDouble());
+      trendValues.add(
+        tasks
+            .where((Task t) => t.done && sameDay(t.updatedAt.toLocal(), day))
+            .length
+            .toDouble(),
+      );
     }
 
     final List<String> weekDays = <String>[];
@@ -266,17 +274,23 @@ class _ReportData {
     for (int i = 6; i >= 0; i--) {
       final DateTime day = today.subtract(Duration(days: i));
       weekDays.add(weekdayShort(day.weekday));
-      weekCreated.add(tasks
-          .where((Task t) => sameDay(t.createdAt.toLocal(), day))
-          .length
-          .toDouble());
-      weekDone.add(tasks
-          .where((Task t) => t.done && sameDay(t.updatedAt.toLocal(), day))
-          .length
-          .toDouble());
+      weekCreated.add(
+        tasks
+            .where((Task t) => sameDay(t.createdAt.toLocal(), day))
+            .length
+            .toDouble(),
+      );
+      weekDone.add(
+        tasks
+            .where((Task t) => t.done && sameDay(t.updatedAt.toLocal(), day))
+            .length
+            .toDouble(),
+      );
     }
-    final double thisWeek =
-        weekDone.fold<double>(0, (double s, double v) => s + v);
+    final double thisWeek = weekDone.fold<double>(
+      0,
+      (double s, double v) => s + v,
+    );
 
     return _ReportData(
       total: total,

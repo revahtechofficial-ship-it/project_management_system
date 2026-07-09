@@ -78,7 +78,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   // Participant interactions (over LiveKit data channels).
   EventsListener<RoomEvent>? _events;
   final List<_Reaction> _reactions = <_Reaction>[];
-  final List<String> _handQueue = <String>[]; // participant sids, in raise order
+  final List<String> _handQueue =
+      <String>[]; // participant sids, in raise order
   final List<_ChatMsg> _chat = <_ChatMsg>[];
   final TextEditingController _chatController = TextEditingController();
   int _unreadChat = 0;
@@ -273,8 +274,9 @@ class _CallScreenState extends ConsumerState<CallScreen> {
       _events!.on<DataReceivedEvent>(_onData);
       await _room.localParticipant?.setMicrophoneEnabled(
         _micOn,
-        audioCaptureOptions:
-            _micId != null ? AudioCaptureOptions(deviceId: _micId) : null,
+        audioCaptureOptions: _micId != null
+            ? AudioCaptureOptions(deviceId: _micId)
+            : null,
       );
       if (_camOn) {
         await _room.localParticipant?.setCameraEnabled(
@@ -428,7 +430,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
         }
       case 'poll':
         final List<String> opts = <String>[
-          for (final Object? o in (msg['options'] as List<dynamic>? ?? <Object?>[]))
+          for (final Object? o
+              in (msg['options'] as List<dynamic>? ?? <Object?>[]))
             '$o',
         ];
         if (opts.isNotEmpty) {
@@ -533,10 +536,9 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
   Future<void> _mod(String path, Map<String, dynamic> body) async {
     try {
-      await ref.read(dioProvider).post<dynamic>(
-        '/api/v1/calls/$path',
-        data: body,
-      );
+      await ref
+          .read(dioProvider)
+          .post<dynamic>('/api/v1/calls/$path', data: body);
     } catch (_) {
       // Surfaced server-side; ignore client-side to keep the call smooth.
     }
@@ -560,11 +562,10 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     }
   }
 
-  void _removeParticipant(Participant p) =>
-      _mod('remove', <String, dynamic>{
-        'room': _room.name,
-        'identity': p.identity,
-      });
+  void _removeParticipant(Participant p) => _mod('remove', <String, dynamic>{
+    'room': _room.name,
+    'identity': p.identity,
+  });
 
   void _setPublish(Participant p, bool canPublish) =>
       _mod('permissions', <String, dynamic>{
@@ -720,9 +721,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
       mirror: isLocal && !s.isScreen && _mirrorSelf,
       pinned: _pinnedKey == key,
       handUp: !s.isScreen && _handQueue.contains(s.participant.sid),
-      onTap: () => setState(
-        () => _pinnedKey = _pinnedKey == key ? null : key,
-      ),
+      onTap: () => setState(() => _pinnedKey = _pinnedKey == key ? null : key),
     );
   }
 
@@ -1123,7 +1122,10 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: _camOn && _preview != null
-                          ? VideoTrackRenderer(_preview!, fit: VideoViewFit.cover)
+                          ? VideoTrackRenderer(
+                              _preview!,
+                              fit: VideoViewFit.cover,
+                            )
                           : Center(
                               child: _cameraBlocked
                                   ? Padding(
@@ -1200,9 +1202,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                   const SizedBox(height: 8),
                   InkWell(
                     borderRadius: BorderRadius.circular(8),
-                    onTap: () => setState(
-                      () => _devicesExpanded = !_devicesExpanded,
-                    ),
+                    onTap: () =>
+                        setState(() => _devicesExpanded = !_devicesExpanded),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
@@ -1334,8 +1335,9 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     if (devices.isEmpty) {
       return const SizedBox.shrink();
     }
-    final bool hasSelected =
-        devices.any((MediaDevice d) => d.deviceId == selected);
+    final bool hasSelected = devices.any(
+      (MediaDevice d) => d.deviceId == selected,
+    );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -1489,7 +1491,11 @@ class _CallScreenState extends ConsumerState<CallScreen> {
           children: <Widget>[
             Row(
               children: <Widget>[
-                const Icon(Icons.poll_outlined, color: Colors.white70, size: 18),
+                const Icon(
+                  Icons.poll_outlined,
+                  color: Colors.white70,
+                  size: 18,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1501,7 +1507,11 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white54, size: 18),
+                  icon: const Icon(
+                    Icons.close,
+                    color: Colors.white54,
+                    size: 18,
+                  ),
                   onPressed: _dismissPoll,
                 ),
               ],
@@ -1714,9 +1724,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
-                    fontFeatures: <FontFeature>[
-                      FontFeature.tabularFigures(),
-                    ],
+                    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -1763,7 +1771,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     // Feature one source as the main stage: an explicit pin wins, then a shared
     // screen, then (in speaker view) the active speaker. Grid view shows all
     // tiles equally unless something is pinned or being shared.
-    _VideoSource? featured = _findKey(sources, _pinnedKey) ?? _firstScreen(sources);
+    _VideoSource? featured =
+        _findKey(sources, _pinnedKey) ?? _firstScreen(sources);
     if (featured == null && !_gridView) {
       featured = _activeSpeakerSource(sources) ?? sources.first;
     }
@@ -1898,18 +1907,32 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               _toggleHand,
               active: _handUp,
             ),
-            _moreTile(sheet, Icons.poll_outlined, 'Create a poll',
-                _showCreatePoll, active: _poll != null),
+            _moreTile(
+              sheet,
+              Icons.poll_outlined,
+              'Create a poll',
+              _showCreatePoll,
+              active: _poll != null,
+            ),
             _moreTile(
               sheet,
               _gridView ? Icons.grid_view : Icons.view_sidebar_outlined,
               _gridView ? 'Speaker view' : 'Grid view',
               () => setState(() => _gridView = !_gridView),
             ),
-            _moreTile(sheet, Icons.data_saver_on, 'Low-data mode',
-                _toggleLowData, active: _lowData),
-            _moreTile(sheet, Icons.tune, 'Devices & settings',
-                _showDeviceSheet),
+            _moreTile(
+              sheet,
+              Icons.data_saver_on,
+              'Low-data mode',
+              _toggleLowData,
+              active: _lowData,
+            ),
+            _moreTile(
+              sheet,
+              Icons.tune,
+              'Devices & settings',
+              _showDeviceSheet,
+            ),
             const SizedBox(height: 8),
           ],
         ),
@@ -2111,7 +2134,11 @@ class _ParticipantTileState extends State<_ParticipantTile> {
                   if (widget.pinned)
                     const Padding(
                       padding: EdgeInsets.only(left: 6),
-                      child: Icon(Icons.push_pin, color: Colors.white, size: 14),
+                      child: Icon(
+                        Icons.push_pin,
+                        color: Colors.white,
+                        size: 14,
+                      ),
                     ),
                   if (!widget.isScreen)
                     Padding(
@@ -2394,8 +2421,7 @@ class _LinkTextState extends State<_LinkText> {
       }
       final String url = m.group(0)!;
       final TapGestureRecognizer rec = TapGestureRecognizer()
-        ..onTap = () =>
-            launchUrl(Uri.parse(url), webOnlyWindowName: '_blank');
+        ..onTap = () => launchUrl(Uri.parse(url), webOnlyWindowName: '_blank');
       _recognizers.add(rec);
       spans.add(
         TextSpan(
@@ -2413,7 +2439,10 @@ class _LinkTextState extends State<_LinkText> {
       spans.add(TextSpan(text: widget.text.substring(last)));
     }
     return Text.rich(
-      TextSpan(style: const TextStyle(color: Colors.white), children: spans),
+      TextSpan(
+        style: const TextStyle(color: Colors.white),
+        children: spans,
+      ),
     );
   }
 }
@@ -2437,7 +2466,10 @@ class _FloatingReaction extends StatefulWidget {
 class _FloatingReactionState extends State<_FloatingReaction>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 2200))
+      AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 2200),
+        )
         ..addStatusListener((AnimationStatus s) {
           if (s == AnimationStatus.completed) {
             widget.onDone();
@@ -2464,10 +2496,7 @@ class _FloatingReactionState extends State<_FloatingReaction>
             padding: const EdgeInsets.only(bottom: 96),
             child: Transform.translate(
               offset: Offset(dx, -190 * t),
-              child: Opacity(
-                opacity: (1 - t).clamp(0.0, 1.0),
-                child: child,
-              ),
+              child: Opacity(opacity: (1 - t).clamp(0.0, 1.0), child: child),
             ),
           );
         },

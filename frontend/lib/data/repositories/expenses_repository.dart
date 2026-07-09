@@ -11,19 +11,20 @@ class ExpensesRepository {
   final Dio _dio;
 
   Map<String, dynamic> _body(Expense e) => <String, dynamic>{
-        'project_id': e.projectId,
-        'category': e.category.toJson(),
-        'amount_cents': e.amountCents,
-        'spent_on': dateParam(e.spentOn) ?? '',
-        'description': e.description,
-        'merchant': e.merchant,
-        'receipt_url': e.receiptUrl,
-      };
+    'project_id': e.projectId,
+    'category': e.category.toJson(),
+    'amount_cents': e.amountCents,
+    'spent_on': dateParam(e.spentOn) ?? '',
+    'description': e.description,
+    'merchant': e.merchant,
+    'receipt_url': e.receiptUrl,
+  };
 
   /// Every expense claim, newest spend first.
   Future<List<Expense>> list() async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/expenses');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/expenses',
+    );
     return <Expense>[
       for (final dynamic e in res.data ?? <dynamic>[])
         Expense.fromJson(e as Map<String, dynamic>),
@@ -40,9 +41,9 @@ class ExpensesRepository {
 
   /// Moves a claim through the approve / reject / reimburse workflow.
   Future<void> setStatus(int id, String status) => _dio.patch<void>(
-        '/api/v1/expenses/$id/status',
-        data: <String, dynamic>{'status': status},
-      );
+    '/api/v1/expenses/$id/status',
+    data: <String, dynamic>{'status': status},
+  );
 
   /// Removes a claim.
   Future<void> delete(int id) => _dio.delete<void>('/api/v1/expenses/$id');

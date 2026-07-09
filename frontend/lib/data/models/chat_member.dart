@@ -20,24 +20,24 @@ class ChatMember {
   bool get isAdmin => role == 'admin';
 
   factory ChatMember.fromJson(Map<String, dynamic> json) => ChatMember(
-        userId: json['user_id'] as int,
-        role: json['role'] as String? ?? 'member',
-        fullName: json['full_name'] as String? ?? '',
-        email: json['email'] as String? ?? '',
-        avatarUrl: json['avatar_url'] as String?,
-        lastReadAt: json['last_read_at'] == null
-            ? null
-            : DateTime.parse(json['last_read_at'] as String),
-      );
+    userId: json['user_id'] as int,
+    role: json['role'] as String? ?? 'member',
+    fullName: json['full_name'] as String? ?? '',
+    email: json['email'] as String? ?? '',
+    avatarUrl: json['avatar_url'] as String?,
+    lastReadAt: json['last_read_at'] == null
+        ? null
+        : DateTime.parse(json['last_read_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'user_id': userId,
-        'role': role,
-        'full_name': fullName,
-        'email': email,
-        'avatar_url': avatarUrl,
-        'last_read_at': lastReadAt?.toIso8601String(),
-      };
+    'user_id': userId,
+    'role': role,
+    'full_name': fullName,
+    'email': email,
+    'avatar_url': avatarUrl,
+    'last_read_at': lastReadAt?.toIso8601String(),
+  };
 
   @override
   String toString() => 'ChatMember(userId: $userId, role: $role)';

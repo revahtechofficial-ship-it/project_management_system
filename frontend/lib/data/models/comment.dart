@@ -20,24 +20,24 @@ class Comment {
   });
 
   factory Comment.fromJson(Map<String, dynamic> json) => Comment(
-        id: json['id'] as int,
-        taskId: json['task_id'] as int,
-        authorId: json['author_id'] as int?,
-        authorName: json['author_name'] as String?,
-        parentId: json['parent_id'] as int?,
-        body: json['body'] as String? ?? '',
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    taskId: json['task_id'] as int,
+    authorId: json['author_id'] as int?,
+    authorName: json['author_name'] as String?,
+    parentId: json['parent_id'] as int?,
+    body: json['body'] as String? ?? '',
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'task_id': taskId,
-        'author_id': authorId,
-        'author_name': authorName,
-        'parent_id': parentId,
-        'body': body,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'task_id': taskId,
+    'author_id': authorId,
+    'author_name': authorName,
+    'parent_id': parentId,
+    'body': body,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   @override
   String toString() => 'Comment(id: $id, author: $authorName)';

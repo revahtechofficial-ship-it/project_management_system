@@ -264,8 +264,7 @@ class SavedFiltersButton extends ConsumerWidget {
         if (saved.isNotEmpty) const Divider(height: 1),
         MenuItemButton(
           leadingIcon: const Icon(Icons.add, size: 18),
-          onPressed:
-              current.isEmpty ? null : () => _save(context, ref),
+          onPressed: current.isEmpty ? null : () => _save(context, ref),
           child: const Text('Save current filter'),
         ),
       ],

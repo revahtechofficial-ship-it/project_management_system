@@ -11,8 +11,9 @@ class ChecklistRepository {
 
   /// Lists the checklist items of a task.
   Future<List<ChecklistItem>> list(int taskId) async {
-    final Response<List<dynamic>> res =
-        await _dio.get<List<dynamic>>('/api/v1/tasks/$taskId/checklist');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/api/v1/tasks/$taskId/checklist',
+    );
     final List<dynamic> data = res.data ?? <dynamic>[];
     return data
         .map((dynamic e) => ChecklistItem.fromJson(e as Map<String, dynamic>))

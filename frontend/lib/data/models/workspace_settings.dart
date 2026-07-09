@@ -59,6 +59,11 @@ class WorkspaceSettings {
           other.ssoConfigured == ssoConfigured;
 
   @override
-  int get hashCode =>
-      Object.hash(name, allowedDomains, require2fa, sessionHours, ssoConfigured);
+  int get hashCode => Object.hash(
+    name,
+    allowedDomains,
+    require2fa,
+    sessionHours,
+    ssoConfigured,
+  );
 }

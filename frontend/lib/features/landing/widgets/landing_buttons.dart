@@ -65,11 +65,14 @@ class _GradientButtonState extends State<GradientButton> {
                       Icon(widget.icon, color: Colors.white, size: 18),
                       const SizedBox(width: 8),
                     ],
-                    Text(widget.label,
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: widget.large ? 16 : 14.5,
-                            fontWeight: FontWeight.w700)),
+                    Text(
+                      widget.label,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: widget.large ? 16 : 14.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -118,8 +121,7 @@ class _GhostButtonState extends State<GhostButton> {
           color: scheme.surface.withValues(alpha: _hover ? 0.55 : 0.32),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: scheme.outlineVariant
-                .withValues(alpha: _hover ? 0.9 : 0.6),
+            color: scheme.outlineVariant.withValues(alpha: _hover ? 0.9 : 0.6),
           ),
         ),
         child: Material(
@@ -137,11 +139,14 @@ class _GhostButtonState extends State<GhostButton> {
                     Icon(widget.icon, size: 18, color: scheme.onSurface),
                     const SizedBox(width: 8),
                   ],
-                  Text(widget.label,
-                      style: TextStyle(
-                          color: scheme.onSurface,
-                          fontSize: widget.large ? 16 : 14.5,
-                          fontWeight: FontWeight.w600)),
+                  Text(
+                    widget.label,
+                    style: TextStyle(
+                      color: scheme.onSurface,
+                      fontSize: widget.large ? 16 : 14.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),

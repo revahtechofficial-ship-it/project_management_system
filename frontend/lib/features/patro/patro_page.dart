@@ -8,6 +8,7 @@ import '../../data/enums/calendar_event_kind.dart';
 import '../../providers/auth_provider.dart';
 import 'providers/patro_providers.dart';
 import 'widgets/add_holiday_dialog.dart';
+import 'widgets/nepal_clock.dart';
 import 'widgets/pill_toggle.dart';
 
 /// A dual Bikram Sambat + Gregorian calendar, in the spirit of Hamro Patro:
@@ -25,8 +26,21 @@ class _PatroPageState extends ConsumerState<PatroPage> {
   late BsDate _month = bsToday();
   late DateTime _selected = dateOnly(DateTime.now());
 
+  /// The month [delta] away, or null when that would leave the range the year
+  /// picker offers (and, further out, the range the conversion table covers).
+  BsDate? _monthAway(int delta) {
+    final BsDate next = addBsMonths(_month.year, _month.month, delta);
+    if (next.year < kBsPickerMinYear || next.year > kBsPickerMaxYear) {
+      return null;
+    }
+    return next;
+  }
+
   void _shiftMonth(int delta) {
-    setState(() => _month = addBsMonths(_month.year, _month.month, delta));
+    final BsDate? next = _monthAway(delta);
+    if (next != null) {
+      setState(() => _month = next);
+    }
   }
 
   /// Selects [day] and brings its BS month into view. Used by the grid, by the
@@ -116,8 +130,10 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                     selected: _selected,
                     nepali: _nepali,
                     events: events,
-                    onPrevious: () => _shiftMonth(-1),
-                    onNext: () => _shiftMonth(1),
+                    onPrevious: _monthAway(-1) == null
+                        ? null
+                        : () => _shiftMonth(-1),
+                    onNext: _monthAway(1) == null ? null : () => _shiftMonth(1),
                     onOpenDate: _openDate,
                     onJump: (int year, int month) =>
                         setState(() => _month = BsDate(year, month, 1)),
@@ -238,8 +254,11 @@ class _MonthCard extends StatelessWidget {
   final DateTime selected;
   final bool nepali;
   final Map<String, List<CalendarEvent>> events;
-  final VoidCallback onPrevious;
-  final VoidCallback onNext;
+
+  /// Null at the ends of the supported year range, which disables the chevron
+  /// and the swipe in that direction.
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
   final ValueChanged<DateTime> onOpenDate;
   final void Function(int year, int month) onJump;
 
@@ -262,150 +281,163 @@ class _MonthCard extends StatelessWidget {
           null,
     );
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                IconButton(
-                  onPressed: onPrevious,
-                  icon: const Icon(Icons.chevron_left),
-                  tooltip: nepali ? 'अघिल्लो महिना' : 'Previous month',
-                ),
-                Column(
-                  children: <Widget>[
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        _BsYearPicker(
-                          year: month.year,
-                          nepali: nepali,
-                          onChanged: (int year) => onJump(year, month.month),
-                        ),
-                        const SizedBox(width: 8),
-                        _BsMonthPicker(
-                          month: month.month,
-                          nepali: nepali,
-                          onChanged: (int m) => onJump(month.year, m),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      adRangeLabel(days),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-                IconButton(
-                  onPressed: onNext,
-                  icon: const Icon(Icons.chevron_right),
-                  tooltip: nepali ? 'अर्को महिना' : 'Next month',
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
+    return GestureDetector(
+      // Swipe the month across, as on a phone. A flick left goes forward;
+      // the velocity gate keeps a slow drag over a day cell from paging.
+      onHorizontalDragEnd: (DragEndDetails details) {
+        final double velocity = details.primaryVelocity ?? 0;
+        if (velocity > 250) {
+          onPrevious?.call();
+        } else if (velocity < -250) {
+          onNext?.call();
+        }
+      },
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: scheme.outlineVariant),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  for (int col = 0; col < 7; col++)
-                    Expanded(
-                      // Matches the grid's crossAxisSpacing so the labels sit
-                      // exactly over their columns.
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
-                        child: Column(
-                          children: <Widget>[
-                            Text(
-                              nepali
-                                  ? kWeekdaysNeLong[col]
-                                  : kWeekdaysEnLong[col],
-                              textAlign: TextAlign.center,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: isWeekendColumn(col)
-                                    ? scheme.error
-                                    : scheme.onSurface,
-                              ),
-                            ),
-                            Text(
-                              nepali
-                                  ? kWeekdaysEnLong[col]
-                                  : kWeekdaysNeLong[col],
-                              textAlign: TextAlign.center,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 10,
-                                height: 1.3,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
+                  IconButton(
+                    onPressed: onPrevious,
+                    icon: const Icon(Icons.chevron_left),
+                    tooltip: nepali ? 'अघिल्लो महिना' : 'Previous month',
+                  ),
+                  Column(
+                    children: <Widget>[
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          _BsYearPicker(
+                            year: month.year,
+                            nepali: nepali,
+                            onChanged: (int year) => onJump(year, month.month),
+                          ),
+                          const SizedBox(width: 8),
+                          _BsMonthPicker(
+                            month: month.month,
+                            nepali: nepali,
+                            onChanged: (int m) => onJump(month.year, m),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        adRangeLabel(days),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
-                    ),
+                    ],
+                  ),
+                  IconButton(
+                    onPressed: onNext,
+                    icon: const Icon(Icons.chevron_right),
+                    tooltip: nepali ? 'अर्को महिना' : 'Next month',
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 8),
-            // A fixed cell height, not an aspect ratio: on a wide screen an
-            // aspect ratio makes every cell as tall as the column is wide.
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              itemCount: cells.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7,
-                mainAxisExtent: reserveNameLine ? 84 : 66,
-                mainAxisSpacing: 5,
-                crossAxisSpacing: 5,
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    for (int col = 0; col < 7; col++)
+                      Expanded(
+                        // Matches the grid's crossAxisSpacing so the labels sit
+                        // exactly over their columns.
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 3),
+                          child: Column(
+                            children: <Widget>[
+                              Text(
+                                nepali
+                                    ? kWeekdaysNeLong[col]
+                                    : kWeekdaysEnLong[col],
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: isWeekendColumn(col)
+                                      ? scheme.error
+                                      : scheme.onSurface,
+                                ),
+                              ),
+                              Text(
+                                nepali
+                                    ? kWeekdaysEnLong[col]
+                                    : kWeekdaysNeLong[col],
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  height: 1.3,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-              itemBuilder: (BuildContext context, int index) {
-                final _GridDay cell = cells[index];
-                return _DayCell(
-                  date: cell.date,
-                  bsDay: cell.bsDay,
-                  outside: cell.outside,
-                  reserveNameLine: reserveNameLine,
-                  nepali: nepali,
-                  isToday: isSameDay(cell.date, today),
-                  isSelected: isSameDay(cell.date, selected),
-                  events: events[dayKey(cell.date)] ?? const <CalendarEvent>[],
-                  onTap: () => onOpenDate(cell.date),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            _Legend(nepali: nepali),
-          ],
+              const SizedBox(height: 8),
+              // A fixed cell height, not an aspect ratio: on a wide screen an
+              // aspect ratio makes every cell as tall as the column is wide.
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: cells.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 7,
+                  mainAxisExtent: reserveNameLine ? 84 : 66,
+                  mainAxisSpacing: 5,
+                  crossAxisSpacing: 5,
+                ),
+                itemBuilder: (BuildContext context, int index) {
+                  final _GridDay cell = cells[index];
+                  return _DayCell(
+                    date: cell.date,
+                    bsDay: cell.bsDay,
+                    outside: cell.outside,
+                    reserveNameLine: reserveNameLine,
+                    nepali: nepali,
+                    isToday: isSameDay(cell.date, today),
+                    isSelected: isSameDay(cell.date, selected),
+                    events:
+                        events[dayKey(cell.date)] ?? const <CalendarEvent>[],
+                    onTap: () => onOpenDate(cell.date),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              _Legend(nepali: nepali),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Jumps to any BS year within five years of today's.
+/// Jumps to any BS year the conversion table covers.
 class _BsYearPicker extends StatelessWidget {
   const _BsYearPicker({
     required this.year,
@@ -420,20 +452,20 @@ class _BsYearPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final int current = bsToday().year;
-    final List<int> years = <int>[
-      for (int y = current - 5; y <= current + 5; y++) y,
-    ];
     return DropdownButton<int>(
-      value: years.contains(year) ? year : current,
+      value: year >= kBsPickerMinYear && year <= kBsPickerMaxYear
+          ? year
+          : current,
       underline: const SizedBox.shrink(),
       borderRadius: BorderRadius.circular(10),
+      menuMaxHeight: 320,
       style: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w800,
         color: Theme.of(context).colorScheme.onSurface,
       ),
       items: <DropdownMenuItem<int>>[
-        for (final int y in years)
+        for (int y = kBsPickerMinYear; y <= kBsPickerMaxYear; y++)
           DropdownMenuItem<int>(
             value: y,
             child: Text(localDigits(y, nepali: nepali)),
@@ -754,6 +786,8 @@ class _SidePanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        NepalClock(nepali: nepali),
+        const SizedBox(height: 16),
         _SelectedDayCard(
           selected: selected,
           nepali: nepali,

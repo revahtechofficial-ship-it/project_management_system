@@ -38,36 +38,42 @@ class AuthAppPreview extends StatelessWidget {
                 children: <Widget>[
                   const _Group(label: 'Done', color: AppColors.green, count: 2),
                   const _Row(
-                      done: true,
-                      title: 'Design system v2',
-                      label: 'Design',
-                      labelColor: AppColors.violet),
+                    done: true,
+                    title: 'Design system v2',
+                    label: 'Design',
+                    labelColor: AppColors.violet,
+                  ),
                   const _Row(
-                      done: true,
-                      title: 'Onboarding flow',
-                      label: 'Product',
-                      labelColor: AppColors.sky),
+                    done: true,
+                    title: 'Onboarding flow',
+                    label: 'Product',
+                    labelColor: AppColors.sky,
+                  ),
                   const SizedBox(height: 14),
                   const _Group(
-                      label: 'In progress',
-                      color: AppColors.brand,
-                      count: 3),
+                    label: 'In progress',
+                    color: AppColors.brand,
+                    count: 3,
+                  ),
                   const _Row(
-                      done: false,
-                      title: 'API integration',
-                      label: 'Engineering',
-                      labelColor: AppColors.teal,
-                      flag: AppColors.rose),
+                    done: false,
+                    title: 'API integration',
+                    label: 'Engineering',
+                    labelColor: AppColors.teal,
+                    flag: AppColors.rose,
+                  ),
                   const _Row(
-                      done: false,
-                      title: 'Q3 roadmap',
-                      label: 'Planning',
-                      labelColor: AppColors.amber),
+                    done: false,
+                    title: 'Q3 roadmap',
+                    label: 'Planning',
+                    labelColor: AppColors.amber,
+                  ),
                   const _Row(
-                      done: false,
-                      title: 'User research',
-                      label: 'Research',
-                      labelColor: AppColors.orange),
+                    done: false,
+                    title: 'User research',
+                    label: 'Research',
+                    labelColor: AppColors.orange,
+                  ),
                 ],
               ),
             ),
@@ -99,12 +105,17 @@ class _Toolbar extends StatelessWidget {
               gradient: AppColors.brandGradient,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.dashboard_rounded,
-                color: Colors.white, size: 15),
+            child: const Icon(
+              Icons.dashboard_rounded,
+              color: Colors.white,
+              size: 15,
+            ),
           ),
           const SizedBox(width: 10),
-          const Text('Marketing',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+          const Text(
+            'Marketing',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(width: 14),
           _Tab(label: 'List', active: true, scheme: scheme),
           _Tab(label: 'Board', active: false, scheme: scheme),
@@ -133,19 +144,21 @@ class _Tab extends StatelessWidget {
               : Colors.transparent,
           borderRadius: BorderRadius.circular(7),
         ),
-        child: Text(label,
-            style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                color: active ? AppColors.brand : scheme.onSurfaceVariant)),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: active ? AppColors.brand : scheme.onSurfaceVariant,
+          ),
+        ),
       ),
     );
   }
 }
 
 class _Group extends StatelessWidget {
-  const _Group(
-      {required this.label, required this.color, required this.count});
+  const _Group({required this.label, required this.color, required this.count});
   final String label;
   final Color color;
   final int count;
@@ -163,16 +176,20 @@ class _Group extends StatelessWidget {
               color: color.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(label,
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: color)),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
-          Text('$count',
-              style: TextStyle(
-                  fontSize: 11.5, color: scheme.onSurfaceVariant)),
+          Text(
+            '$count',
+            style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -208,14 +225,17 @@ class _Row extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    decoration: done ? TextDecoration.lineThrough : null,
-                    color: done ? scheme.onSurfaceVariant : scheme.onSurface)),
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                decoration: done ? TextDecoration.lineThrough : null,
+                color: done ? scheme.onSurfaceVariant : scheme.onSurface,
+              ),
+            ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -223,11 +243,14 @@ class _Row extends StatelessWidget {
               color: labelColor.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text(label,
-                style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: labelColor)),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: labelColor,
+              ),
+            ),
           ),
           SizedBox(
             width: 22,

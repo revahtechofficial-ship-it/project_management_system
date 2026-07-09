@@ -477,9 +477,8 @@ class _TaskSettingsCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     DropdownButtonFormField<int?>(
-                      initialValue: projects.any(
-                        (Project p) => p.id == config.projectId,
-                      )
+                      initialValue:
+                          projects.any((Project p) => p.id == config.projectId)
                           ? config.projectId
                           : null,
                       decoration: const InputDecoration(
@@ -487,9 +486,7 @@ class _TaskSettingsCard extends ConsumerWidget {
                         helperText: 'Where created tasks land',
                       ),
                       items: <DropdownMenuItem<int?>>[
-                        const DropdownMenuItem<int?>(
-                          child: Text('No project'),
-                        ),
+                        const DropdownMenuItem<int?>(child: Text('No project')),
                         for (final Project p in projects)
                           DropdownMenuItem<int?>(
                             value: p.id,

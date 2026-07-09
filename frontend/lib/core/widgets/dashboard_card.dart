@@ -35,9 +35,13 @@ class DashboardCard extends StatelessWidget {
                 Row(
                   children: <Widget>[
                     Expanded(
-                      child: Text(title!,
-                          style: const TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w700)),
+                      child: Text(
+                        title!,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                     ?trailing,
                   ],
