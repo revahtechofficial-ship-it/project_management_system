@@ -90,6 +90,27 @@ const List<String> kWeekdaysEn = <String>[
   'Sat',
 ];
 
+/// Full weekday names, Sunday first, for the calendar's column headings.
+const List<String> kWeekdaysNeLong = <String>[
+  'आइतवार',
+  'सोमवार',
+  'मङ्गलवार',
+  'बुधवार',
+  'बिहीवार',
+  'शुक्रवार',
+  'शनिवार',
+];
+
+const List<String> kWeekdaysEnLong = <String>[
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
 /// Gregorian month abbreviations, indexed 1–12.
 const List<String> kAdMonthsShort = <String>[
   '',
@@ -238,6 +259,19 @@ String dayKey(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-'
     '${d.month.toString().padLeft(2, '0')}-'
     '${d.day.toString().padLeft(2, '0')}';
+
+/// A one-line date for an event list, e.g. `Fri, 28 Aug 2026` in English or
+/// `शुक्र, १२ भदौ २०८३` in Nepali (which counts in the BS calendar).
+String eventDateLine(DateTime ad, {required bool nepali}) {
+  final int col = sundayFirstIndex(ad);
+  if (!nepali) {
+    return '${kWeekdaysEn[col]}, ${ad.day} '
+        '${kAdMonthsShort[ad.month]} ${ad.year}';
+  }
+  final BsDate bs = adToBs(ad);
+  return '${kWeekdaysNe[col]}, ${toNepaliDigits(bs.day)} '
+      '${kBsMonthsNe[bs.month]} ${toNepaliDigits(bs.year)}';
+}
 
 /// A full date line in both calendars, e.g.
 /// `असार २५, २०८३ · बिही, 9 Jul 2026`.

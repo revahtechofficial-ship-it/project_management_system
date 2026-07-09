@@ -172,3 +172,37 @@ List<CalendarEvent> upcomingEvents(
       });
   return all.length <= limit ? all : all.sublist(0, limit);
 }
+
+/// The [limit] events before today, most recent first.
+List<CalendarEvent> pastEvents(
+  Map<String, List<CalendarEvent>> byDay, {
+  int limit = 12,
+}) {
+  final DateTime today = dateOnly(DateTime.now());
+  final List<CalendarEvent> all =
+      <CalendarEvent>[
+        for (final List<CalendarEvent> day in byDay.values)
+          for (final CalendarEvent event in day)
+            if (event.date.isBefore(today)) event,
+      ]..sort((CalendarEvent a, CalendarEvent b) {
+        final int byDate = b.date.compareTo(a.date);
+        return byDate != 0 ? byDate : a.kind.index.compareTo(b.kind.index);
+      });
+  return all.length <= limit ? all : all.sublist(0, limit);
+}
+
+/// The event whose name a day cell should print. Holidays win over tasks and
+/// leave, mirroring how a printed patro labels its days.
+CalendarEvent? headlineEvent(List<CalendarEvent> events) {
+  if (events.isEmpty) {
+    return null;
+  }
+  for (final CalendarEventKind kind in CalendarEventKind.values) {
+    for (final CalendarEvent event in events) {
+      if (event.kind == kind) {
+        return event;
+      }
+    }
+  }
+  return events.first;
+}

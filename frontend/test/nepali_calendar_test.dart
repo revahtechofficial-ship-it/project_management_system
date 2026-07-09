@@ -115,5 +115,20 @@ void main() {
     test('dayKey pads correctly', () {
       expect(dayKey(DateTime(2026, 7, 9)), '2026-07-09');
     });
+
+    test('eventDateLine reads Gregorian in English, BS in Nepali', () {
+      // Raksha Bandhan 2026, from the seeded holiday table.
+      final DateTime rakshaBandhan = DateTime(2026, 8, 28);
+      expect(
+        eventDateLine(rakshaBandhan, nepali: false),
+        'Fri, 28 Aug 2026',
+      );
+      final BsDate bs = adToBs(rakshaBandhan);
+      expect(
+        eventDateLine(rakshaBandhan, nepali: true),
+        'शुक्र, ${toNepaliDigits(bs.day)} ${kBsMonthsNe[bs.month]} '
+        '${toNepaliDigits(bs.year)}',
+      );
+    });
   });
 }

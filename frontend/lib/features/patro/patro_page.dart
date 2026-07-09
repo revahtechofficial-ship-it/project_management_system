@@ -97,6 +97,8 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                     onPrevious: () => _shiftMonth(-1),
                     onNext: () => _shiftMonth(1),
                     onSelect: (DateTime day) => setState(() => _selected = day),
+                    onJump: (int year, int month) =>
+                        setState(() => _month = BsDate(year, month, 1)),
                   );
                   final Widget side = _SidePanel(
                     selected: _selected,
@@ -166,6 +168,7 @@ class _MonthCard extends StatelessWidget {
     required this.onPrevious,
     required this.onNext,
     required this.onSelect,
+    required this.onJump,
   });
 
   final BsDate month;
@@ -176,6 +179,7 @@ class _MonthCard extends StatelessWidget {
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final ValueChanged<DateTime> onSelect;
+  final void Function(int year, int month) onJump;
 
   @override
   Widget build(BuildContext context) {
@@ -202,29 +206,34 @@ class _MonthCard extends StatelessWidget {
                   icon: const Icon(Icons.chevron_left),
                   tooltip: nepali ? 'अघिल्लो महिना' : 'Previous month',
                 ),
-                SizedBox(
-                  width: 200,
-                  child: Column(
-                    children: <Widget>[
-                      Text(
-                        bsMonthLabel(month.year, month.month, nepali: nepali),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
+                Column(
+                  children: <Widget>[
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        _BsYearPicker(
+                          year: month.year,
+                          nepali: nepali,
+                          onChanged: (int year) => onJump(year, month.month),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        adRangeLabel(days),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: scheme.onSurfaceVariant,
+                        const SizedBox(width: 8),
+                        _BsMonthPicker(
+                          month: month.month,
+                          nepali: nepali,
+                          onChanged: (int m) => onJump(month.year, m),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      adRangeLabel(days),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
                 IconButton(
                   onPressed: onNext,
@@ -234,28 +243,54 @@ class _MonthCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Row(
-              children: <Widget>[
-                for (int col = 0; col < 7; col++)
-                  Expanded(
-                    // Matches the grid's crossAxisSpacing so the labels sit
-                    // exactly over their columns.
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 3),
-                      child: Text(
-                        nepali ? kWeekdaysNe[col] : kWeekdaysEn[col],
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: col == 6
-                              ? scheme.error
-                              : scheme.onSurfaceVariant,
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: <Widget>[
+                  for (int col = 0; col < 7; col++)
+                    Expanded(
+                      // Matches the grid's crossAxisSpacing so the labels sit
+                      // exactly over their columns.
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: Column(
+                          children: <Widget>[
+                            Text(
+                              nepali
+                                  ? kWeekdaysNeLong[col]
+                                  : kWeekdaysEnLong[col],
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: col == 6
+                                    ? scheme.error
+                                    : scheme.onSurface,
+                              ),
+                            ),
+                            Text(
+                              nepali
+                                  ? kWeekdaysEnLong[col]
+                                  : kWeekdaysNeLong[col],
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 9,
+                                height: 1.4,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 8),
             // A fixed cell height, not an aspect ratio: on a wide screen an
@@ -267,7 +302,7 @@ class _MonthCard extends StatelessWidget {
               itemCount: leading + days.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 7,
-                mainAxisExtent: 72,
+                mainAxisExtent: 92,
                 mainAxisSpacing: 6,
                 crossAxisSpacing: 6,
               ),
@@ -293,6 +328,88 @@ class _MonthCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Jumps to any BS year within five years of today's.
+class _BsYearPicker extends StatelessWidget {
+  const _BsYearPicker({
+    required this.year,
+    required this.nepali,
+    required this.onChanged,
+  });
+
+  final int year;
+  final bool nepali;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final int current = bsToday().year;
+    final List<int> years = <int>[
+      for (int y = current - 5; y <= current + 5; y++) y,
+    ];
+    return DropdownButton<int>(
+      value: years.contains(year) ? year : current,
+      underline: const SizedBox.shrink(),
+      borderRadius: BorderRadius.circular(10),
+      style: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w800,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
+      items: <DropdownMenuItem<int>>[
+        for (final int y in years)
+          DropdownMenuItem<int>(
+            value: y,
+            child: Text(localDigits(y, nepali: nepali)),
+          ),
+      ],
+      onChanged: (int? value) {
+        if (value != null) {
+          onChanged(value);
+        }
+      },
+    );
+  }
+}
+
+/// Jumps to any month of the shown BS year.
+class _BsMonthPicker extends StatelessWidget {
+  const _BsMonthPicker({
+    required this.month,
+    required this.nepali,
+    required this.onChanged,
+  });
+
+  final int month;
+  final bool nepali;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButton<int>(
+      value: month,
+      underline: const SizedBox.shrink(),
+      borderRadius: BorderRadius.circular(10),
+      style: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w800,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
+      items: <DropdownMenuItem<int>>[
+        for (int m = 1; m <= 12; m++)
+          DropdownMenuItem<int>(
+            value: m,
+            child: Text(nepali ? kBsMonthsNe[m] : kBsMonthsEn[m]),
+          ),
+      ],
+      onChanged: (int? value) {
+        if (value != null) {
+          onChanged(value);
+        }
+      },
     );
   }
 }
@@ -352,6 +469,7 @@ class _DayCell extends StatelessWidget {
         : scheme.outlineVariant.withValues(alpha: 0.55);
 
     final BorderRadius radius = BorderRadius.circular(10);
+    final CalendarEvent? headline = headlineEvent(events);
 
     return Material(
       color: isSelected
@@ -371,25 +489,37 @@ class _DayCell extends StatelessWidget {
               width: isToday && !isSelected ? 1.5 : 1,
             ),
           ),
-          child: Stack(
+          padding: const EdgeInsets.fromLTRB(5, 4, 5, 5),
+          child: Column(
             children: <Widget>[
-              Positioned(
-                top: 4,
-                right: 6,
-                child: Text(
-                  adLabel,
-                  style: TextStyle(
-                    fontSize: 10,
-                    height: 1,
-                    color: isSelected
-                        ? scheme.onPrimary.withValues(alpha: 0.85)
-                        : scheme.onSurfaceVariant,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  for (final CalendarEventKind kind in kinds)
+                    Container(
+                      width: 5,
+                      height: 5,
+                      margin: const EdgeInsets.only(right: 2, top: 3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isSelected ? scheme.onPrimary : kind.color,
+                      ),
+                    ),
+                  const Spacer(),
+                  Text(
+                    adLabel,
+                    style: TextStyle(
+                      fontSize: 10,
+                      height: 1,
+                      color: isSelected
+                          ? scheme.onPrimary.withValues(alpha: 0.85)
+                          : scheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
+                ],
               ),
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
+              Expanded(
+                child: Center(
                   child: Text(
                     localDigits(bsDay, nepali: nepali),
                     style: TextStyle(
@@ -401,25 +531,28 @@ class _DayCell extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
-                bottom: 7,
-                left: 0,
-                right: 0,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    for (final CalendarEventKind kind in kinds)
-                      Container(
-                        width: 5,
-                        height: 5,
-                        margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected ? scheme.onPrimary : kind.color,
+              // A printed patro names the day rather than dotting it; the dots
+              // above only cover the kinds this line has no room for.
+              SizedBox(
+                height: 22,
+                child: headline == null
+                    ? null
+                    : Text(
+                        headline.name(nepali: nepali),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 8.5,
+                          height: 1.25,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected
+                              ? scheme.onPrimary.withValues(alpha: 0.9)
+                              : headline.kind == CalendarEventKind.holiday
+                              ? scheme.error
+                              : scheme.onSurfaceVariant,
                         ),
                       ),
-                  ],
-                ),
               ),
             ],
           ),
@@ -575,16 +708,29 @@ class _SelectedDayCard extends ConsumerWidget {
   }
 }
 
-class _UpcomingCard extends StatelessWidget {
+/// Upcoming and past events, one at a time — the two lists Hamro Patro shows
+/// beside its grid.
+class _UpcomingCard extends StatefulWidget {
   const _UpcomingCard({required this.nepali, required this.events});
 
   final bool nepali;
   final Map<String, List<CalendarEvent>> events;
 
   @override
+  State<_UpcomingCard> createState() => _UpcomingCardState();
+}
+
+class _UpcomingCardState extends State<_UpcomingCard> {
+  bool _past = false;
+
+  @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final List<CalendarEvent> upcoming = upcomingEvents(events);
+    final bool nepali = widget.nepali;
+    final List<CalendarEvent> shown = _past
+        ? pastEvents(widget.events)
+        : upcomingEvents(widget.events);
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -596,18 +742,33 @@ class _UpcomingCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              nepali ? 'आगामी' : 'Upcoming',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            SegmentedButton<bool>(
+              showSelectedIcon: false,
+              style: const ButtonStyle(visualDensity: VisualDensity.compact),
+              segments: <ButtonSegment<bool>>[
+                ButtonSegment<bool>(
+                  value: false,
+                  label: Text(nepali ? 'आउँदा दिनहरू' : 'Upcoming'),
+                ),
+                ButtonSegment<bool>(
+                  value: true,
+                  label: Text(nepali ? 'बितेका' : 'Past'),
+                ),
+              ],
+              selected: <bool>{_past},
+              onSelectionChanged: (Set<bool> value) =>
+                  setState(() => _past = value.first),
             ),
-            const SizedBox(height: 12),
-            if (upcoming.isEmpty)
+            const SizedBox(height: 14),
+            if (shown.isEmpty)
               Text(
-                nepali ? 'केही आउँदैछैन।' : 'Nothing coming up.',
+                _past
+                    ? (nepali ? 'केही बितेको छैन।' : 'Nothing has passed.')
+                    : (nepali ? 'केही आउँदैछैन।' : 'Nothing coming up.'),
                 style: TextStyle(color: scheme.onSurfaceVariant),
               )
             else
-              for (final CalendarEvent event in upcoming)
+              for (final CalendarEvent event in shown)
                 _EventTile(event: event, nepali: nepali, showDate: true),
           ],
         ),
@@ -633,18 +794,9 @@ class _EventTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final BsDate bs = adToBs(event.date);
-    final String dateLine = nepali
-        ? '${kBsMonthsNe[bs.month]} ${toNepaliDigits(bs.day)} · '
-              '${event.date.day} ${kAdMonthsShort[event.date.month]}'
-        : '${kBsMonthsEn[bs.month]} ${bs.day} · '
-              '${event.date.day} ${kAdMonthsShort[event.date.month]}';
-    final String subtitle = showDate
-        ? (event.subtitle.isEmpty ? dateLine : '$dateLine · ${event.subtitle}')
-        : event.subtitle;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -662,6 +814,15 @@ class _EventTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
+                // The date leads the line, as in a printed events list.
+                if (showDate)
+                  Text(
+                    eventDateLine(event.date, nepali: nepali),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 Text(
                   event.name(nepali: nepali),
                   style: const TextStyle(
@@ -669,9 +830,9 @@ class _EventTile extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (subtitle.isNotEmpty)
+                if (event.subtitle.isNotEmpty)
                   Text(
-                    subtitle,
+                    event.subtitle,
                     style: TextStyle(
                       fontSize: 11,
                       color: scheme.onSurfaceVariant,
