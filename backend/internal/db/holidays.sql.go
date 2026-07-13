@@ -15,13 +15,14 @@ const createHoliday = `-- name: CreateHoliday :one
 INSERT INTO holidays (holiday_date, name_en, name_ne, is_public, category,
                       description_en, description_ne, history_en, history_ne,
                       importance_en, importance_ne, celebration_en,
-                      celebration_ne)
+                      celebration_ne, aliases)
 VALUES ($1, $2, $3,
         $4, $5,
         $6, $7,
         $8, $9,
         $10, $11,
-        $12, $13)
+        $12, $13,
+        $14)
 ON CONFLICT (holiday_date, name_en) DO UPDATE
 SET name_ne = EXCLUDED.name_ne,
     is_public = EXCLUDED.is_public,
@@ -33,8 +34,9 @@ SET name_ne = EXCLUDED.name_ne,
     importance_en = EXCLUDED.importance_en,
     importance_ne = EXCLUDED.importance_ne,
     celebration_en = EXCLUDED.celebration_en,
-    celebration_ne = EXCLUDED.celebration_ne
-RETURNING id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne
+    celebration_ne = EXCLUDED.celebration_ne,
+    aliases = EXCLUDED.aliases
+RETURNING id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne, aliases
 `
 
 type CreateHolidayParams struct {
@@ -51,6 +53,7 @@ type CreateHolidayParams struct {
 	ImportanceNe  string      `json:"importance_ne"`
 	CelebrationEn string      `json:"celebration_en"`
 	CelebrationNe string      `json:"celebration_ne"`
+	Aliases       string      `json:"aliases"`
 }
 
 func (q *Queries) CreateHoliday(ctx context.Context, arg CreateHolidayParams) (Holiday, error) {
@@ -68,6 +71,7 @@ func (q *Queries) CreateHoliday(ctx context.Context, arg CreateHolidayParams) (H
 		arg.ImportanceNe,
 		arg.CelebrationEn,
 		arg.CelebrationNe,
+		arg.Aliases,
 	)
 	var i Holiday
 	err := row.Scan(
@@ -86,6 +90,7 @@ func (q *Queries) CreateHoliday(ctx context.Context, arg CreateHolidayParams) (H
 		&i.ImportanceNe,
 		&i.CelebrationEn,
 		&i.CelebrationNe,
+		&i.Aliases,
 	)
 	return i, err
 }
@@ -100,7 +105,7 @@ func (q *Queries) DeleteHoliday(ctx context.Context, id int64) error {
 }
 
 const listHolidays = `-- name: ListHolidays :many
-SELECT id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne FROM holidays
+SELECT id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne, aliases FROM holidays
 WHERE holiday_date >= $1
   AND holiday_date <= $2
 ORDER BY holiday_date, id
@@ -136,6 +141,7 @@ func (q *Queries) ListHolidays(ctx context.Context, arg ListHolidaysParams) ([]H
 			&i.ImportanceNe,
 			&i.CelebrationEn,
 			&i.CelebrationNe,
+			&i.Aliases,
 		); err != nil {
 			return nil, err
 		}
@@ -161,9 +167,10 @@ SET holiday_date = $1,
     importance_en = $10,
     importance_ne = $11,
     celebration_en = $12,
-    celebration_ne = $13
-WHERE id = $14
-RETURNING id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne
+    celebration_ne = $13,
+    aliases = $14
+WHERE id = $15
+RETURNING id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne, aliases
 `
 
 type UpdateHolidayParams struct {
@@ -180,6 +187,7 @@ type UpdateHolidayParams struct {
 	ImportanceNe  string      `json:"importance_ne"`
 	CelebrationEn string      `json:"celebration_en"`
 	CelebrationNe string      `json:"celebration_ne"`
+	Aliases       string      `json:"aliases"`
 	ID            int64       `json:"id"`
 }
 
@@ -198,6 +206,7 @@ func (q *Queries) UpdateHoliday(ctx context.Context, arg UpdateHolidayParams) (H
 		arg.ImportanceNe,
 		arg.CelebrationEn,
 		arg.CelebrationNe,
+		arg.Aliases,
 		arg.ID,
 	)
 	var i Holiday
@@ -217,6 +226,7 @@ func (q *Queries) UpdateHoliday(ctx context.Context, arg UpdateHolidayParams) (H
 		&i.ImportanceNe,
 		&i.CelebrationEn,
 		&i.CelebrationNe,
+		&i.Aliases,
 	)
 	return i, err
 }

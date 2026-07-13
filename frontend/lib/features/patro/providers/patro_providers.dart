@@ -214,6 +214,18 @@ List<CalendarEvent> pastEvents(
   return all.length <= limit ? all : all.sublist(0, limit);
 }
 
+/// Holidays whose name, Nepali name, or aliases match [query], soonest first.
+///
+/// Searching is the point of the aliases column: "Dashain" is not the formal
+/// name of any single day, so without it the search finds nothing.
+List<Holiday> searchHolidays(List<Holiday> holidays, String query) {
+  final List<Holiday> hits = <Holiday>[
+    for (final Holiday h in holidays)
+      if (h.matches(query)) h,
+  ]..sort((Holiday a, Holiday b) => a.date.compareTo(b.date));
+  return hits;
+}
+
 /// The holiday a day cell should print, if any.
 ///
 /// Only holidays get their name spelled out in the grid. Task titles and

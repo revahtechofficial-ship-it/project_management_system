@@ -69,6 +69,9 @@ class _HolidayDialogState extends ConsumerState<_HolidayDialog> {
   late final TextEditingController _celebrationNe = TextEditingController(
     text: _existing?.celebration.ne ?? '',
   );
+  late final TextEditingController _aliases = TextEditingController(
+    text: _existing?.aliases ?? '',
+  );
 
   late DateTime _date = dateOnly(
     _existing?.date ?? widget.initialDate ?? DateTime.now(),
@@ -91,6 +94,7 @@ class _HolidayDialogState extends ConsumerState<_HolidayDialog> {
       _importanceNe,
       _celebrationEn,
       _celebrationNe,
+      _aliases,
     ]) {
       c.dispose();
     }
@@ -126,6 +130,7 @@ class _HolidayDialogState extends ConsumerState<_HolidayDialog> {
       en: _celebrationEn.text.trim(),
       ne: _celebrationNe.text.trim(),
     ),
+    aliases: _aliases.text.trim(),
   );
 
   Future<void> _save() async {
@@ -231,6 +236,17 @@ class _HolidayDialogState extends ConsumerState<_HolidayDialog> {
                 ],
                 onChanged: (FestivalCategory? v) =>
                     setState(() => _category = v ?? FestivalCategory.other),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _aliases,
+                decoration: const InputDecoration(
+                  labelText: 'Also known as',
+                  isDense: true,
+                  helperText:
+                      'Comma-separated, e.g. Dashain, दशैं, '
+                      'Bada Dashain',
+                ),
               ),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,

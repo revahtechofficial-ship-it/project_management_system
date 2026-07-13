@@ -68,6 +68,7 @@ type holidayResponse struct {
 	ImportanceNe  string `json:"importance_ne"`
 	CelebrationEn string `json:"celebration_en"`
 	CelebrationNe string `json:"celebration_ne"`
+	Aliases       string `json:"aliases"`
 }
 
 func holidayFrom(hd db.Holiday) holidayResponse {
@@ -86,6 +87,7 @@ func holidayFrom(hd db.Holiday) holidayResponse {
 		ImportanceNe:  hd.ImportanceNe,
 		CelebrationEn: hd.CelebrationEn,
 		CelebrationNe: hd.CelebrationNe,
+		Aliases:       hd.Aliases,
 	}
 }
 
@@ -138,6 +140,7 @@ type holidayBody struct {
 	ImportanceNe  string `json:"importance_ne"`
 	CelebrationEn string `json:"celebration_en"`
 	CelebrationNe string `json:"celebration_ne"`
+	Aliases       string `json:"aliases"`
 }
 
 // decodeHoliday reads the body shared by create and update, and normalises it.
@@ -191,6 +194,7 @@ func (h *HolidayHandler) create(w http.ResponseWriter, r *http.Request) {
 		ImportanceNe:  b.ImportanceNe,
 		CelebrationEn: b.CelebrationEn,
 		CelebrationNe: b.CelebrationNe,
+		Aliases:       b.Aliases,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -234,6 +238,7 @@ func (h *HolidayHandler) update(w http.ResponseWriter, r *http.Request) {
 		ImportanceNe:  b.ImportanceNe,
 		CelebrationEn: b.CelebrationEn,
 		CelebrationNe: b.CelebrationNe,
+		Aliases:       b.Aliases,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)

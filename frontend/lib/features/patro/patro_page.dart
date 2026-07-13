@@ -28,6 +28,14 @@ class _PatroPageState extends ConsumerState<PatroPage> {
   bool _nepali = true;
   late BsDate _month = bsToday();
   late DateTime _selected = dateOnly(DateTime.now());
+  final TextEditingController _search = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
   /// The month [delta] away, or null when that would leave the range the year
   /// picker offers (and, further out, the range the conversion table covers).
@@ -128,6 +136,40 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                   onRetry: () => ref.invalidate(holidaysProvider),
                 ),
               ],
+              const SizedBox(height: 16),
+              TextField(
+                controller: _search,
+                onChanged: (String v) => setState(() => _query = v),
+                decoration: InputDecoration(
+                  isDense: true,
+                  prefixIcon: const Icon(Icons.search, size: 18),
+                  hintText: _nepali
+                      ? 'पर्व खोज्नुहोस् — दशैं, तिहार, होली…'
+                      : 'Search festivals — Dashain, Tihar, Holi…',
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () {
+                            _search.clear();
+                            setState(() => _query = '');
+                          },
+                        ),
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              if (_query.trim().isNotEmpty) ...<Widget>[
+                const SizedBox(height: 12),
+                _SearchResults(
+                  query: _query,
+                  nepali: _nepali,
+                  onOpenDate: (DateTime day) {
+                    _search.clear();
+                    setState(() => _query = '');
+                    _openDate(day);
+                  },
+                ),
+              ],
               const SizedBox(height: 20),
               LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
@@ -174,6 +216,103 @@ class _PatroPageState extends ConsumerState<PatroPage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Festivals matching the search box, by name or by any of their other names.
+class _SearchResults extends ConsumerWidget {
+  const _SearchResults({
+    required this.query,
+    required this.nepali,
+    required this.onOpenDate,
+  });
+
+  final String query;
+  final bool nepali;
+  final ValueChanged<DateTime> onOpenDate;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final List<Holiday> all =
+        ref.watch(holidaysProvider).asData?.value ?? const <Holiday>[];
+    final List<Holiday> hits = searchHolidays(all, query);
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: hits.isEmpty
+            ? Text(
+                nepali
+                    ? '"$query" सँग मिल्ने पर्व भेटिएन।'
+                    : 'No festival matches "$query".',
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  for (final Holiday holiday in hits)
+                    _SearchHit(
+                      holiday: holiday,
+                      nepali: nepali,
+                      onTap: () => onOpenDate(holiday.date),
+                    ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _SearchHit extends StatelessWidget {
+  const _SearchHit({
+    required this.holiday,
+    required this.nepali,
+    required this.onTap,
+  });
+
+  final Holiday holiday;
+  final bool nepali;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: Row(
+          children: <Widget>[
+            Icon(
+              holiday.category.icon,
+              size: 16,
+              color: holiday.category.color,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                holiday.name(nepali: nepali),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Text(
+              eventDateLine(holiday.date, nepali: nepali),
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+            ),
+          ],
         ),
       ),
     );

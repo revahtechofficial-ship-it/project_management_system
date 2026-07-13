@@ -51,7 +51,8 @@ class FestivalDetails extends StatelessWidget {
             if (s.$3.isNotEmpty) s,
         ];
 
-    if (present.isEmpty) {
+    final List<String> aliases = holiday.aliasList;
+    if (present.isEmpty && aliases.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -65,6 +66,46 @@ class FestivalDetails extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          // The name people actually use often is not the day's formal name:
+          // Vijaya Dashami is "Dashain", Raksha Bandhan is "Janai Purnima".
+          if (aliases.isNotEmpty) ...<Widget>[
+            Text(
+              nepali ? 'अन्य नाम' : 'Also known as',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: <Widget>[
+                for (final String alias in aliases)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: holiday.category.color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      alias,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: holiday.category.color,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (present.isNotEmpty) const SizedBox(height: 12),
+          ],
           for (int i = 0; i < present.length; i++) ...<Widget>[
             if (i > 0) const SizedBox(height: 12),
             _Section(

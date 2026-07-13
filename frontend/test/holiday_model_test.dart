@@ -47,6 +47,7 @@ void main() {
       'importance_ne': '',
       'celebration_en': 'Elders give tika and jamara.',
       'celebration_ne': '',
+      'aliases': 'Dashain, दशैं',
     };
 
     test('round-trips through fromJson and toJson', () {
@@ -80,6 +81,36 @@ void main() {
         'category': 'lunar-eclipse-party',
       });
       expect(odd.category, FestivalCategory.other);
+    });
+
+    test('aliases make the umbrella festival findable', () {
+      // The whole point: "Dashain" is not the formal name of any single day.
+      final Holiday dashami = Holiday(
+        id: 1,
+        date: DateTime(2026, 10, 21),
+        nameEn: 'Vijaya Dashami',
+        nameNe: 'विजया दशमी',
+        aliases: 'Dashain, बडा दशैं, दशैं, Bada Dashain',
+      );
+      expect(dashami.matches('Dashain'), isTrue);
+      expect(dashami.matches('dashain'), isTrue);
+      expect(dashami.matches('दशैं'), isTrue);
+      expect(dashami.matches('Vijaya'), isTrue);
+      expect(dashami.matches('विजया'), isTrue);
+      expect(dashami.matches('Tihar'), isFalse);
+      expect(dashami.matches('  '), isFalse);
+      expect(dashami.aliasList, <String>[
+        'Dashain',
+        'बडा दशैं',
+        'दशैं',
+        'Bada Dashain',
+      ]);
+    });
+
+    test('a day with no aliases has an empty list, not [""]', () {
+      final Holiday plain = Holiday(id: 1, date: DateTime(2026, 1, 1));
+      expect(plain.aliasList, isEmpty);
+      expect(plain.matches('anything'), isFalse);
     });
 
     test('name falls back across languages', () {

@@ -53,6 +53,11 @@ class Holiday {
   final Bilingual importance;
   final Bilingual celebration;
 
+  /// Other names for this day, comma-separated: the umbrella festival it
+  /// belongs to (Vijaya Dashami is *Dashain*), the name another community
+  /// uses (Raksha Bandhan is *Janai Purnima*), and the Nepali spelling.
+  final String aliases;
+
   const Holiday({
     required this.id,
     required this.date,
@@ -64,7 +69,26 @@ class Holiday {
     this.history = const Bilingual(),
     this.importance = const Bilingual(),
     this.celebration = const Bilingual(),
+    this.aliases = '',
   });
+
+  /// The aliases as a list, empties dropped.
+  List<String> get aliasList => <String>[
+    for (final String a in aliases.split(','))
+      if (a.trim().isNotEmpty) a.trim(),
+  ];
+
+  /// Whether [query] matches this day's name or any of its other names, so
+  /// that searching "Dashain" finds Vijaya Dashami.
+  bool matches(String query) {
+    final String q = query.trim().toLowerCase();
+    if (q.isEmpty) {
+      return false;
+    }
+    return nameEn.toLowerCase().contains(q) ||
+        nameNe.contains(q) ||
+        aliases.toLowerCase().contains(q);
+  }
 
   /// The holiday name in the requested language, falling back to the other.
   String name({required bool nepali}) {
@@ -107,6 +131,7 @@ class Holiday {
       en: _str(json, 'celebration_en'),
       ne: _str(json, 'celebration_ne'),
     ),
+    aliases: _str(json, 'aliases'),
   );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -127,6 +152,7 @@ class Holiday {
     'importance_ne': importance.ne,
     'celebration_en': celebration.en,
     'celebration_ne': celebration.ne,
+    'aliases': aliases,
   };
 
   @override
@@ -145,7 +171,8 @@ class Holiday {
           other.description == description &&
           other.history == history &&
           other.importance == importance &&
-          other.celebration == celebration;
+          other.celebration == celebration &&
+          other.aliases == aliases;
 
   @override
   int get hashCode => Object.hash(
@@ -159,5 +186,6 @@ class Holiday {
     history,
     importance,
     celebration,
+    aliases,
   );
 }

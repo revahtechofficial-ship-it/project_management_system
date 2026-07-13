@@ -255,6 +255,7 @@ type Holiday struct {
 	ImportanceNe  string      `json:"importance_ne"`
 	CelebrationEn string      `json:"celebration_en"`
 	CelebrationNe string      `json:"celebration_ne"`
+	Aliases       string      `json:"aliases"`
 }
 
 type Incident struct {
