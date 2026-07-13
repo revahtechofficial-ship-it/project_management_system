@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/date_format.dart';
+import '../../core/utils/date_search.dart';
 import '../../core/utils/feedback.dart';
 import '../../core/utils/nepali_calendar.dart';
 import '../../core/widgets/page_header.dart';
@@ -20,6 +21,7 @@ import 'widgets/nepal_clock.dart';
 import 'widgets/panchang_card.dart';
 import 'widgets/pill_toggle.dart';
 import 'widgets/rashifal_card.dart';
+import 'widgets/share_dialog.dart';
 
 /// A dual Bikram Sambat + Gregorian calendar, in the spirit of Hamro Patro:
 /// a BS month grid with the AD day in each cell, holidays, task due dates and
@@ -60,6 +62,12 @@ class _PatroPageState extends ConsumerState<PatroPage> {
       setState(() => _month = next);
     }
   }
+
+  /// A year is twelve months, so year navigation is month navigation — which
+  /// means it inherits the same bounds check and cannot walk off the table.
+  BsDate? _yearAway(int delta) => _monthAway(delta * 12);
+
+  void _shiftYear(int delta) => _shiftMonth(delta * 12);
 
   /// Selects [day] and brings its BS month into view. Used by the grid, by the
   /// greyed days of the neighbouring months, and by the event lists.
@@ -129,6 +137,18 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                     label: Text(_nepali ? 'आज' : 'Today', softWrap: false),
                   ),
                   const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => showShareDialog(
+                      context,
+                      date: _selected,
+                      nepali: _nepali,
+                      events:
+                          events[dayKey(_selected)] ?? const <CalendarEvent>[],
+                    ),
+                    icon: const Icon(Icons.ios_share, size: 18),
+                    label: Text(_nepali ? 'साझा' : 'Share', softWrap: false),
+                  ),
+                  const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: _addEvent,
                     icon: const Icon(Icons.add, size: 18),
@@ -167,8 +187,8 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                   isDense: true,
                   prefixIcon: const Icon(Icons.search, size: 18),
                   hintText: _nepali
-                      ? 'पर्व खोज्नुहोस् — दशैं, तिहार, होली…'
-                      : 'Search festivals — Dashain, Tihar, Holi…',
+                      ? 'खोज्नुहोस् — दशैं, होली, २०८३-०३-२५, असार २५'
+                      : 'Search — Dashain, Holi, 2083-03-25, 9 July 2026',
                   suffixIcon: _query.isEmpty
                       ? null
                       : IconButton(
@@ -205,6 +225,12 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                         ? null
                         : () => _shiftMonth(-1),
                     onNext: _monthAway(1) == null ? null : () => _shiftMonth(1),
+                    onPreviousYear: _yearAway(-1) == null
+                        ? null
+                        : () => _shiftYear(-1),
+                    onNextYear: _yearAway(1) == null
+                        ? null
+                        : () => _shiftYear(1),
                     onOpenDate: _openDate,
                     onJump: (int year, int month) =>
                         setState(() => _month = BsDate(year, month, 1)),
@@ -264,6 +290,10 @@ class _SearchResults extends ConsumerWidget {
         ref.watch(holidaysProvider).asData?.value ?? const <Holiday>[];
     final List<Holiday> hits = searchHolidays(all, query);
 
+    // The same box takes a date as well as a festival name. A year that both
+    // calendars could claim comes back twice, labelled, rather than guessed at.
+    final List<DateMatch> dates = searchDates(query);
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -272,16 +302,24 @@ class _SearchResults extends ConsumerWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: hits.isEmpty
+        child: hits.isEmpty && dates.isEmpty
             ? Text(
                 nepali
-                    ? '"$query" सँग मिल्ने पर्व भेटिएन।'
-                    : 'No festival matches "$query".',
+                    ? '"$query" सँग मिल्ने पर्व वा मिति भेटिएन।'
+                    : 'No festival or date matches "$query".',
                 style: TextStyle(color: scheme.onSurfaceVariant),
               )
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
+                  for (final DateMatch m in dates)
+                    _DateHit(
+                      match: m,
+                      nepali: nepali,
+                      onTap: () => onOpenDate(m.date),
+                    ),
+                  if (dates.isNotEmpty && hits.isNotEmpty)
+                    const Divider(height: 14),
                   for (final Holiday holiday in hits)
                     _SearchHit(
                       holiday: holiday,
@@ -290,6 +328,63 @@ class _SearchResults extends ConsumerWidget {
                     ),
                 ],
               ),
+      ),
+    );
+  }
+}
+
+/// A date the query could have meant, and which calendar it was read in.
+class _DateHit extends StatelessWidget {
+  const _DateHit({
+    required this.match,
+    required this.nepali,
+    required this.onTap,
+  });
+
+  final DateMatch match;
+  final bool nepali;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: Row(
+          children: <Widget>[
+            Icon(Icons.event_outlined, size: 16, color: scheme.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                fullDualDate(match.date, nepali: nepali),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            // Which calendar this reading came from. Without it, two results
+            // for one query would look like a bug.
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Text(
+                nepali ? match.readAs.labelNe : match.readAs.short,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -414,6 +509,8 @@ class _MonthCard extends StatelessWidget {
     required this.events,
     required this.onPrevious,
     required this.onNext,
+    required this.onPreviousYear,
+    required this.onNextYear,
     required this.onOpenDate,
     required this.onJump,
   });
@@ -427,6 +524,11 @@ class _MonthCard extends StatelessWidget {
   /// and the swipe in that direction.
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
+
+  /// A whole year at a step, for the reader who is looking for last Dashain.
+  final VoidCallback? onPreviousYear;
+  final VoidCallback? onNextYear;
+
   final ValueChanged<DateTime> onOpenDate;
   final void Function(int year, int month) onJump;
 

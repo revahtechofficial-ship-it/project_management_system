@@ -27,6 +27,7 @@ import '../onboarding/widgets/onboarding_tour.dart';
 import '../reminders/providers/reminders_providers.dart';
 import '../reminders/widgets/reminder_dialog.dart';
 import '../tasks/providers/tasks_providers.dart';
+import '../patro/widgets/patro_today_card.dart';
 
 /// The home dashboard: greeting, KPI cards, activity charts and live task
 /// lists. Real numbers come from [tasksProvider]; everything degrades
@@ -71,6 +72,8 @@ class DashboardPage extends ConsumerWidget {
             const _DashboardSkeleton()
           else ...<Widget>[
             const _QuickActionsRow(),
+            const SizedBox(height: 16),
+            const PatroTodayCard(),
             const SizedBox(height: 16),
             _SummaryBand(metrics: metrics),
             if (user != null && _profileCompletion(user) < 1.0) ...<Widget>[
