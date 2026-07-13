@@ -344,4 +344,55 @@ void main() {
       );
     });
   });
+
+  group('date converter', () {
+    test('BS -> AD -> BS returns the same day, across a whole BS year', () {
+      for (int month = 1; month <= 12; month++) {
+        final int length = bsMonthLength(2083, month);
+        for (int day = 1; day <= length; day++) {
+          final DateTime ad = bsToAd(2083, month, day);
+          expect(
+            adToBs(ad),
+            BsDate(2083, month, day),
+            reason: 'BS 2083-$month-$day round trip',
+          );
+        }
+      }
+    });
+
+    test('AD -> BS -> AD returns the same day, across a Gregorian year', () {
+      DateTime day = DateTime(2026, 1, 1);
+      while (day.year == 2026) {
+        final BsDate bs = adToBs(day);
+        expect(bsToAd(bs.year, bs.month, bs.day), day, reason: '$day');
+        day = DateTime(day.year, day.month, day.day + 1);
+      }
+    });
+
+    test('a BS month never offers a day it does not have', () {
+      // The converter builds its day picker from bsMonthLength, so this is the
+      // invariant that keeps it from offering 32 Falgun.
+      for (int year = 2080; year <= 2085; year++) {
+        for (int month = 1; month <= 12; month++) {
+          final int length = bsMonthLength(year, month);
+          expect(length, inInclusiveRange(29, 32));
+          // The last day converts, and one past it belongs to the next month.
+          expect(adToBs(bsToAd(year, month, length)).day, length);
+          final DateTime past = bsToAd(year, month, length);
+          expect(
+            adToBs(DateTime(past.year, past.month, past.day + 1)).month,
+            month == 12 ? 1 : month + 1,
+          );
+        }
+      }
+    });
+
+    test('the weekday agrees in both calendars', () {
+      // The converter prints one weekday for both; it must be the same day.
+      final DateTime ad = bsToAd(2083, 3, 25);
+      expect(sundayFirstIndex(ad), sundayFirstIndex(bsToAd(2083, 3, 25)));
+      expect(kWeekdaysEnLong[sundayFirstIndex(ad)], 'Thursday');
+      expect(dayKey(ad), '2026-07-09');
+    });
+  });
 }

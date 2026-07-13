@@ -376,6 +376,19 @@ type Milestone struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Muhurat struct {
+	ID          int64       `json:"id"`
+	MuhuratDate pgtype.Date `json:"muhurat_date"`
+	Kind        string      `json:"kind"`
+	StartTime   pgtype.Time `json:"start_time"`
+	EndTime     pgtype.Time `json:"end_time"`
+	NoteEn      string      `json:"note_en"`
+	NoteNe      string      `json:"note_ne"`
+	// Which published list this came from, e.g. "Nepal Panchanga Nirnayak Samiti 2083". Left blank it is nobody's authority but the person who typed it.
+	Source    string    `json:"source"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Notification struct {
 	ID        int64     `json:"id"`
 	Type      string    `json:"type"`

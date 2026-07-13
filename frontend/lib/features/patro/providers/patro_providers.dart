@@ -5,8 +5,10 @@ import '../../../data/enums/calendar_event_kind.dart';
 import '../../../data/enums/festival_category.dart';
 import '../../../data/models/holiday.dart';
 import '../../../data/models/leave_request.dart';
+import '../../../data/models/muhurat.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/holidays_repository.dart';
+import '../../../data/repositories/muhurats_repository.dart';
 import '../../../providers/dio_provider.dart';
 import '../../leave/providers/leave_providers.dart';
 import '../../tasks/providers/tasks_providers.dart';
@@ -22,6 +24,19 @@ final Provider<HolidaysRepository> holidaysRepositoryProvider =
 final FutureProvider<List<Holiday>> holidaysProvider =
     FutureProvider<List<Holiday>>((ref) {
       return ref.watch(holidaysRepositoryProvider).list();
+    });
+
+/// The saait repository.
+final Provider<MuhuratsRepository> muhuratsRepositoryProvider =
+    Provider<MuhuratsRepository>((ref) {
+      return MuhuratsRepository(ref.watch(dioProvider));
+    });
+
+/// Published saait across the server's default window. Empty until an admin
+/// enters some — they cannot be computed. Invalidate after adding or removing.
+final FutureProvider<List<Muhurat>> muhuratsProvider =
+    FutureProvider<List<Muhurat>>((ref) {
+      return ref.watch(muhuratsRepositoryProvider).list();
     });
 
 /// One entry on the calendar, whatever its origin.

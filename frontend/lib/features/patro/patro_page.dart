@@ -9,8 +9,10 @@ import '../../data/enums/calendar_event_kind.dart';
 import '../../data/models/holiday.dart';
 import '../../providers/auth_provider.dart';
 import 'providers/patro_providers.dart';
+import 'widgets/date_converter.dart';
 import 'widgets/festival_details.dart';
 import 'widgets/holiday_dialog.dart';
+import 'widgets/muhurta_card.dart';
 import 'widgets/nepal_clock.dart';
 import 'widgets/panchang_card.dart';
 import 'widgets/pill_toggle.dart';
@@ -943,7 +945,11 @@ class _SidePanel extends StatelessWidget {
         const SizedBox(height: 16),
         PanchangCard(date: selected, nepali: nepali),
         const SizedBox(height: 16),
+        MuhurtaCard(date: selected, nepali: nepali),
+        const SizedBox(height: 16),
         _UpcomingCard(nepali: nepali, events: events, onOpenDate: onOpenDate),
+        const SizedBox(height: 16),
+        DateConverter(nepali: nepali, onOpenDate: onOpenDate),
       ],
     );
   }
