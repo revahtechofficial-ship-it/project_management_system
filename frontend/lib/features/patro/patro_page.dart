@@ -6,10 +6,12 @@ import '../../core/utils/feedback.dart';
 import '../../core/utils/nepali_calendar.dart';
 import '../../core/widgets/page_header.dart';
 import '../../data/enums/calendar_event_kind.dart';
+import '../../data/models/calendar_entry.dart';
 import '../../data/models/holiday.dart';
 import '../../providers/auth_provider.dart';
 import 'providers/patro_providers.dart';
 import 'widgets/date_converter.dart';
+import 'widgets/event_dialog.dart';
 import 'widgets/festival_details.dart';
 import 'widgets/holiday_dialog.dart';
 import 'widgets/muhurta_card.dart';
@@ -67,6 +69,13 @@ class _PatroPageState extends ConsumerState<PatroPage> {
     });
   }
 
+  Future<void> _addEvent() async {
+    final bool? added = await showEventDialog(context, initialDate: _selected);
+    if ((added ?? false) && mounted) {
+      context.showSuccess('Event added');
+    }
+  }
+
   Future<void> _addHoliday() async {
     final bool? added = await showHolidayDialog(
       context,
@@ -117,13 +126,22 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                     icon: const Icon(Icons.today_outlined, size: 18),
                     label: Text(_nepali ? 'आज' : 'Today', softWrap: false),
                   ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: _addEvent,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(
+                      _nepali ? 'कार्यक्रम थप्नुहोस्' : 'Add event',
+                      softWrap: false,
+                    ),
+                  ),
                   if (isAdmin) ...<Widget>[
                     const SizedBox(width: 8),
-                    FilledButton.icon(
+                    OutlinedButton.icon(
                       onPressed: _addHoliday,
-                      icon: const Icon(Icons.add, size: 18),
+                      icon: const Icon(Icons.celebration_outlined, size: 18),
                       label: Text(
-                        _nepali ? 'बिदा थप्नुहोस्' : 'Add holiday',
+                        _nepali ? 'बिदा' : 'Add holiday',
                         softWrap: false,
                       ),
                     ),
@@ -968,6 +986,22 @@ class _SelectedDayCard extends ConsumerWidget {
   final List<CalendarEvent> events;
   final bool isAdmin;
 
+  /// Removes one of the caller's own entries. No confirmation: it is theirs,
+  /// it is one row, and the snackbar says what happened.
+  Future<void> _deleteEntry(BuildContext context, WidgetRef ref, int id) async {
+    try {
+      await ref.read(calendarEntriesRepositoryProvider).delete(id);
+      ref.invalidate(calendarEntriesProvider);
+      if (context.mounted) {
+        context.showSuccess('Event removed');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        context.showError('Could not remove: $e');
+      }
+    }
+  }
+
   Future<void> _deleteHoliday(
     BuildContext context,
     WidgetRef ref,
@@ -1081,13 +1115,22 @@ class _SelectedDayCard extends ConsumerWidget {
                 _EventTile(
                   event: event,
                   nepali: nepali,
-                  onEdit: isAdmin && event.holiday != null
-                      ? () =>
-                            showHolidayDialog(context, existing: event.holiday)
-                      : null,
-                  onDelete: isAdmin && event.holiday != null
-                      ? () => _deleteHoliday(context, ref, event.holiday!.id)
-                      : null,
+                  // A holiday is the country's, so only an admin may touch it.
+                  // A personal entry is the caller's own, always.
+                  onEdit: switch (event) {
+                    CalendarEvent(entry: final CalendarEntry e?) =>
+                      () => showEventDialog(context, existing: e),
+                    CalendarEvent(holiday: final Holiday h?) when isAdmin =>
+                      () => showHolidayDialog(context, existing: h),
+                    _ => null,
+                  },
+                  onDelete: switch (event) {
+                    CalendarEvent(entry: final CalendarEntry e?) =>
+                      () => _deleteEntry(context, ref, e.id),
+                    CalendarEvent(holiday: final Holiday h?) when isAdmin =>
+                      () => _deleteHoliday(context, ref, h.id),
+                    _ => null,
+                  },
                 ),
                 if (event.holiday != null)
                   FestivalDetails(holiday: event.holiday!, nepali: nepali),

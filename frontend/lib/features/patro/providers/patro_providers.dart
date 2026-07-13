@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/nepali_calendar.dart';
 import '../../../data/enums/calendar_event_kind.dart';
 import '../../../data/enums/festival_category.dart';
+import '../../../data/models/calendar_entry.dart';
 import '../../../data/models/holiday.dart';
 import '../../../data/models/leave_request.dart';
 import '../../../data/models/muhurat.dart';
 import '../../../data/models/task.dart';
+import '../../../data/repositories/calendar_entries_repository.dart';
 import '../../../data/repositories/holidays_repository.dart';
 import '../../../data/repositories/muhurats_repository.dart';
 import '../../../providers/dio_provider.dart';
@@ -32,6 +34,18 @@ final Provider<MuhuratsRepository> muhuratsRepositoryProvider =
       return MuhuratsRepository(ref.watch(dioProvider));
     });
 
+/// The personal-events repository.
+final Provider<CalendarEntriesRepository> calendarEntriesRepositoryProvider =
+    Provider<CalendarEntriesRepository>((ref) {
+      return CalendarEntriesRepository(ref.watch(dioProvider));
+    });
+
+/// The caller's own calendar entries. Invalidate after any change.
+final FutureProvider<List<CalendarEntry>> calendarEntriesProvider =
+    FutureProvider<List<CalendarEntry>>((ref) {
+      return ref.watch(calendarEntriesRepositoryProvider).list();
+    });
+
 /// Published saait across the server's default window. Empty until an admin
 /// enters some — they cannot be computed. Invalidate after adding or removing.
 final FutureProvider<List<Muhurat>> muhuratsProvider =
@@ -49,6 +63,7 @@ class CalendarEvent {
     this.subtitle = '',
     this.subtitleNe = '',
     this.holiday,
+    this.entry,
     this.isPublicHoliday = false,
   });
 
@@ -63,6 +78,10 @@ class CalendarEvent {
   /// Set only for holidays: the festival behind this event, so the day panel
   /// can show its detail and an admin can edit or delete it.
   final Holiday? holiday;
+
+  /// Set only for the user's own entries, so they can be edited or deleted
+  /// from the day panel.
+  final CalendarEntry? entry;
 
   /// A public holiday tints its whole day cell red; a non-public one only
   /// shows its name.
@@ -98,6 +117,7 @@ class CalendarEvent {
           other.subtitle == subtitle &&
           other.subtitleNe == subtitleNe &&
           other.holiday == holiday &&
+          other.entry == entry &&
           other.isPublicHoliday == isPublicHoliday;
 
   @override
@@ -109,6 +129,7 @@ class CalendarEvent {
     subtitle,
     subtitleNe,
     holiday,
+    entry,
     isPublicHoliday,
   );
 }
@@ -127,6 +148,9 @@ calendarEventsProvider = Provider<Map<String, List<CalendarEvent>>>((ref) {
       ref.watch(tasksProvider).asData?.value ?? const <Task>[];
   final List<LeaveRequest> leave =
       ref.watch(leaveCalendarProvider).asData?.value ?? const <LeaveRequest>[];
+  final List<CalendarEntry> entries =
+      ref.watch(calendarEntriesProvider).asData?.value ??
+      const <CalendarEntry>[];
 
   final Map<String, List<CalendarEvent>> byDay =
       <String, List<CalendarEvent>>{};
@@ -165,6 +189,34 @@ calendarEventsProvider = Provider<Map<String, List<CalendarEvent>>>((ref) {
         kind: CalendarEventKind.task,
         title: task.title,
         subtitle: task.projectName ?? '',
+      ),
+    );
+  }
+
+  for (final CalendarEntry entry in entries) {
+    // A repeating entry belongs on its next occurrence, not on the day it was
+    // recorded — a birthday from 1994 goes on this year's grid. The server
+    // works that out, because only it has the BS conversion table.
+    final DateTime on = dateOnly(entry.shownOn);
+    final int? years = entry.yearsAt(on);
+    final String detail = <String>[
+      entry.window(nepali: false),
+      if (years != null) '$years years',
+      if (entry.note.isNotEmpty) entry.note,
+    ].join(' · ');
+    final String detailNe = <String>[
+      entry.window(nepali: true),
+      if (years != null) '${toNepaliDigits(years)} वर्ष',
+      if (entry.note.isNotEmpty) entry.note,
+    ].join(' · ');
+    add(
+      CalendarEvent(
+        date: on,
+        kind: CalendarEventKind.personal,
+        title: entry.title,
+        subtitle: detail,
+        subtitleNe: detailNe,
+        entry: entry,
       ),
     );
   }

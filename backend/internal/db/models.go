@@ -101,6 +101,23 @@ type Availability struct {
 	CreatedAt time.Time   `json:"created_at"`
 }
 
+type CalendarEvent struct {
+	ID         int64              `json:"id"`
+	UserID     int64              `json:"user_id"`
+	EventDate  pgtype.Date        `json:"event_date"`
+	Kind       string             `json:"kind"`
+	Title      string             `json:"title"`
+	Note       string             `json:"note"`
+	StartTime  pgtype.Time        `json:"start_time"`
+	EndTime    pgtype.Time        `json:"end_time"`
+	RepeatIn   string             `json:"repeat_in"`
+	RemindDays *int32             `json:"remind_days"`
+	NextOccurs pgtype.Date        `json:"next_occurs"`
+	RemindedAt pgtype.Timestamptz `json:"reminded_at"`
+	CreatedAt  time.Time          `json:"created_at"`
+	UpdatedAt  time.Time          `json:"updated_at"`
+}
+
 type ChecklistItem struct {
 	ID        int64     `json:"id"`
 	TaskID    int64     `json:"task_id"`
