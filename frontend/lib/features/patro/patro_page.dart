@@ -6,9 +6,11 @@ import '../../core/utils/feedback.dart';
 import '../../core/utils/nepali_calendar.dart';
 import '../../core/widgets/page_header.dart';
 import '../../data/enums/calendar_event_kind.dart';
+import '../../data/models/holiday.dart';
 import '../../providers/auth_provider.dart';
 import 'providers/patro_providers.dart';
-import 'widgets/add_holiday_dialog.dart';
+import 'widgets/festival_details.dart';
+import 'widgets/holiday_dialog.dart';
 import 'widgets/nepal_clock.dart';
 import 'widgets/pill_toggle.dart';
 
@@ -55,7 +57,10 @@ class _PatroPageState extends ConsumerState<PatroPage> {
   }
 
   Future<void> _addHoliday() async {
-    final bool? added = await showAddHolidayDialog(context, _selected);
+    final bool? added = await showHolidayDialog(
+      context,
+      initialDate: _selected,
+    );
     if ((added ?? false) && mounted) {
       context.showSuccess('Holiday added');
     }
@@ -924,14 +929,21 @@ class _SelectedDayCard extends ConsumerWidget {
                 style: TextStyle(color: scheme.onSurfaceVariant),
               )
             else
-              for (final CalendarEvent event in events)
+              for (final CalendarEvent event in events) ...<Widget>[
                 _EventTile(
                   event: event,
                   nepali: nepali,
-                  onDelete: isAdmin && event.holidayId != null
-                      ? () => _deleteHoliday(context, ref, event.holidayId!)
+                  onEdit: isAdmin && event.holiday != null
+                      ? () =>
+                            showHolidayDialog(context, existing: event.holiday)
+                      : null,
+                  onDelete: isAdmin && event.holiday != null
+                      ? () => _deleteHoliday(context, ref, event.holiday!.id)
                       : null,
                 ),
+                if (event.holiday != null)
+                  FestivalDetails(holiday: event.holiday!, nepali: nepali),
+              ],
           ],
         ),
       ),
@@ -1058,6 +1070,7 @@ class _EventTile extends StatelessWidget {
     required this.nepali,
     this.showDate = false,
     this.onTap,
+    this.onEdit,
     this.onDelete,
   });
 
@@ -1065,12 +1078,23 @@ class _EventTile extends StatelessWidget {
   final bool nepali;
   final bool showDate;
   final VoidCallback? onTap;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final String detail = event.detail(nepali: nepali);
+
+    // A festival wears its category — a temple for religious, a flag for
+    // national — rather than the same confetti icon as every other holiday.
+    final Holiday? holiday = event.holiday;
+    final IconData icon = holiday != null
+        ? holiday.category.icon
+        : event.kind.icon;
+    final Color tint = holiday != null
+        ? holiday.category.color
+        : event.kind.color;
 
     final Widget row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -1081,10 +1105,10 @@ class _EventTile extends StatelessWidget {
             width: 30,
             height: 30,
             decoration: BoxDecoration(
-              color: event.kind.color.withValues(alpha: 0.12),
+              color: tint.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(event.kind.icon, size: 16, color: event.kind.color),
+            child: Icon(icon, size: 16, color: tint),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1118,6 +1142,13 @@ class _EventTile extends StatelessWidget {
               ],
             ),
           ),
+          if (onEdit != null)
+            IconButton(
+              onPressed: onEdit,
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.edit_outlined, size: 17),
+              tooltip: 'Edit holiday',
+            ),
           if (onDelete != null)
             IconButton(
               onPressed: onDelete,

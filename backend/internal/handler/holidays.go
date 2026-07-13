@@ -29,25 +29,63 @@ func (h *HolidayHandler) Routes() http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", h.list)
 	r.Post("/", h.create)
+	r.Put("/{id}", h.update)
 	r.Delete("/{id}", h.delete)
 	return r
 }
 
+// holidayCategories mirrors the CHECK constraint on holidays.category. An
+// unrecognised value degrades to "other" rather than failing the write, so an
+// older client cannot break holiday creation with a category it invented.
+var holidayCategories = map[string]bool{
+	"religious":     true,
+	"national":      true,
+	"local":         true,
+	"international": true,
+	"other":         true,
+}
+
+func validCategory(s string) string {
+	s = strings.TrimSpace(strings.ToLower(s))
+	if holidayCategories[s] {
+		return s
+	}
+	return "other"
+}
+
 type holidayResponse struct {
-	ID       int64  `json:"id"`
-	Date     string `json:"date"`
-	NameEn   string `json:"name_en"`
-	NameNe   string `json:"name_ne"`
-	IsPublic bool   `json:"is_public"`
+	ID            int64  `json:"id"`
+	Date          string `json:"date"`
+	NameEn        string `json:"name_en"`
+	NameNe        string `json:"name_ne"`
+	IsPublic      bool   `json:"is_public"`
+	Category      string `json:"category"`
+	DescriptionEn string `json:"description_en"`
+	DescriptionNe string `json:"description_ne"`
+	HistoryEn     string `json:"history_en"`
+	HistoryNe     string `json:"history_ne"`
+	ImportanceEn  string `json:"importance_en"`
+	ImportanceNe  string `json:"importance_ne"`
+	CelebrationEn string `json:"celebration_en"`
+	CelebrationNe string `json:"celebration_ne"`
 }
 
 func holidayFrom(hd db.Holiday) holidayResponse {
 	return holidayResponse{
-		ID:       hd.ID,
-		Date:     fmtDate(hd.HolidayDate),
-		NameEn:   hd.NameEn,
-		NameNe:   hd.NameNe,
-		IsPublic: hd.IsPublic,
+		ID:            hd.ID,
+		Date:          fmtDate(hd.HolidayDate),
+		NameEn:        hd.NameEn,
+		NameNe:        hd.NameNe,
+		IsPublic:      hd.IsPublic,
+		Category:      hd.Category,
+		DescriptionEn: hd.DescriptionEn,
+		DescriptionNe: hd.DescriptionNe,
+		HistoryEn:     hd.HistoryEn,
+		HistoryNe:     hd.HistoryNe,
+		ImportanceEn:  hd.ImportanceEn,
+		ImportanceNe:  hd.ImportanceNe,
+		CelebrationEn: hd.CelebrationEn,
+		CelebrationNe: hd.CelebrationNe,
 	}
 }
 
@@ -87,18 +125,49 @@ func (h *HolidayHandler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 type holidayBody struct {
-	Date     string `json:"date"`
-	NameEn   string `json:"name_en"`
-	NameNe   string `json:"name_ne"`
-	IsPublic *bool  `json:"is_public"`
+	Date          string `json:"date"`
+	NameEn        string `json:"name_en"`
+	NameNe        string `json:"name_ne"`
+	IsPublic      *bool  `json:"is_public"`
+	Category      string `json:"category"`
+	DescriptionEn string `json:"description_en"`
+	DescriptionNe string `json:"description_ne"`
+	HistoryEn     string `json:"history_en"`
+	HistoryNe     string `json:"history_ne"`
+	ImportanceEn  string `json:"importance_en"`
+	ImportanceNe  string `json:"importance_ne"`
+	CelebrationEn string `json:"celebration_en"`
+	CelebrationNe string `json:"celebration_ne"`
+}
+
+// decodeHoliday reads the body shared by create and update, and normalises it.
+func decodeHoliday(r *http.Request) (holidayBody, error) {
+	var b holidayBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		return b, err
+	}
+	b.NameEn = strings.TrimSpace(b.NameEn)
+	if b.NameEn == "" {
+		return b, errors.New("a name is required")
+	}
+	b.NameNe = strings.TrimSpace(b.NameNe)
+	b.Category = validCategory(b.Category)
+	return b, nil
+}
+
+func (b holidayBody) public() bool {
+	if b.IsPublic != nil {
+		return *b.IsPublic
+	}
+	return true
 }
 
 func (h *HolidayHandler) create(w http.ResponseWriter, r *http.Request) {
 	if !requireAdmin(w, r) {
 		return
 	}
-	var b holidayBody
-	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+	b, err := decodeHoliday(r)
+	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -108,26 +177,69 @@ func (h *HolidayHandler) create(w http.ResponseWriter, r *http.Request) {
 			errors.New("a date (YYYY-MM-DD) is required"))
 		return
 	}
-	name := strings.TrimSpace(b.NameEn)
-	if name == "" {
-		writeError(w, http.StatusBadRequest, errors.New("a name is required"))
-		return
-	}
-	public := true
-	if b.IsPublic != nil {
-		public = *b.IsPublic
-	}
 	hd, err := h.q.CreateHoliday(r.Context(), db.CreateHolidayParams{
-		HolidayDate: date,
-		NameEn:      name,
-		NameNe:      strings.TrimSpace(b.NameNe),
-		IsPublic:    public,
+		HolidayDate:   date,
+		NameEn:        b.NameEn,
+		NameNe:        b.NameNe,
+		IsPublic:      b.public(),
+		Category:      b.Category,
+		DescriptionEn: b.DescriptionEn,
+		DescriptionNe: b.DescriptionNe,
+		HistoryEn:     b.HistoryEn,
+		HistoryNe:     b.HistoryNe,
+		ImportanceEn:  b.ImportanceEn,
+		ImportanceNe:  b.ImportanceNe,
+		CelebrationEn: b.CelebrationEn,
+		CelebrationNe: b.CelebrationNe,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, holidayFrom(hd))
+}
+
+func (h *HolidayHandler) update(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
+	id, err := idParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid id"))
+		return
+	}
+	b, err := decodeHoliday(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	date, err := datePtr(b.Date)
+	if err != nil || !date.Valid {
+		writeError(w, http.StatusBadRequest,
+			errors.New("a date (YYYY-MM-DD) is required"))
+		return
+	}
+	hd, err := h.q.UpdateHoliday(r.Context(), db.UpdateHolidayParams{
+		ID:            id,
+		HolidayDate:   date,
+		NameEn:        b.NameEn,
+		NameNe:        b.NameNe,
+		IsPublic:      b.public(),
+		Category:      b.Category,
+		DescriptionEn: b.DescriptionEn,
+		DescriptionNe: b.DescriptionNe,
+		HistoryEn:     b.HistoryEn,
+		HistoryNe:     b.HistoryNe,
+		ImportanceEn:  b.ImportanceEn,
+		ImportanceNe:  b.ImportanceNe,
+		CelebrationEn: b.CelebrationEn,
+		CelebrationNe: b.CelebrationNe,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, holidayFrom(hd))
 }
 
 func (h *HolidayHandler) delete(w http.ResponseWriter, r *http.Request) {

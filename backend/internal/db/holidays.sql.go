@@ -12,19 +12,45 @@ import (
 )
 
 const createHoliday = `-- name: CreateHoliday :one
-INSERT INTO holidays (holiday_date, name_en, name_ne, is_public)
+INSERT INTO holidays (holiday_date, name_en, name_ne, is_public, category,
+                      description_en, description_ne, history_en, history_ne,
+                      importance_en, importance_ne, celebration_en,
+                      celebration_ne)
 VALUES ($1, $2, $3,
-        $4)
+        $4, $5,
+        $6, $7,
+        $8, $9,
+        $10, $11,
+        $12, $13)
 ON CONFLICT (holiday_date, name_en) DO UPDATE
-SET name_ne = EXCLUDED.name_ne, is_public = EXCLUDED.is_public
-RETURNING id, holiday_date, name_en, name_ne, is_public, created_at
+SET name_ne = EXCLUDED.name_ne,
+    is_public = EXCLUDED.is_public,
+    category = EXCLUDED.category,
+    description_en = EXCLUDED.description_en,
+    description_ne = EXCLUDED.description_ne,
+    history_en = EXCLUDED.history_en,
+    history_ne = EXCLUDED.history_ne,
+    importance_en = EXCLUDED.importance_en,
+    importance_ne = EXCLUDED.importance_ne,
+    celebration_en = EXCLUDED.celebration_en,
+    celebration_ne = EXCLUDED.celebration_ne
+RETURNING id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne
 `
 
 type CreateHolidayParams struct {
-	HolidayDate pgtype.Date `json:"holiday_date"`
-	NameEn      string      `json:"name_en"`
-	NameNe      string      `json:"name_ne"`
-	IsPublic    bool        `json:"is_public"`
+	HolidayDate   pgtype.Date `json:"holiday_date"`
+	NameEn        string      `json:"name_en"`
+	NameNe        string      `json:"name_ne"`
+	IsPublic      bool        `json:"is_public"`
+	Category      string      `json:"category"`
+	DescriptionEn string      `json:"description_en"`
+	DescriptionNe string      `json:"description_ne"`
+	HistoryEn     string      `json:"history_en"`
+	HistoryNe     string      `json:"history_ne"`
+	ImportanceEn  string      `json:"importance_en"`
+	ImportanceNe  string      `json:"importance_ne"`
+	CelebrationEn string      `json:"celebration_en"`
+	CelebrationNe string      `json:"celebration_ne"`
 }
 
 func (q *Queries) CreateHoliday(ctx context.Context, arg CreateHolidayParams) (Holiday, error) {
@@ -33,6 +59,15 @@ func (q *Queries) CreateHoliday(ctx context.Context, arg CreateHolidayParams) (H
 		arg.NameEn,
 		arg.NameNe,
 		arg.IsPublic,
+		arg.Category,
+		arg.DescriptionEn,
+		arg.DescriptionNe,
+		arg.HistoryEn,
+		arg.HistoryNe,
+		arg.ImportanceEn,
+		arg.ImportanceNe,
+		arg.CelebrationEn,
+		arg.CelebrationNe,
 	)
 	var i Holiday
 	err := row.Scan(
@@ -42,6 +77,15 @@ func (q *Queries) CreateHoliday(ctx context.Context, arg CreateHolidayParams) (H
 		&i.NameNe,
 		&i.IsPublic,
 		&i.CreatedAt,
+		&i.Category,
+		&i.DescriptionEn,
+		&i.DescriptionNe,
+		&i.HistoryEn,
+		&i.HistoryNe,
+		&i.ImportanceEn,
+		&i.ImportanceNe,
+		&i.CelebrationEn,
+		&i.CelebrationNe,
 	)
 	return i, err
 }
@@ -56,7 +100,7 @@ func (q *Queries) DeleteHoliday(ctx context.Context, id int64) error {
 }
 
 const listHolidays = `-- name: ListHolidays :many
-SELECT id, holiday_date, name_en, name_ne, is_public, created_at FROM holidays
+SELECT id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne FROM holidays
 WHERE holiday_date >= $1
   AND holiday_date <= $2
 ORDER BY holiday_date, id
@@ -83,6 +127,15 @@ func (q *Queries) ListHolidays(ctx context.Context, arg ListHolidaysParams) ([]H
 			&i.NameNe,
 			&i.IsPublic,
 			&i.CreatedAt,
+			&i.Category,
+			&i.DescriptionEn,
+			&i.DescriptionNe,
+			&i.HistoryEn,
+			&i.HistoryNe,
+			&i.ImportanceEn,
+			&i.ImportanceNe,
+			&i.CelebrationEn,
+			&i.CelebrationNe,
 		); err != nil {
 			return nil, err
 		}
@@ -92,4 +145,78 @@ func (q *Queries) ListHolidays(ctx context.Context, arg ListHolidaysParams) ([]H
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateHoliday = `-- name: UpdateHoliday :one
+UPDATE holidays
+SET holiday_date = $1,
+    name_en = $2,
+    name_ne = $3,
+    is_public = $4,
+    category = $5,
+    description_en = $6,
+    description_ne = $7,
+    history_en = $8,
+    history_ne = $9,
+    importance_en = $10,
+    importance_ne = $11,
+    celebration_en = $12,
+    celebration_ne = $13
+WHERE id = $14
+RETURNING id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne
+`
+
+type UpdateHolidayParams struct {
+	HolidayDate   pgtype.Date `json:"holiday_date"`
+	NameEn        string      `json:"name_en"`
+	NameNe        string      `json:"name_ne"`
+	IsPublic      bool        `json:"is_public"`
+	Category      string      `json:"category"`
+	DescriptionEn string      `json:"description_en"`
+	DescriptionNe string      `json:"description_ne"`
+	HistoryEn     string      `json:"history_en"`
+	HistoryNe     string      `json:"history_ne"`
+	ImportanceEn  string      `json:"importance_en"`
+	ImportanceNe  string      `json:"importance_ne"`
+	CelebrationEn string      `json:"celebration_en"`
+	CelebrationNe string      `json:"celebration_ne"`
+	ID            int64       `json:"id"`
+}
+
+func (q *Queries) UpdateHoliday(ctx context.Context, arg UpdateHolidayParams) (Holiday, error) {
+	row := q.db.QueryRow(ctx, updateHoliday,
+		arg.HolidayDate,
+		arg.NameEn,
+		arg.NameNe,
+		arg.IsPublic,
+		arg.Category,
+		arg.DescriptionEn,
+		arg.DescriptionNe,
+		arg.HistoryEn,
+		arg.HistoryNe,
+		arg.ImportanceEn,
+		arg.ImportanceNe,
+		arg.CelebrationEn,
+		arg.CelebrationNe,
+		arg.ID,
+	)
+	var i Holiday
+	err := row.Scan(
+		&i.ID,
+		&i.HolidayDate,
+		&i.NameEn,
+		&i.NameNe,
+		&i.IsPublic,
+		&i.CreatedAt,
+		&i.Category,
+		&i.DescriptionEn,
+		&i.DescriptionNe,
+		&i.HistoryEn,
+		&i.HistoryNe,
+		&i.ImportanceEn,
+		&i.ImportanceNe,
+		&i.CelebrationEn,
+		&i.CelebrationNe,
+	)
+	return i, err
 }

@@ -3,8 +3,8 @@ import 'package:dio/dio.dart';
 import '../../core/utils/date_format.dart';
 import '../models/holiday.dart';
 
-/// Talks to /api/v1/holidays — the calendar's holidays (AGENTS.md §1
-/// `data/repositories`).
+/// Talks to /api/v1/holidays — the calendar's holidays and festivals
+/// (AGENTS.md §1 `data/repositories`).
 class HolidaysRepository {
   const HolidaysRepository(this._dio);
 
@@ -26,21 +26,16 @@ class HolidaysRepository {
     ];
   }
 
-  /// Adds a holiday (admin only, enforced server-side).
-  Future<void> create({
-    required DateTime date,
-    required String nameEn,
-    String nameNe = '',
-    bool isPublic = true,
-  }) => _dio.post<void>(
-    '/api/v1/holidays',
-    data: <String, dynamic>{
-      'date': dateParam(date),
-      'name_en': nameEn,
-      'name_ne': nameNe,
-      'is_public': isPublic,
-    },
-  );
+  /// Adds [holiday], ignoring its id (admin only, enforced server-side).
+  ///
+  /// The server upserts on (date, name), so re-adding an existing festival
+  /// rewrites its prose rather than failing.
+  Future<void> create(Holiday holiday) =>
+      _dio.post<void>('/api/v1/holidays', data: holiday.toJson());
+
+  /// Rewrites the holiday carrying [Holiday.id] (admin only).
+  Future<void> update(Holiday holiday) =>
+      _dio.put<void>('/api/v1/holidays/${holiday.id}', data: holiday.toJson());
 
   /// Removes a holiday (admin only).
   Future<void> delete(int id) => _dio.delete<void>('/api/v1/holidays/$id');

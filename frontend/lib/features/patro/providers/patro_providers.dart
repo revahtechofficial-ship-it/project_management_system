@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/nepali_calendar.dart';
 import '../../../data/enums/calendar_event_kind.dart';
+import '../../../data/enums/festival_category.dart';
 import '../../../data/models/holiday.dart';
 import '../../../data/models/leave_request.dart';
 import '../../../data/models/task.dart';
@@ -32,7 +33,7 @@ class CalendarEvent {
     this.titleNe = '',
     this.subtitle = '',
     this.subtitleNe = '',
-    this.holidayId,
+    this.holiday,
     this.isPublicHoliday = false,
   });
 
@@ -44,8 +45,9 @@ class CalendarEvent {
   final String subtitle;
   final String subtitleNe;
 
-  /// Set only for holidays, so admins can delete them from the day panel.
-  final int? holidayId;
+  /// Set only for holidays: the festival behind this event, so the day panel
+  /// can show its detail and an admin can edit or delete it.
+  final Holiday? holiday;
 
   /// A public holiday tints its whole day cell red; a non-public one only
   /// shows its name.
@@ -80,7 +82,7 @@ class CalendarEvent {
           other.titleNe == titleNe &&
           other.subtitle == subtitle &&
           other.subtitleNe == subtitleNe &&
-          other.holidayId == holidayId &&
+          other.holiday == holiday &&
           other.isPublicHoliday == isPublicHoliday;
 
   @override
@@ -91,7 +93,7 @@ class CalendarEvent {
     titleNe,
     subtitle,
     subtitleNe,
-    holidayId,
+    holiday,
     isPublicHoliday,
   );
 }
@@ -118,15 +120,20 @@ calendarEventsProvider = Provider<Map<String, List<CalendarEvent>>>((ref) {
   }
 
   for (final Holiday holiday in holidays) {
+    // "Religious · Public holiday" — the category and the day off are
+    // independent facts, and a reader wants both.
+    final String kindEn = holiday.isPublic ? 'Public holiday' : 'Observance';
+    final String kindNe = holiday.isPublic ? 'सार्वजनिक बिदा' : 'पर्व';
+    final bool named = holiday.category != FestivalCategory.other;
     add(
       CalendarEvent(
         date: dateOnly(holiday.date),
         kind: CalendarEventKind.holiday,
         title: holiday.nameEn,
         titleNe: holiday.nameNe,
-        subtitle: holiday.isPublic ? 'Public holiday' : 'Observance',
-        subtitleNe: holiday.isPublic ? 'सार्वजनिक बिदा' : 'पर्व',
-        holidayId: holiday.id,
+        subtitle: named ? '${holiday.category.label} · $kindEn' : kindEn,
+        subtitleNe: named ? '${holiday.category.labelNe} · $kindNe' : kindNe,
+        holiday: holiday,
         isPublicHoliday: holiday.isPublic,
       ),
     );
