@@ -4,11 +4,13 @@ import '../../../core/utils/nepali_calendar.dart';
 import '../../../data/enums/calendar_event_kind.dart';
 import '../../../data/enums/festival_category.dart';
 import '../../../data/models/calendar_entry.dart';
+import '../../../data/models/daily_content.dart';
 import '../../../data/models/holiday.dart';
 import '../../../data/models/leave_request.dart';
 import '../../../data/models/muhurat.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/calendar_entries_repository.dart';
+import '../../../data/repositories/daily_repository.dart';
 import '../../../data/repositories/holidays_repository.dart';
 import '../../../data/repositories/muhurats_repository.dart';
 import '../../../providers/dio_provider.dart';
@@ -45,6 +47,42 @@ final FutureProvider<List<CalendarEntry>> calendarEntriesProvider =
     FutureProvider<List<CalendarEntry>>((ref) {
       return ref.watch(calendarEntriesRepositoryProvider).list();
     });
+
+/// The written-not-computed content: observances, the quote, the rashifal.
+final Provider<DailyRepository> dailyRepositoryProvider =
+    Provider<DailyRepository>((ref) {
+      return DailyRepository(ref.watch(dioProvider));
+    });
+
+/// Every observance. They recur by month and day, so one fetch serves any date.
+final FutureProvider<List<Observance>> observancesProvider =
+    FutureProvider<List<Observance>>((ref) {
+      return ref.watch(dailyRepositoryProvider).observances();
+    });
+
+/// The quote for a day. Null when nobody has entered any.
+final quoteProvider = FutureProvider.family<Quote?, DateTime>((
+  ref,
+  DateTime on,
+) {
+  return ref.watch(dailyRepositoryProvider).quoteOfTheDay(on);
+});
+
+/// Every rashifal reading covering a day. Empty until an astrologer's readings
+/// are entered — there is no formula for one.
+final rashifalProvider = FutureProvider.family<List<Rashifal>, DateTime>((
+  ref,
+  DateTime on,
+) {
+  return ref.watch(dailyRepositoryProvider).rashifal(on);
+});
+
+/// The observances falling on [date], by month and day.
+List<Observance> observancesOn(List<Observance> all, DateTime date) =>
+    <Observance>[
+      for (final Observance o in all)
+        if (o.fallsOn(date)) o,
+    ];
 
 /// Published saait across the server's default window. Empty until an admin
 /// enters some — they cannot be computed. Invalidate after adding or removing.

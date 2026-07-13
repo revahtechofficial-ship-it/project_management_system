@@ -11,6 +11,7 @@ import '../../data/models/holiday.dart';
 import '../../providers/auth_provider.dart';
 import 'providers/patro_providers.dart';
 import 'widgets/date_converter.dart';
+import 'widgets/day_summary_card.dart';
 import 'widgets/event_dialog.dart';
 import 'widgets/festival_details.dart';
 import 'widgets/holiday_dialog.dart';
@@ -18,6 +19,7 @@ import 'widgets/muhurta_card.dart';
 import 'widgets/nepal_clock.dart';
 import 'widgets/panchang_card.dart';
 import 'widgets/pill_toggle.dart';
+import 'widgets/rashifal_card.dart';
 
 /// A dual Bikram Sambat + Gregorian calendar, in the spirit of Hamro Patro:
 /// a BS month grid with the AD day in each cell, holidays, task due dates and
@@ -961,9 +963,13 @@ class _SidePanel extends StatelessWidget {
           isAdmin: isAdmin,
         ),
         const SizedBox(height: 16),
+        DaySummaryCard(date: selected, nepali: nepali),
+        const SizedBox(height: 16),
         PanchangCard(date: selected, nepali: nepali),
         const SizedBox(height: 16),
         MuhurtaCard(date: selected, nepali: nepali),
+        const SizedBox(height: 16),
+        RashifalCard(date: selected, nepali: nepali),
         const SizedBox(height: 16),
         _UpcomingCard(nepali: nepali, events: events, onOpenDate: onOpenDate),
         const SizedBox(height: 16),

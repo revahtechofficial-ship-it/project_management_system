@@ -162,6 +162,7 @@ func main() {
 		api.Mount("/api/v1/holidays", handler.NewHolidayHandler(queries).Routes())
 		api.Mount("/api/v1/muhurats", handler.NewMuhuratHandler(queries).Routes())
 		api.Mount("/api/v1/events", handler.NewCalendarEventHandler(queries).Routes())
+		api.Mount("/api/v1/daily", handler.NewDailyHandler(queries).Routes())
 		api.Get("/api/v1/search", handler.NewSearchHandler(queries).Search)
 		api.Get("/api/v1/link-preview", handler.LinkPreview)
 		api.Mount("/api/v1/custom-fields", handler.NewCustomFieldHandler(queries).Routes())

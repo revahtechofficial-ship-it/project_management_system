@@ -430,6 +430,19 @@ type Objective struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+type Observance struct {
+	ID        int64     `json:"id"`
+	Month     int32     `json:"month"`
+	Day       int32     `json:"day"`
+	NameEn    string    `json:"name_en"`
+	NameNe    string    `json:"name_ne"`
+	Scope     string    `json:"scope"`
+	NoteEn    string    `json:"note_en"`
+	NoteNe    string    `json:"note_ne"`
+	Source    string    `json:"source"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type OneOnOne struct {
 	ID          int64     `json:"id"`
 	ManagerID   int64     `json:"manager_id"`
@@ -546,6 +559,27 @@ type ProjectTemplate struct {
 	Status      string    `json:"status"`
 	CreatedBy   *int64    `json:"created_by"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type Quote struct {
+	ID        int64     `json:"id"`
+	TextEn    string    `json:"text_en"`
+	TextNe    string    `json:"text_ne"`
+	Author    string    `json:"author"`
+	Source    string    `json:"source"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Rashifal struct {
+	ID        int64       `json:"id"`
+	Rashi     int32       `json:"rashi"`
+	Period    string      `json:"period"`
+	FromDate  pgtype.Date `json:"from_date"`
+	ToDate    pgtype.Date `json:"to_date"`
+	TextEn    string      `json:"text_en"`
+	TextNe    string      `json:"text_ne"`
+	Source    string      `json:"source"`
+	CreatedAt time.Time   `json:"created_at"`
 }
 
 type Release struct {

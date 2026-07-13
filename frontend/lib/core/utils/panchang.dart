@@ -282,6 +282,9 @@ class Panchang {
     required this.nakshatra,
     required this.yoga,
     required this.karana,
+    required this.moonSidereal,
+    required this.sunSidereal,
+    required this.lunarMonthIndex,
     required this.lunarMonthEn,
     required this.lunarMonthNe,
     required this.isAdhikMasa,
@@ -297,6 +300,19 @@ class Panchang {
   final PanchangElement nakshatra;
   final PanchangElement yoga;
   final PanchangElement karana;
+
+  /// The moon's and the sun's sidereal longitudes at sunrise, in degrees.
+  /// Everything else here is derived from these two numbers, so exposing them
+  /// lets callers cut the sky up their own way — into rashis, say, rather than
+  /// nakshatras.
+  final double moonSidereal;
+  final double sunSidereal;
+
+  /// The amanta lunar month, 1 = Chaitra. Nepal *names* its fasts by the
+  /// purnimanta month instead, which differs in the dark half — see
+  /// `religious_days.dart`.
+  final int lunarMonthIndex;
+
   final String lunarMonthEn;
   final String lunarMonthNe;
 
@@ -507,6 +523,9 @@ Panchang panchangFor(
         _nextCrossing(elongation, (karanaIndex * 6) % 360, jd, 12.19),
       ),
     ),
+    moonSidereal: moonSidereal(jd),
+    sunSidereal: sunSidereal(jd),
+    lunarMonthIndex: lunarMonthIndex + 1,
     lunarMonthEn: _lunarMonthEn[lunarMonthIndex],
     lunarMonthNe: _lunarMonthNe[lunarMonthIndex],
     isAdhikMasa: adhik,
