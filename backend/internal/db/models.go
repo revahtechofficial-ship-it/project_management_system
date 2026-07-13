@@ -240,22 +240,30 @@ type GitRepo struct {
 }
 
 type Holiday struct {
-	ID            int64       `json:"id"`
-	HolidayDate   pgtype.Date `json:"holiday_date"`
-	NameEn        string      `json:"name_en"`
-	NameNe        string      `json:"name_ne"`
-	IsPublic      bool        `json:"is_public"`
-	CreatedAt     time.Time   `json:"created_at"`
-	Category      string      `json:"category"`
-	DescriptionEn string      `json:"description_en"`
-	DescriptionNe string      `json:"description_ne"`
-	HistoryEn     string      `json:"history_en"`
-	HistoryNe     string      `json:"history_ne"`
-	ImportanceEn  string      `json:"importance_en"`
-	ImportanceNe  string      `json:"importance_ne"`
-	CelebrationEn string      `json:"celebration_en"`
-	CelebrationNe string      `json:"celebration_ne"`
-	Aliases       string      `json:"aliases"`
+	ID          int64       `json:"id"`
+	HolidayDate pgtype.Date `json:"holiday_date"`
+	NameEn      string      `json:"name_en"`
+	NameNe      string      `json:"name_ne"`
+	// Office closed nationwide (the gazette's "sarbajanik bida").
+	IsPublic      bool      `json:"is_public"`
+	CreatedAt     time.Time `json:"created_at"`
+	Category      string    `json:"category"`
+	DescriptionEn string    `json:"description_en"`
+	DescriptionNe string    `json:"description_ne"`
+	HistoryEn     string    `json:"history_en"`
+	HistoryNe     string    `json:"history_ne"`
+	ImportanceEn  string    `json:"importance_en"`
+	ImportanceNe  string    `json:"importance_ne"`
+	CelebrationEn string    `json:"celebration_en"`
+	CelebrationNe string    `json:"celebration_ne"`
+	Aliases       string    `json:"aliases"`
+	IsGovernment  bool      `json:"is_government"`
+	IsBank        bool      `json:"is_bank"`
+	IsSchool      bool      `json:"is_school"`
+	// Kept only by the community, region or group named in observed_by.
+	IsOptional bool `json:"is_optional"`
+	// Who keeps it: Kirat, Newar, Tamang, Sherpa, Gurung, Tharu, Mithila, Muslim, Sikh, Christian, Women, Students, Kathmandu Valley, ... Blank means everyone.
+	ObservedBy string `json:"observed_by"`
 }
 
 type Incident struct {

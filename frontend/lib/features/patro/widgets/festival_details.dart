@@ -52,7 +52,21 @@ class FestivalDetails extends StatelessWidget {
         ];
 
     final List<String> aliases = holiday.aliasList;
-    if (present.isEmpty && aliases.isEmpty) {
+
+    // What the day actually closes. The gazette is precise about this and a
+    // single "holiday" badge throws the distinction away.
+    final List<(String, String, IconData)> closes =
+        <(String, String, IconData)>[
+          if (holiday.isPublic)
+            ('Public holiday', 'सार्वजनिक बिदा', Icons.flag_outlined),
+          if (holiday.isGovernment)
+            ('Government', 'सरकारी', Icons.account_balance_outlined),
+          if (holiday.isBank) ('Banks', 'बैंक', Icons.savings_outlined),
+          if (holiday.isSchool) ('Schools', 'विद्यालय', Icons.school_outlined),
+          if (holiday.isOptional) ('Optional', 'ऐच्छिक', Icons.person_outline),
+        ];
+
+    if (present.isEmpty && aliases.isEmpty && closes.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -66,6 +80,50 @@ class FestivalDetails extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          if (closes.isNotEmpty) ...<Widget>[
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: <Widget>[
+                for (final (String en, String ne, IconData icon) c in closes)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: scheme.outlineVariant),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Icon(c.$3, size: 11, color: scheme.onSurfaceVariant),
+                        const SizedBox(width: 4),
+                        Text(
+                          nepali ? c.$2 : c.$1,
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            if (holiday.observedBy.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 6),
+              Text(
+                nepali
+                    ? 'मान्ने: ${holiday.observedBy}'
+                    : 'Observed by ${holiday.observedBy}',
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+              ),
+            ],
+            const SizedBox(height: 12),
+          ],
           // The name people actually use often is not the day's formal name:
           // Vijaya Dashami is "Dashain", Raksha Bandhan is "Janai Purnima".
           if (aliases.isNotEmpty) ...<Widget>[

@@ -48,6 +48,11 @@ void main() {
       'celebration_en': 'Elders give tika and jamara.',
       'celebration_ne': '',
       'aliases': 'Dashain, दशैं',
+      'is_government': true,
+      'is_bank': true,
+      'is_school': true,
+      'is_optional': false,
+      'observed_by': '',
     };
 
     test('round-trips through fromJson and toJson', () {
@@ -72,6 +77,28 @@ void main() {
       expect(bare.isPublic, isTrue);
       expect(bare.category, FestivalCategory.other);
       expect(bare.hasDetails, isFalse);
+      expect(bare.isOptional, isFalse);
+      expect(bare.observedBy, '');
+    });
+
+    test('the holiday kinds are independent of one another', () {
+      // Saraswati Puja shuts schools and nothing else. A single "is a holiday"
+      // boolean cannot say that, which is why there are five.
+      final Holiday saraswati = Holiday.fromJson(<String, dynamic>{
+        'id': 1,
+        'date': '2026-01-23',
+        'name_en': 'Basanta Panchami / Saraswati Puja',
+        'is_public': false,
+        'is_government': false,
+        'is_bank': false,
+        'is_school': true,
+        'is_optional': true,
+        'observed_by': 'Students, Teachers',
+      });
+      expect(saraswati.isPublic, isFalse);
+      expect(saraswati.isSchool, isTrue);
+      expect(saraswati.isBank, isFalse);
+      expect(saraswati.observedBy, 'Students, Teachers');
     });
 
     test('an unknown category degrades to other rather than throwing', () {

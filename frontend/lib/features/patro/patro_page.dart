@@ -12,6 +12,7 @@ import 'providers/patro_providers.dart';
 import 'widgets/festival_details.dart';
 import 'widgets/holiday_dialog.dart';
 import 'widgets/nepal_clock.dart';
+import 'widgets/panchang_card.dart';
 import 'widgets/pill_toggle.dart';
 
 /// A dual Bikram Sambat + Gregorian calendar, in the spirit of Hamro Patro:
@@ -939,6 +940,8 @@ class _SidePanel extends StatelessWidget {
           events: events[dayKey(selected)] ?? const <CalendarEvent>[],
           isAdmin: isAdmin,
         ),
+        const SizedBox(height: 16),
+        PanchangCard(date: selected, nepali: nepali),
         const SizedBox(height: 16),
         _UpcomingCard(nepali: nepali, events: events, onOpenDate: onOpenDate),
       ],

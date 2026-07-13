@@ -15,14 +15,16 @@ const createHoliday = `-- name: CreateHoliday :one
 INSERT INTO holidays (holiday_date, name_en, name_ne, is_public, category,
                       description_en, description_ne, history_en, history_ne,
                       importance_en, importance_ne, celebration_en,
-                      celebration_ne, aliases)
+                      celebration_ne, aliases, is_government, is_bank,
+                      is_school, is_optional, observed_by)
 VALUES ($1, $2, $3,
         $4, $5,
         $6, $7,
         $8, $9,
         $10, $11,
         $12, $13,
-        $14)
+        $14, $15, $16,
+        $17, $18, $19)
 ON CONFLICT (holiday_date, name_en) DO UPDATE
 SET name_ne = EXCLUDED.name_ne,
     is_public = EXCLUDED.is_public,
@@ -35,8 +37,13 @@ SET name_ne = EXCLUDED.name_ne,
     importance_ne = EXCLUDED.importance_ne,
     celebration_en = EXCLUDED.celebration_en,
     celebration_ne = EXCLUDED.celebration_ne,
-    aliases = EXCLUDED.aliases
-RETURNING id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne, aliases
+    aliases = EXCLUDED.aliases,
+    is_government = EXCLUDED.is_government,
+    is_bank = EXCLUDED.is_bank,
+    is_school = EXCLUDED.is_school,
+    is_optional = EXCLUDED.is_optional,
+    observed_by = EXCLUDED.observed_by
+RETURNING id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne, aliases, is_government, is_bank, is_school, is_optional, observed_by
 `
 
 type CreateHolidayParams struct {
@@ -54,6 +61,11 @@ type CreateHolidayParams struct {
 	CelebrationEn string      `json:"celebration_en"`
 	CelebrationNe string      `json:"celebration_ne"`
 	Aliases       string      `json:"aliases"`
+	IsGovernment  bool        `json:"is_government"`
+	IsBank        bool        `json:"is_bank"`
+	IsSchool      bool        `json:"is_school"`
+	IsOptional    bool        `json:"is_optional"`
+	ObservedBy    string      `json:"observed_by"`
 }
 
 func (q *Queries) CreateHoliday(ctx context.Context, arg CreateHolidayParams) (Holiday, error) {
@@ -72,6 +84,11 @@ func (q *Queries) CreateHoliday(ctx context.Context, arg CreateHolidayParams) (H
 		arg.CelebrationEn,
 		arg.CelebrationNe,
 		arg.Aliases,
+		arg.IsGovernment,
+		arg.IsBank,
+		arg.IsSchool,
+		arg.IsOptional,
+		arg.ObservedBy,
 	)
 	var i Holiday
 	err := row.Scan(
@@ -91,6 +108,11 @@ func (q *Queries) CreateHoliday(ctx context.Context, arg CreateHolidayParams) (H
 		&i.CelebrationEn,
 		&i.CelebrationNe,
 		&i.Aliases,
+		&i.IsGovernment,
+		&i.IsBank,
+		&i.IsSchool,
+		&i.IsOptional,
+		&i.ObservedBy,
 	)
 	return i, err
 }
@@ -105,7 +127,7 @@ func (q *Queries) DeleteHoliday(ctx context.Context, id int64) error {
 }
 
 const listHolidays = `-- name: ListHolidays :many
-SELECT id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne, aliases FROM holidays
+SELECT id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne, aliases, is_government, is_bank, is_school, is_optional, observed_by FROM holidays
 WHERE holiday_date >= $1
   AND holiday_date <= $2
 ORDER BY holiday_date, id
@@ -142,6 +164,11 @@ func (q *Queries) ListHolidays(ctx context.Context, arg ListHolidaysParams) ([]H
 			&i.CelebrationEn,
 			&i.CelebrationNe,
 			&i.Aliases,
+			&i.IsGovernment,
+			&i.IsBank,
+			&i.IsSchool,
+			&i.IsOptional,
+			&i.ObservedBy,
 		); err != nil {
 			return nil, err
 		}
@@ -168,9 +195,14 @@ SET holiday_date = $1,
     importance_ne = $11,
     celebration_en = $12,
     celebration_ne = $13,
-    aliases = $14
-WHERE id = $15
-RETURNING id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne, aliases
+    aliases = $14,
+    is_government = $15,
+    is_bank = $16,
+    is_school = $17,
+    is_optional = $18,
+    observed_by = $19
+WHERE id = $20
+RETURNING id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne, aliases, is_government, is_bank, is_school, is_optional, observed_by
 `
 
 type UpdateHolidayParams struct {
@@ -188,6 +220,11 @@ type UpdateHolidayParams struct {
 	CelebrationEn string      `json:"celebration_en"`
 	CelebrationNe string      `json:"celebration_ne"`
 	Aliases       string      `json:"aliases"`
+	IsGovernment  bool        `json:"is_government"`
+	IsBank        bool        `json:"is_bank"`
+	IsSchool      bool        `json:"is_school"`
+	IsOptional    bool        `json:"is_optional"`
+	ObservedBy    string      `json:"observed_by"`
 	ID            int64       `json:"id"`
 }
 
@@ -207,6 +244,11 @@ func (q *Queries) UpdateHoliday(ctx context.Context, arg UpdateHolidayParams) (H
 		arg.CelebrationEn,
 		arg.CelebrationNe,
 		arg.Aliases,
+		arg.IsGovernment,
+		arg.IsBank,
+		arg.IsSchool,
+		arg.IsOptional,
+		arg.ObservedBy,
 		arg.ID,
 	)
 	var i Holiday
@@ -227,6 +269,11 @@ func (q *Queries) UpdateHoliday(ctx context.Context, arg UpdateHolidayParams) (H
 		&i.CelebrationEn,
 		&i.CelebrationNe,
 		&i.Aliases,
+		&i.IsGovernment,
+		&i.IsBank,
+		&i.IsSchool,
+		&i.IsOptional,
+		&i.ObservedBy,
 	)
 	return i, err
 }

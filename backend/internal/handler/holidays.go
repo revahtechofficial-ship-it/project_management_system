@@ -69,6 +69,11 @@ type holidayResponse struct {
 	CelebrationEn string `json:"celebration_en"`
 	CelebrationNe string `json:"celebration_ne"`
 	Aliases       string `json:"aliases"`
+	IsGovernment  bool   `json:"is_government"`
+	IsBank        bool   `json:"is_bank"`
+	IsSchool      bool   `json:"is_school"`
+	IsOptional    bool   `json:"is_optional"`
+	ObservedBy    string `json:"observed_by"`
 }
 
 func holidayFrom(hd db.Holiday) holidayResponse {
@@ -88,6 +93,11 @@ func holidayFrom(hd db.Holiday) holidayResponse {
 		CelebrationEn: hd.CelebrationEn,
 		CelebrationNe: hd.CelebrationNe,
 		Aliases:       hd.Aliases,
+		IsGovernment:  hd.IsGovernment,
+		IsBank:        hd.IsBank,
+		IsSchool:      hd.IsSchool,
+		IsOptional:    hd.IsOptional,
+		ObservedBy:    hd.ObservedBy,
 	}
 }
 
@@ -141,6 +151,20 @@ type holidayBody struct {
 	CelebrationEn string `json:"celebration_en"`
 	CelebrationNe string `json:"celebration_ne"`
 	Aliases       string `json:"aliases"`
+	IsGovernment  *bool  `json:"is_government"`
+	IsBank        *bool  `json:"is_bank"`
+	IsSchool      *bool  `json:"is_school"`
+	IsOptional    *bool  `json:"is_optional"`
+	ObservedBy    string `json:"observed_by"`
+}
+
+// flag reads an optional boolean, defaulting to the nationwide answer: an
+// office holiday closes government, banks and schools unless told otherwise.
+func (b holidayBody) flag(v *bool) bool {
+	if v != nil {
+		return *v
+	}
+	return b.public()
 }
 
 // decodeHoliday reads the body shared by create and update, and normalises it.
@@ -195,6 +219,11 @@ func (h *HolidayHandler) create(w http.ResponseWriter, r *http.Request) {
 		CelebrationEn: b.CelebrationEn,
 		CelebrationNe: b.CelebrationNe,
 		Aliases:       b.Aliases,
+		IsGovernment:  b.flag(b.IsGovernment),
+		IsBank:        b.flag(b.IsBank),
+		IsSchool:      b.flag(b.IsSchool),
+		IsOptional:    b.IsOptional != nil && *b.IsOptional,
+		ObservedBy:    strings.TrimSpace(b.ObservedBy),
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -239,6 +268,11 @@ func (h *HolidayHandler) update(w http.ResponseWriter, r *http.Request) {
 		CelebrationEn: b.CelebrationEn,
 		CelebrationNe: b.CelebrationNe,
 		Aliases:       b.Aliases,
+		IsGovernment:  b.flag(b.IsGovernment),
+		IsBank:        b.flag(b.IsBank),
+		IsSchool:      b.flag(b.IsSchool),
+		IsOptional:    b.IsOptional != nil && *b.IsOptional,
+		ObservedBy:    strings.TrimSpace(b.ObservedBy),
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)

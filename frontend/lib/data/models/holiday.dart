@@ -58,6 +58,18 @@ class Holiday {
   /// uses (Raksha Bandhan is *Janai Purnima*), and the Nepali spelling.
   final String aliases;
 
+  /// What the day actually closes. A nationwide public holiday closes all
+  /// three; the gazette also grants days that close only one — Saraswati Puja
+  /// shuts schools but not offices.
+  final bool isGovernment;
+  final bool isBank;
+  final bool isSchool;
+
+  /// Kept only by the group named in [observedBy] — a community, a region, or
+  /// women employees — rather than by the country.
+  final bool isOptional;
+  final String observedBy;
+
   const Holiday({
     required this.id,
     required this.date,
@@ -70,6 +82,11 @@ class Holiday {
     this.importance = const Bilingual(),
     this.celebration = const Bilingual(),
     this.aliases = '',
+    this.isGovernment = false,
+    this.isBank = false,
+    this.isSchool = false,
+    this.isOptional = false,
+    this.observedBy = '',
   });
 
   /// The aliases as a list, empties dropped.
@@ -132,6 +149,11 @@ class Holiday {
       ne: _str(json, 'celebration_ne'),
     ),
     aliases: _str(json, 'aliases'),
+    isGovernment: json['is_government'] as bool? ?? false,
+    isBank: json['is_bank'] as bool? ?? false,
+    isSchool: json['is_school'] as bool? ?? false,
+    isOptional: json['is_optional'] as bool? ?? false,
+    observedBy: _str(json, 'observed_by'),
   );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -153,6 +175,11 @@ class Holiday {
     'celebration_en': celebration.en,
     'celebration_ne': celebration.ne,
     'aliases': aliases,
+    'is_government': isGovernment,
+    'is_bank': isBank,
+    'is_school': isSchool,
+    'is_optional': isOptional,
+    'observed_by': observedBy,
   };
 
   @override
@@ -172,7 +199,12 @@ class Holiday {
           other.history == history &&
           other.importance == importance &&
           other.celebration == celebration &&
-          other.aliases == aliases;
+          other.aliases == aliases &&
+          other.isGovernment == isGovernment &&
+          other.isBank == isBank &&
+          other.isSchool == isSchool &&
+          other.isOptional == isOptional &&
+          other.observedBy == observedBy;
 
   @override
   int get hashCode => Object.hash(
@@ -187,5 +219,10 @@ class Holiday {
     importance,
     celebration,
     aliases,
+    isGovernment,
+    isBank,
+    isSchool,
+    isOptional,
+    observedBy,
   );
 }
