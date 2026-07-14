@@ -9,14 +9,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// calendar, which is the sort of thing that makes a feature feel broken even
 /// though every part of it works.
 ///
-/// Nepali is the default, because this is a Nepali patro.
+/// English is the default. This is a Nepali patro, but it is read inside an
+/// English management system — the sidebar, the tasks and the leave requests
+/// are all in English — so opening in Nepali would make the calendar the one
+/// page that disagrees with the rest of the app. The toggle is right there, and
+/// it is remembered.
 class LanguageController extends Notifier<bool> {
   static const String _key = 'calendar_nepali';
 
   @override
   bool build() {
     _restore();
-    return true;
+    return false;
   }
 
   Future<void> _restore() async {
