@@ -13,7 +13,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/language_provider.dart';
 import 'providers/patro_providers.dart';
 import 'widgets/date_converter.dart';
-import 'widgets/day_hover_region.dart';
+import 'widgets/day_cell.dart';
 import 'widgets/day_summary_card.dart';
 import 'widgets/event_dialog.dart';
 import 'widgets/festival_details.dart';
@@ -41,6 +41,9 @@ class _PatroPageState extends ConsumerState<PatroPage> {
   late DateTime _selected = dateOnly(DateTime.now());
   final TextEditingController _search = TextEditingController();
   String _query = '';
+
+  /// Marks the side panel, so the popup's "Details" button can scroll to it.
+  final GlobalKey _panelKey = GlobalKey();
 
   @override
   void dispose() {
@@ -79,6 +82,24 @@ class _PatroPageState extends ConsumerState<PatroPage> {
       _selected = dateOnly(day);
       _month = BsDate(bs.year, bs.month, 1);
     });
+  }
+
+  /// Selects [day] and brings the side panel — the long form of everything the
+  /// popup summarised — into view. On a wide screen the panel is already
+  /// beside the grid and nothing scrolls; on a narrow one it sits below the
+  /// month, which is exactly where "view details" ought to take you.
+  void _showDetails(DateTime day) {
+    _openDate(day);
+    final BuildContext? panel = _panelKey.currentContext;
+    if (panel == null) {
+      return;
+    }
+    Scrollable.ensureVisible(
+      panel,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+    );
   }
 
   Future<void> _addEvent() async {
@@ -263,10 +284,12 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                     onOpenDate: _openDate,
                     onJump: (int year, int month) =>
                         setState(() => _month = BsDate(year, month, 1)),
+                    onShowDetails: _showDetails,
                     onAddNote: _addNoteOn,
                     onSetReminder: _addReminderOn,
                   );
                   final Widget side = _SidePanel(
+                    key: _panelKey,
                     selected: _selected,
                     nepali: nepali,
                     events: events,
@@ -544,6 +567,7 @@ class _MonthCard extends StatelessWidget {
     required this.onNextYear,
     required this.onOpenDate,
     required this.onJump,
+    required this.onShowDetails,
     required this.onAddNote,
     required this.onSetReminder,
   });
@@ -565,7 +589,8 @@ class _MonthCard extends StatelessWidget {
   final ValueChanged<DateTime> onOpenDate;
   final void Function(int year, int month) onJump;
 
-  /// The hover card's quick actions, for whichever day is under the pointer.
+  /// The day card's quick actions, for the day that was clicked.
+  final ValueChanged<DateTime> onShowDetails;
   final ValueChanged<DateTime> onAddNote;
   final ValueChanged<DateTime> onSetReminder;
 
@@ -720,7 +745,7 @@ class _MonthCard extends StatelessWidget {
                 ),
                 itemBuilder: (BuildContext context, int index) {
                   final _GridDay cell = cells[index];
-                  return _DayCell(
+                  return DayCell(
                     date: cell.date,
                     bsDay: cell.bsDay,
                     outside: cell.outside,
@@ -731,6 +756,7 @@ class _MonthCard extends StatelessWidget {
                     events:
                         events[dayKey(cell.date)] ?? const <CalendarEvent>[],
                     onTap: () => onOpenDate(cell.date),
+                    onShowDetails: () => onShowDetails(cell.date),
                     onAddNote: () => onAddNote(cell.date),
                     onSetReminder: () => onSetReminder(cell.date),
                   );
@@ -830,218 +856,6 @@ class _BsMonthPicker extends StatelessWidget {
 
 /// One day: the BS day large, the AD day small, holidays named, everything
 /// else dotted.
-class _DayCell extends StatelessWidget {
-  const _DayCell({
-    required this.date,
-    required this.bsDay,
-    required this.outside,
-    required this.reserveNameLine,
-    required this.nepali,
-    required this.isToday,
-    required this.isSelected,
-    required this.events,
-    required this.onTap,
-    required this.onAddNote,
-    required this.onSetReminder,
-  });
-
-  final DateTime date;
-  final int bsDay;
-
-  /// True for the neighbouring months' days that pad the rectangle out.
-  final bool outside;
-  final bool reserveNameLine;
-  final bool nepali;
-  final bool isToday;
-  final bool isSelected;
-  final List<CalendarEvent> events;
-  final VoidCallback onTap;
-
-  /// The hover card's quick actions.
-  final VoidCallback onAddNote;
-  final VoidCallback onSetReminder;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    final bool isPublicHoliday = events.any(
-      (CalendarEvent e) => e.isPublicHoliday,
-    );
-    final bool restDay = isWeekend(date) || isPublicHoliday;
-
-    final Color foreground = isSelected
-        ? scheme.onPrimary
-        : outside
-        ? scheme.onSurfaceVariant.withValues(alpha: 0.4)
-        : restDay
-        ? scheme.error
-        : scheme.onSurface;
-
-    // Holidays are named in the cell and get a festival icon, so they need no
-    // dot of their own; the dots are for the kinds that carry no other mark.
-    final List<CalendarEventKind> kinds = <CalendarEventKind>[
-      for (final CalendarEventKind kind in CalendarEventKind.values)
-        if (kind != CalendarEventKind.holiday &&
-            events.any((CalendarEvent e) => e.kind == kind))
-          kind,
-    ];
-
-    // A day the reader has asked to be reminded about. Worth its own mark: a
-    // dot says something is on, but a bell says the calendar will speak up.
-    final bool hasReminder = events.any(
-      (CalendarEvent e) => e.entry?.remindDays != null,
-    );
-
-    // The 1st of a Gregorian month carries its month name, so the AD calendar
-    // stays readable as it drifts across the BS grid.
-    final String adLabel = date.day == 1
-        ? '${date.day} ${kAdMonthsShort[date.month]}'
-        : '${date.day}';
-
-    final Color border = isSelected
-        ? Colors.transparent
-        : isToday
-        ? scheme.primary
-        : outside
-        ? scheme.outlineVariant.withValues(alpha: 0.25)
-        : isPublicHoliday
-        ? scheme.error.withValues(alpha: 0.35)
-        : scheme.outlineVariant.withValues(alpha: 0.55);
-
-    final BorderRadius radius = BorderRadius.circular(10);
-    final CalendarEvent? holiday = cellHoliday(events);
-    final double dim = outside ? 0.45 : 1;
-
-    final Widget cell = Material(
-      color: isSelected
-          ? scheme.primary
-          : isPublicHoliday && !outside
-          ? scheme.error.withValues(alpha: 0.07)
-          : Colors.transparent,
-      borderRadius: radius,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: radius,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            border: Border.all(
-              color: border,
-              width: isToday && !isSelected ? 1.5 : 1,
-            ),
-          ),
-          padding: const EdgeInsets.fromLTRB(5, 4, 5, 5),
-          child: Column(
-            children: <Widget>[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  // A festival gets an icon rather than a dot — it is the one
-                  // thing on the day a reader is scanning the month for.
-                  if (holiday != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 2),
-                      child: Icon(
-                        Icons.celebration,
-                        size: 9,
-                        color: isSelected
-                            ? scheme.onPrimary
-                            : scheme.error.withValues(alpha: dim),
-                      ),
-                    ),
-                  if (hasReminder)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 2),
-                      child: Icon(
-                        Icons.notifications_active,
-                        size: 9,
-                        color: isSelected
-                            ? scheme.onPrimary
-                            : scheme.tertiary.withValues(alpha: dim),
-                      ),
-                    ),
-                  for (final CalendarEventKind kind in kinds)
-                    Container(
-                      width: 5,
-                      height: 5,
-                      margin: const EdgeInsets.only(right: 2, top: 3),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isSelected
-                            ? scheme.onPrimary
-                            : kind.color.withValues(alpha: dim),
-                      ),
-                    ),
-                  const Spacer(),
-                  Text(
-                    adLabel,
-                    style: TextStyle(
-                      fontSize: 10,
-                      height: 1,
-                      color: isSelected
-                          ? scheme.onPrimary.withValues(alpha: 0.85)
-                          : scheme.onSurfaceVariant.withValues(alpha: dim),
-                    ),
-                  ),
-                ],
-              ),
-              Expanded(
-                child: Center(
-                  child: Text(
-                    localDigits(bsDay, nepali: nepali),
-                    style: TextStyle(
-                      fontSize: 19,
-                      height: 1,
-                      fontWeight: FontWeight.w700,
-                      color: foreground,
-                    ),
-                  ),
-                ),
-              ),
-              // A printed patro names its holidays. Everything else stays a
-              // dot — a task title would never fit.
-              if (reserveNameLine)
-                SizedBox(
-                  height: 22,
-                  child: holiday == null
-                      ? null
-                      : Text(
-                          holiday.name(nepali: nepali),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            height: 1.15,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected
-                                ? scheme.onPrimary.withValues(alpha: 0.9)
-                                : scheme.error.withValues(alpha: dim),
-                          ),
-                        ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    // Every day gets the card, not only the days that happen to carry an event.
-    // The tithi, the sunrise and the moon are worth reading on an ordinary
-    // Tuesday too, and a cell that answers only sometimes teaches the reader to
-    // stop asking.
-    return DayHoverRegion(
-      date: date,
-      nepali: nepali,
-      events: events,
-      onViewDetails: onTap,
-      onAddNote: onAddNote,
-      onSetReminder: onSetReminder,
-      child: cell,
-    );
-  }
-}
-
 /// What the marks in the grid mean.
 class _Legend extends StatelessWidget {
   const _Legend({required this.nepali});
@@ -1117,6 +931,7 @@ class _Legend extends StatelessWidget {
 /// The selected day's detail plus what is coming up.
 class _SidePanel extends StatelessWidget {
   const _SidePanel({
+    super.key,
     required this.selected,
     required this.nepali,
     required this.events,

@@ -51,10 +51,10 @@ void main() {
     });
   });
 
-  group('the hover card example', () {
+  group('the day card example', () {
     test('25 June 2026 is 11 Ashar 2083, a Thursday, Nirjala Ekadashi', () {
-      // Straight from the specification for the hover popup. Every part of it
-      // is something we work out rather than look up, so all of it is testable.
+      // Straight from the specification for the day popup. Every part of it is
+      // something we work out rather than look up, so all of it is testable.
       final DateTime day = DateTime(2026, 6, 25);
 
       expect(adToBs(day), const BsDate(2083, 3, 11));

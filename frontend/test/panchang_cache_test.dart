@@ -20,7 +20,7 @@ void main() {
     });
 
     test('keys on the day, not the time of day', () {
-      // The hover card passes whatever DateTime it has; two moments on the same
+      // The day card passes whatever DateTime it has; two moments on the same
       // day must not compute the panchang twice.
       final Panchang morning = panchangFor(DateTime(2026, 6, 25, 3, 15));
       final Panchang evening = panchangFor(DateTime(2026, 6, 25, 22, 45));
@@ -91,10 +91,11 @@ void main() {
       );
     });
 
-    test('is fast enough to rebuild on every mouse-move', () {
-      // The hover card is rebuilt as the pointer moves, so a day already looked
-      // at has to come back essentially free. Warm it, then time a thousand
-      // more asks for the same day.
+    test('is fast enough to be asked for again and again', () {
+      // The side panel, the panchang card and the day card all ask for the same
+      // day, and every setState on the page asks again — so a day already
+      // looked at has to come back essentially free. Warm it, then time a
+      // thousand more asks for the same day.
       final DateTime day = DateTime(2026, 7, 9);
       panchangFor(day);
 

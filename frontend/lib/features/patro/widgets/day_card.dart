@@ -7,14 +7,15 @@ import '../../../core/utils/religious_days.dart';
 import '../../../data/models/holiday.dart';
 import '../providers/patro_providers.dart';
 
-/// What a day looks like when you hover it: both dates, the festival, whether
+/// What a day looks like when you click it: both dates, the festival, whether
 /// the office is shut, the tithi, sunrise, sunset, the moon.
 ///
 /// Every line here is computed on the spot — the panchang for a single day is
 /// a few dozen trigonometric terms, which is nothing next to a frame budget. So
-/// hovering costs no round trip and the card is complete the instant it appears.
-class DayHoverCard extends StatelessWidget {
-  const DayHoverCard({
+/// opening it costs no round trip and the card is complete the instant it
+/// appears.
+class DayCard extends StatelessWidget {
+  const DayCard({
     super.key,
     required this.date,
     required this.nepali,
@@ -86,6 +87,9 @@ class DayHoverCard extends StatelessWidget {
               style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 6),
+            // The weekday holds its ground and the date yields, because a card
+            // 300px wide has to survive a long Nepali weekday and a reader who
+            // has turned their text size up.
             Row(
               children: <Widget>[
                 Text(
@@ -96,11 +100,15 @@ class DayHoverCard extends StatelessWidget {
                     color: isWeekend(date) ? scheme.error : scheme.onSurface,
                   ),
                 ),
-                Text(
-                  '  ·  ${formatLongDate(date).split(', ').last}',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: scheme.onSurfaceVariant,
+                Flexible(
+                  child: Text(
+                    '  ·  ${formatLongDate(date).split(', ').last}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],
