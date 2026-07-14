@@ -126,6 +126,79 @@ func (q *Queries) DeleteHoliday(ctx context.Context, id int64) error {
 	return err
 }
 
+const dueHolidayReminders = `-- name: DueHolidayReminders :many
+SELECT u.id AS user_id,
+       u.holiday_remind_days,
+       h.id AS holiday_id,
+       h.holiday_date,
+       h.name_en,
+       h.name_ne
+FROM users u
+CROSS JOIN holidays h
+LEFT JOIN holiday_reminders_sent s
+       ON s.user_id = u.id AND s.holiday_id = h.id
+WHERE u.holiday_remind_days IS NOT NULL
+  AND u.status = 'active'
+  AND h.is_public
+  AND s.user_id IS NULL
+  AND h.holiday_date >= CURRENT_DATE
+  AND h.holiday_date <= CURRENT_DATE + u.holiday_remind_days
+ORDER BY h.holiday_date, u.id
+LIMIT 1000
+`
+
+type DueHolidayRemindersRow struct {
+	UserID            int64       `json:"user_id"`
+	HolidayRemindDays *int32      `json:"holiday_remind_days"`
+	HolidayID         int64       `json:"holiday_id"`
+	HolidayDate       pgtype.Date `json:"holiday_date"`
+	NameEn            string      `json:"name_en"`
+	NameNe            string      `json:"name_ne"`
+}
+
+// Every (user, holiday) pair that is due a reminder: the user has opted in, the
+// holiday falls inside their notice period, and they have not been told yet.
+//
+// The LEFT JOIN ... IS NULL is what makes it idempotent — the sweep can run
+// every half hour without telling anyone twice.
+func (q *Queries) DueHolidayReminders(ctx context.Context) ([]DueHolidayRemindersRow, error) {
+	rows, err := q.db.Query(ctx, dueHolidayReminders)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DueHolidayRemindersRow{}
+	for rows.Next() {
+		var i DueHolidayRemindersRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.HolidayRemindDays,
+			&i.HolidayID,
+			&i.HolidayDate,
+			&i.NameEn,
+			&i.NameNe,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getHolidayRemindDays = `-- name: GetHolidayRemindDays :one
+SELECT holiday_remind_days FROM users WHERE id = $1
+`
+
+func (q *Queries) GetHolidayRemindDays(ctx context.Context, id int64) (*int32, error) {
+	row := q.db.QueryRow(ctx, getHolidayRemindDays, id)
+	var holiday_remind_days *int32
+	err := row.Scan(&holiday_remind_days)
+	return holiday_remind_days, err
+}
+
 const listHolidays = `-- name: ListHolidays :many
 SELECT id, holiday_date, name_en, name_ne, is_public, created_at, category, description_en, description_ne, history_en, history_ne, importance_en, importance_ne, celebration_en, celebration_ne, aliases, is_government, is_bank, is_school, is_optional, observed_by FROM holidays
 WHERE holiday_date >= $1
@@ -178,6 +251,37 @@ func (q *Queries) ListHolidays(ctx context.Context, arg ListHolidaysParams) ([]H
 		return nil, err
 	}
 	return items, nil
+}
+
+const markHolidayReminded = `-- name: MarkHolidayReminded :exec
+INSERT INTO holiday_reminders_sent (user_id, holiday_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING
+`
+
+type MarkHolidayRemindedParams struct {
+	UserID    int64 `json:"user_id"`
+	HolidayID int64 `json:"holiday_id"`
+}
+
+func (q *Queries) MarkHolidayReminded(ctx context.Context, arg MarkHolidayRemindedParams) error {
+	_, err := q.db.Exec(ctx, markHolidayReminded, arg.UserID, arg.HolidayID)
+	return err
+}
+
+const setHolidayRemindDays = `-- name: SetHolidayRemindDays :exec
+UPDATE users SET holiday_remind_days = $1
+WHERE id = $2
+`
+
+type SetHolidayRemindDaysParams struct {
+	HolidayRemindDays *int32 `json:"holiday_remind_days"`
+	ID                int64  `json:"id"`
+}
+
+func (q *Queries) SetHolidayRemindDays(ctx context.Context, arg SetHolidayRemindDaysParams) error {
+	_, err := q.db.Exec(ctx, setHolidayRemindDays, arg.HolidayRemindDays, arg.ID)
+	return err
 }
 
 const updateHoliday = `-- name: UpdateHoliday :one

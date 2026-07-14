@@ -10,12 +10,14 @@ import '../../data/enums/calendar_event_kind.dart';
 import '../../data/models/calendar_entry.dart';
 import '../../data/models/holiday.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/language_provider.dart';
 import 'providers/patro_providers.dart';
 import 'widgets/date_converter.dart';
 import 'widgets/day_summary_card.dart';
 import 'widgets/event_dialog.dart';
 import 'widgets/festival_details.dart';
 import 'widgets/holiday_dialog.dart';
+import 'widgets/holiday_reminder_card.dart';
 import 'widgets/muhurta_card.dart';
 import 'widgets/nepal_clock.dart';
 import 'widgets/panchang_card.dart';
@@ -34,7 +36,6 @@ class PatroPage extends ConsumerStatefulWidget {
 }
 
 class _PatroPageState extends ConsumerState<PatroPage> {
-  bool _nepali = true;
   late BsDate _month = bsToday();
   late DateTime _selected = dateOnly(DateTime.now());
   final TextEditingController _search = TextEditingController();
@@ -98,6 +99,8 @@ class _PatroPageState extends ConsumerState<PatroPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Global and persisted, so the choice survives a refresh.
+    final bool nepali = ref.watch(nepaliProvider);
     final bool isAdmin =
         ref.watch(authControllerProvider).asData?.value.isAdmin ?? false;
     final Map<String, List<CalendarEvent>> events = ref.watch(
@@ -119,41 +122,42 @@ class _PatroPageState extends ConsumerState<PatroPage> {
             padding: const EdgeInsets.all(24),
             children: <Widget>[
               PageHeader(
-                title: _nepali ? 'पात्रो' : 'Calendar',
-                subtitle: _nepali
+                title: nepali ? 'पात्रो' : 'Calendar',
+                subtitle: nepali
                     ? 'नेपाली र अंग्रेजी पात्रो — बिदा, काम र छुट्टी सहित'
                     : 'Bikram Sambat and Gregorian, with holidays, '
                           'due tasks and leave',
                 actions: <Widget>[
                   PillToggle(
                     labels: const <String>['नेपाली', 'English'],
-                    selected: _nepali ? 0 : 1,
-                    onChanged: (int i) => setState(() => _nepali = i == 0),
+                    selected: nepali ? 0 : 1,
+                    onChanged: (int i) =>
+                        ref.read(nepaliProvider.notifier).setNepali(i == 0),
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton.icon(
                     onPressed: alreadyOnToday ? null : () => _openDate(today),
                     icon: const Icon(Icons.today_outlined, size: 18),
-                    label: Text(_nepali ? 'आज' : 'Today', softWrap: false),
+                    label: Text(nepali ? 'आज' : 'Today', softWrap: false),
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton.icon(
                     onPressed: () => showShareDialog(
                       context,
                       date: _selected,
-                      nepali: _nepali,
+                      nepali: nepali,
                       events:
                           events[dayKey(_selected)] ?? const <CalendarEvent>[],
                     ),
                     icon: const Icon(Icons.ios_share, size: 18),
-                    label: Text(_nepali ? 'साझा' : 'Share', softWrap: false),
+                    label: Text(nepali ? 'साझा' : 'Share', softWrap: false),
                   ),
                   const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: _addEvent,
                     icon: const Icon(Icons.add, size: 18),
                     label: Text(
-                      _nepali ? 'कार्यक्रम थप्नुहोस्' : 'Add event',
+                      nepali ? 'कार्यक्रम थप्नुहोस्' : 'Add event',
                       softWrap: false,
                     ),
                   ),
@@ -163,7 +167,7 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                       onPressed: _addHoliday,
                       icon: const Icon(Icons.celebration_outlined, size: 18),
                       label: Text(
-                        _nepali ? 'बिदा' : 'Add holiday',
+                        nepali ? 'बिदा' : 'Add holiday',
                         softWrap: false,
                       ),
                     ),
@@ -175,7 +179,7 @@ class _PatroPageState extends ConsumerState<PatroPage> {
               if (holidaysFailed) ...<Widget>[
                 const SizedBox(height: 16),
                 _HolidaysUnavailable(
-                  nepali: _nepali,
+                  nepali: nepali,
                   onRetry: () => ref.invalidate(holidaysProvider),
                 ),
               ],
@@ -186,7 +190,7 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                 decoration: InputDecoration(
                   isDense: true,
                   prefixIcon: const Icon(Icons.search, size: 18),
-                  hintText: _nepali
+                  hintText: nepali
                       ? 'खोज्नुहोस् — दशैं, होली, २०८३-०३-२५, असार २५'
                       : 'Search — Dashain, Holi, 2083-03-25, 9 July 2026',
                   suffixIcon: _query.isEmpty
@@ -205,7 +209,7 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                 const SizedBox(height: 12),
                 _SearchResults(
                   query: _query,
-                  nepali: _nepali,
+                  nepali: nepali,
                   onOpenDate: (DateTime day) {
                     _search.clear();
                     setState(() => _query = '');
@@ -219,7 +223,7 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                   final Widget grid = _MonthCard(
                     month: _month,
                     selected: _selected,
-                    nepali: _nepali,
+                    nepali: nepali,
                     events: events,
                     onPrevious: _monthAway(-1) == null
                         ? null
@@ -237,7 +241,7 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                   );
                   final Widget side = _SidePanel(
                     selected: _selected,
-                    nepali: _nepali,
+                    nepali: nepali,
                     events: events,
                     isAdmin: isAdmin,
                     onOpenDate: _openDate,
@@ -832,13 +836,20 @@ class _DayCell extends StatelessWidget {
         ? scheme.error
         : scheme.onSurface;
 
-    // Holidays are named in the cell, so they need no dot of their own.
+    // Holidays are named in the cell and get a festival icon, so they need no
+    // dot of their own; the dots are for the kinds that carry no other mark.
     final List<CalendarEventKind> kinds = <CalendarEventKind>[
       for (final CalendarEventKind kind in CalendarEventKind.values)
         if (kind != CalendarEventKind.holiday &&
             events.any((CalendarEvent e) => e.kind == kind))
           kind,
     ];
+
+    // A day the reader has asked to be reminded about. Worth its own mark: a
+    // dot says something is on, but a bell says the calendar will speak up.
+    final bool hasReminder = events.any(
+      (CalendarEvent e) => e.entry?.remindDays != null,
+    );
 
     // The 1st of a Gregorian month carries its month name, so the AD calendar
     // stays readable as it drifts across the BS grid.
@@ -884,6 +895,30 @@ class _DayCell extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
+                  // A festival gets an icon rather than a dot — it is the one
+                  // thing on the day a reader is scanning the month for.
+                  if (holiday != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 2),
+                      child: Icon(
+                        Icons.celebration,
+                        size: 9,
+                        color: isSelected
+                            ? scheme.onPrimary
+                            : scheme.error.withValues(alpha: dim),
+                      ),
+                    ),
+                  if (hasReminder)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 2),
+                      child: Icon(
+                        Icons.notifications_active,
+                        size: 9,
+                        color: isSelected
+                            ? scheme.onPrimary
+                            : scheme.tertiary.withValues(alpha: dim),
+                      ),
+                    ),
                   for (final CalendarEventKind kind in kinds)
                     Container(
                       width: 5,
@@ -985,17 +1020,7 @@ class _Legend extends StatelessWidget {
               // Holidays are named in red rather than dotted, so their swatch
               // shows the tint a holiday cell actually gets.
               if (kind == CalendarEventKind.holiday)
-                Container(
-                  width: 14,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: scheme.error.withValues(alpha: 0.07),
-                    borderRadius: BorderRadius.circular(3),
-                    border: Border.all(
-                      color: scheme.error.withValues(alpha: 0.35),
-                    ),
-                  ),
-                )
+                Icon(Icons.celebration, size: 11, color: scheme.error)
               else
                 Container(
                   width: 8,
@@ -1012,6 +1037,17 @@ class _Legend extends StatelessWidget {
               ),
             ],
           ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.notifications_active, size: 11, color: scheme.tertiary),
+            const SizedBox(width: 6),
+            Text(
+              nepali ? 'सम्झना' : 'Reminder set',
+              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -1074,6 +1110,8 @@ class _SidePanel extends StatelessWidget {
         RashifalCard(date: selected, nepali: nepali),
         const SizedBox(height: 16),
         _UpcomingCard(nepali: nepali, events: events, onOpenDate: onOpenDate),
+        const SizedBox(height: 16),
+        HolidayReminderCard(nepali: nepali),
         const SizedBox(height: 16),
         DateConverter(nepali: nepali, onOpenDate: onOpenDate),
       ],

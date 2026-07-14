@@ -31,7 +31,58 @@ func (h *HolidayHandler) Routes() http.Handler {
 	r.Post("/", h.create)
 	r.Put("/{id}", h.update)
 	r.Delete("/{id}", h.delete)
+
+	// The caller's own notice period for upcoming public holidays. Not admin:
+	// a holiday is everybody's, but whether *you* want warning of it is yours.
+	r.Get("/reminder", h.getReminder)
+	r.Put("/reminder", h.setReminder)
 	return r
+}
+
+type holidayReminderBody struct {
+	// Null means no reminders, which is the default.
+	RemindDays *int32 `json:"remind_days"`
+}
+
+func (h *HolidayHandler) getReminder(w http.ResponseWriter, r *http.Request) {
+	actor := actorOf(r.Context())
+	if actor == nil {
+		writeError(w, http.StatusUnauthorized, errors.New("sign in"))
+		return
+	}
+	days, err := h.q.GetHolidayRemindDays(r.Context(), *actor)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, holidayReminderBody{RemindDays: days})
+}
+
+func (h *HolidayHandler) setReminder(w http.ResponseWriter, r *http.Request) {
+	actor := actorOf(r.Context())
+	if actor == nil {
+		writeError(w, http.StatusUnauthorized, errors.New("sign in"))
+		return
+	}
+	var b holidayReminderBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if b.RemindDays != nil && (*b.RemindDays < 0 || *b.RemindDays > 60) {
+		writeError(w, http.StatusBadRequest,
+			errors.New("remind_days must be between 0 and 60"))
+		return
+	}
+	err := h.q.SetHolidayRemindDays(r.Context(), db.SetHolidayRemindDaysParams{
+		ID:                *actor,
+		HolidayRemindDays: b.RemindDays,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, b)
 }
 
 // holidayCategories mirrors the CHECK constraint on holidays.category. An

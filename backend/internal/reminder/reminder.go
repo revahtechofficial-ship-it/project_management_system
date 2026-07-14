@@ -44,6 +44,64 @@ func Run(ctx context.Context, q *db.Queries, now time.Time) {
 	runUserReminders(ctx, q)
 	rollRepeatingEvents(ctx, q, now)
 	runCalendarReminders(ctx, q, now)
+	runHolidayReminders(ctx, q, now)
+}
+
+// runHolidayReminders tells people about a public holiday that is coming up.
+//
+// A holiday is the country's, not one person's, so it carries no remind_days of
+// its own — the notice period is a setting on the *user*, and who has been told
+// is a row in holiday_reminders_sent. That pair is the primary key there, which
+// is what lets this run every half hour without telling anybody twice.
+//
+// Only public holidays. An observance that closes nothing is not worth a
+// notification, and a calendar that pings you about days you still have to work
+// gets muted, taking the useful notifications with it.
+func runHolidayReminders(ctx context.Context, q *db.Queries, now time.Time) {
+	rows, err := q.DueHolidayReminders(ctx)
+	if err != nil {
+		log.Printf("holiday reminder sweep failed: %v", err)
+		return
+	}
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	for _, r := range rows {
+		if !r.HolidayDate.Valid {
+			continue
+		}
+		uid := r.UserID
+		days := int(r.HolidayDate.Time.Sub(today).Hours() / 24)
+
+		name := r.NameEn
+		if name == "" {
+			name = r.NameNe
+		}
+		_, _ = q.CreateNotification(ctx, db.CreateNotificationParams{
+			UserID: &uid,
+			Type:   "reminder",
+			Title:  holidayTitle(name, days),
+			Body:   r.NameNe,
+			Link:   "/patro",
+		})
+		_ = q.MarkHolidayReminded(ctx, db.MarkHolidayRemindedParams{
+			UserID:    uid,
+			HolidayID: r.HolidayID,
+		})
+	}
+}
+
+// holidayTitle words it the way a person would. "Dashain is on Tuesday" beats
+// "Reminder: holiday".
+func holidayTitle(name string, days int) string {
+	switch {
+	case days <= 0:
+		return fmt.Sprintf("%s — today", name)
+	case days == 1:
+		return fmt.Sprintf("%s — tomorrow", name)
+	case days < 7:
+		return fmt.Sprintf("%s — in %d days", name, days)
+	default:
+		return fmt.Sprintf("%s — in %d days (office closed)", name, days)
+	}
 }
 
 // rollRepeatingEvents moves a birthday or anniversary on to its next

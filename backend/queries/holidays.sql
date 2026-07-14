@@ -64,3 +64,40 @@ RETURNING *;
 
 -- name: DeleteHoliday :exec
 DELETE FROM holidays WHERE id = $1;
+
+-- Every (user, holiday) pair that is due a reminder: the user has opted in, the
+-- holiday falls inside their notice period, and they have not been told yet.
+--
+-- The LEFT JOIN ... IS NULL is what makes it idempotent — the sweep can run
+-- every half hour without telling anyone twice.
+-- name: DueHolidayReminders :many
+SELECT u.id AS user_id,
+       u.holiday_remind_days,
+       h.id AS holiday_id,
+       h.holiday_date,
+       h.name_en,
+       h.name_ne
+FROM users u
+CROSS JOIN holidays h
+LEFT JOIN holiday_reminders_sent s
+       ON s.user_id = u.id AND s.holiday_id = h.id
+WHERE u.holiday_remind_days IS NOT NULL
+  AND u.status = 'active'
+  AND h.is_public
+  AND s.user_id IS NULL
+  AND h.holiday_date >= CURRENT_DATE
+  AND h.holiday_date <= CURRENT_DATE + u.holiday_remind_days
+ORDER BY h.holiday_date, u.id
+LIMIT 1000;
+
+-- name: MarkHolidayReminded :exec
+INSERT INTO holiday_reminders_sent (user_id, holiday_id)
+VALUES (sqlc.arg(user_id), sqlc.arg(holiday_id))
+ON CONFLICT DO NOTHING;
+
+-- name: SetHolidayRemindDays :exec
+UPDATE users SET holiday_remind_days = sqlc.narg(holiday_remind_days)
+WHERE id = sqlc.arg(id);
+
+-- name: GetHolidayRemindDays :one
+SELECT holiday_remind_days FROM users WHERE id = $1;

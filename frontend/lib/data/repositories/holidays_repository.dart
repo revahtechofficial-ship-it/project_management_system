@@ -39,4 +39,17 @@ class HolidaysRepository {
 
   /// Removes a holiday (admin only).
   Future<void> delete(int id) => _dio.delete<void>('/api/v1/holidays/$id');
+
+  /// The caller's own notice period for public holidays, or null for none.
+  Future<int?> reminderDays() async {
+    final Response<Map<String, dynamic>> res = await _dio
+        .get<Map<String, dynamic>>('/api/v1/holidays/reminder');
+    return res.data?['remind_days'] as int?;
+  }
+
+  /// Sets it. Null turns holiday reminders off.
+  Future<void> setReminderDays(int? days) => _dio.put<void>(
+    '/api/v1/holidays/reminder',
+    data: <String, dynamic>{'remind_days': days},
+  );
 }

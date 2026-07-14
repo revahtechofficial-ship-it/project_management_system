@@ -30,6 +30,16 @@ final FutureProvider<List<Holiday>> holidaysProvider =
       return ref.watch(holidaysRepositoryProvider).list();
     });
 
+/// The caller's notice period for public holidays, or null for none.
+///
+/// A holiday belongs to the country, so it carries no reminder of its own — how
+/// much warning *you* want is a setting on you. Invalidate after changing it.
+final FutureProvider<int?> holidayReminderProvider = FutureProvider<int?>((
+  ref,
+) {
+  return ref.watch(holidaysRepositoryProvider).reminderDays();
+});
+
 /// The saait repository.
 final Provider<MuhuratsRepository> muhuratsRepositoryProvider =
     Provider<MuhuratsRepository>((ref) {

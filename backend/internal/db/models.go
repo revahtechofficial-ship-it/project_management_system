@@ -283,6 +283,12 @@ type Holiday struct {
 	ObservedBy string `json:"observed_by"`
 }
 
+type HolidayRemindersSent struct {
+	UserID    int64     `json:"user_id"`
+	HolidayID int64     `json:"holiday_id"`
+	SentAt    time.Time `json:"sent_at"`
+}
+
 type Incident struct {
 	ID          int64              `json:"id"`
 	Title       string             `json:"title"`
@@ -775,6 +781,8 @@ type User struct {
 	EmailNotifications bool               `json:"email_notifications"`
 	CalendarToken      *string            `json:"calendar_token"`
 	NotificationPrefs  string             `json:"notification_prefs"`
+	// Days of notice for an upcoming public holiday. NULL = no reminders.
+	HolidayRemindDays *int32 `json:"holiday_remind_days"`
 }
 
 type UserSkill struct {
