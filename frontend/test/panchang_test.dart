@@ -177,6 +177,75 @@ void main() {
     });
   });
 
+  group('moon phase', () {
+    test('the phase is centred on its name, not started by it', () {
+      // 180 degrees is the full moon itself, so it must land in the middle of
+      // fullMoon, not at the edge of the next phase.
+      expect(moonPhaseOf(180), MoonPhase.fullMoon);
+      expect(moonPhaseOf(0), MoonPhase.newMoon);
+      expect(moonPhaseOf(359.9), MoonPhase.newMoon);
+      expect(moonPhaseOf(90), MoonPhase.firstQuarter);
+      expect(moonPhaseOf(270), MoonPhase.lastQuarter);
+      // And the boundaries fall halfway between two names.
+      expect(moonPhaseOf(22.4), MoonPhase.newMoon);
+      expect(moonPhaseOf(22.6), MoonPhase.waxingCrescent);
+    });
+
+    test('illumination runs 0 at the new moon to 1 at the full', () {
+      expect(moonIlluminationOf(0), closeTo(0, 0.001));
+      expect(moonIlluminationOf(90), closeTo(0.5, 0.001));
+      expect(moonIlluminationOf(180), closeTo(1, 0.001));
+      expect(moonIlluminationOf(270), closeTo(0.5, 0.001));
+    });
+
+    test('it agrees with the tithi it is read from', () {
+      // Both come off the same angle, so they cannot contradict each other.
+      // Purnima (tithi 15) must be a full moon; Amavasya (30) a new one.
+      final Panchang purnima = panchangFor(DateTime(2026, 6, 29));
+      expect(purnima.tithi.nameEn, 'Purnima');
+      expect(purnima.moonPhase, MoonPhase.fullMoon);
+      expect(purnima.moonIllumination, greaterThan(0.97));
+
+      final Panchang amavasya = panchangFor(DateTime(2026, 7, 14));
+      expect(amavasya.tithi.nameEn, 'Amavasya');
+      expect(amavasya.moonPhase, MoonPhase.newMoon);
+      expect(amavasya.moonIllumination, lessThan(0.03));
+    });
+
+    test('waxes through the bright half and wanes through the dark', () {
+      // Shukla paksha is the moon filling out; krishna is it emptying.
+      const Set<MoonPhase> waxing = <MoonPhase>{
+        MoonPhase.waxingCrescent,
+        MoonPhase.firstQuarter,
+        MoonPhase.waxingGibbous,
+      };
+      const Set<MoonPhase> waning = <MoonPhase>{
+        MoonPhase.waningGibbous,
+        MoonPhase.lastQuarter,
+        MoonPhase.waningCrescent,
+      };
+      for (int day = 1; day <= 31; day++) {
+        final Panchang p = panchangFor(DateTime(2026, 7, day));
+        if (waxing.contains(p.moonPhase)) {
+          expect(p.paksha, Paksha.shukla, reason: 'July $day');
+        }
+        if (waning.contains(p.moonPhase)) {
+          expect(p.paksha, Paksha.krishna, reason: 'July $day');
+        }
+      }
+    });
+
+    test('every phase turns up in a lunar month', () {
+      final Set<MoonPhase> seen = <MoonPhase>{};
+      DateTime day = DateTime(2026, 6, 15);
+      for (int i = 0; i < 30; i++) {
+        seen.add(panchangFor(day).moonPhase);
+        day = DateTime(day.year, day.month, day.day + 1);
+      }
+      expect(seen.length, 8);
+    });
+  });
+
   group('nakshatra, yoga and karana', () {
     test('every day of a year lands on a real one', () {
       DateTime day = DateTime(2026, 1, 1);

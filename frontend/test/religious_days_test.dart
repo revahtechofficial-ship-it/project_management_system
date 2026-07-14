@@ -51,6 +51,30 @@ void main() {
     });
   });
 
+  group('the hover card example', () {
+    test('25 June 2026 is 11 Ashar 2083, a Thursday, Nirjala Ekadashi', () {
+      // Straight from the specification for the hover popup. Every part of it
+      // is something we work out rather than look up, so all of it is testable.
+      final DateTime day = DateTime(2026, 6, 25);
+
+      expect(adToBs(day), const BsDate(2083, 3, 11));
+      expect(kWeekdaysEnLong[sundayFirstIndex(day)], 'Thursday');
+
+      final Panchang p = panchangFor(day);
+      expect(p.tithi.nameEn, 'Ekadashi');
+      expect(p.paksha, Paksha.shukla);
+
+      // Nirjala is the *Jestha* bright-half Ekadashi, and the lunar month here
+      // is Jestha — the leap month having pushed it — even though the solar
+      // month is Ashar. The two calendars disagree and both are right.
+      expect(p.lunarMonthEn, 'Jestha');
+      expect(
+        religiousDaysFor(day).map((ReligiousDay d) => d.nameEn),
+        contains('Nirjala Ekadashi'),
+      );
+    });
+  });
+
   group('purnimanta naming', () {
     test('the bright half agrees with amanta, the dark half does not', () {
       expect(purnimantaMonth(3, Paksha.shukla), 3);

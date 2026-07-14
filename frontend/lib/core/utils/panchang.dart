@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'astronomy.dart';
 import 'nepali_calendar.dart';
 
@@ -260,6 +262,75 @@ class PanchangElement {
   String toString() => '$nameEn (till $endsAt)';
 }
 
+/// The moon's phase — the *shape* of it, as against the tithi, which is the
+/// count.
+///
+/// Both are read off the same angle: how far the moon has pulled ahead of the
+/// sun. A tithi is 12° of that; a phase is an eighth of the whole turn. So they
+/// move together but do not line up — Purnima is the fifteenth tithi, and the
+/// moon is at its fullest somewhere inside it, not at its edge.
+enum MoonPhase {
+  newMoon,
+  waxingCrescent,
+  firstQuarter,
+  waxingGibbous,
+  fullMoon,
+  waningGibbous,
+  lastQuarter,
+  waningCrescent;
+
+  String get label => switch (this) {
+    MoonPhase.newMoon => 'New moon',
+    MoonPhase.waxingCrescent => 'Waxing crescent',
+    MoonPhase.firstQuarter => 'First quarter',
+    MoonPhase.waxingGibbous => 'Waxing gibbous',
+    MoonPhase.fullMoon => 'Full moon',
+    MoonPhase.waningGibbous => 'Waning gibbous',
+    MoonPhase.lastQuarter => 'Last quarter',
+    MoonPhase.waningCrescent => 'Waning crescent',
+  };
+
+  String get labelNe => switch (this) {
+    MoonPhase.newMoon => 'औंसी',
+    MoonPhase.waxingCrescent => 'बढ्दो चन्द्र',
+    MoonPhase.firstQuarter => 'अर्ध चन्द्र (बढ्दो)',
+    MoonPhase.waxingGibbous => 'बढ्दो पूर्ण चन्द्र',
+    MoonPhase.fullMoon => 'पूर्णिमा',
+    MoonPhase.waningGibbous => 'घट्दो पूर्ण चन्द्र',
+    MoonPhase.lastQuarter => 'अर्ध चन्द्र (घट्दो)',
+    MoonPhase.waningCrescent => 'घट्दो चन्द्र',
+  };
+
+  /// A glyph of the shape, which reads faster than the words do.
+  String get symbol => switch (this) {
+    MoonPhase.newMoon => '\u{1F311}',
+    MoonPhase.waxingCrescent => '\u{1F312}',
+    MoonPhase.firstQuarter => '\u{1F313}',
+    MoonPhase.waxingGibbous => '\u{1F314}',
+    MoonPhase.fullMoon => '\u{1F315}',
+    MoonPhase.waningGibbous => '\u{1F316}',
+    MoonPhase.lastQuarter => '\u{1F317}',
+    MoonPhase.waningCrescent => '\u{1F318}',
+  };
+
+  String phaseName({required bool nepali}) => nepali ? labelNe : label;
+}
+
+/// The phase an elongation falls in.
+///
+/// Eight phases of 45° each, *centred* on their names rather than beginning at
+/// them: the full moon is the moon at 180°, not the moon somewhere between 180°
+/// and 225°.
+MoonPhase moonPhaseOf(double elongationDegrees) {
+  final double e = norm360(elongationDegrees);
+  final int octant = ((e + 22.5) / 45).floor() % 8;
+  return MoonPhase.values[octant];
+}
+
+/// How much of the moon's face is lit, 0 at the new moon and 1 at the full.
+double moonIlluminationOf(double elongationDegrees) =>
+    (1 - math.cos(elongationDegrees * math.pi / 180)) / 2;
+
 /// Whether the moon is waxing or waning.
 enum Paksha {
   shukla,
@@ -284,6 +355,8 @@ class Panchang {
     required this.karana,
     required this.moonSidereal,
     required this.sunSidereal,
+    required this.moonPhase,
+    required this.moonIllumination,
     required this.lunarMonthIndex,
     required this.lunarMonthEn,
     required this.lunarMonthNe,
@@ -307,6 +380,10 @@ class Panchang {
   /// nakshatras.
   final double moonSidereal;
   final double sunSidereal;
+
+  /// The shape of the moon, and how much of its face is lit.
+  final MoonPhase moonPhase;
+  final double moonIllumination;
 
   /// The amanta lunar month, 1 = Chaitra. Nepal *names* its fasts by the
   /// purnimanta month instead, which differs in the dark half — see
@@ -408,15 +485,52 @@ double newMoonBefore(double jd) {
 /// Which of the twelve signs the sun is in, 0-based.
 int _sunRasi(double jd) => (sunSidereal(jd) / 30).floor() % 12;
 
+/// Panchangs already worked out, keyed by day and place.
+///
+/// A day's panchang costs a few hundred trigonometric terms plus a scan for
+/// sunrise, which is nothing once — and quite a lot sixty times a second. The
+/// hover card is rebuilt on every mouse-move, and several cards on the page ask
+/// for the same day at once, so the answer is worth keeping.
+///
+/// Bounded, because a reader scrolling through years would otherwise grow it
+/// without limit. Panchangs do not change, so eviction is arbitrary: the oldest
+/// insertion goes.
+final Map<String, Panchang> _cache = <String, Panchang>{};
+const int _cacheLimit = 512;
+
 /// The whole panchang for the Gregorian day [date], reckoned at Kathmandu.
 ///
 /// Every element is the one in force at sunrise, which is how a patro names
 /// its days.
+///
+/// This is a *Nepali* almanac and it is built like one. The day it scans runs
+/// from midnight Nepal time, and every time it hands back is in Nepal time. The
+/// [latitude] and [longitude] are there to move about within Nepal — the far
+/// west sees the sun a few minutes after Kathmandu — and not to compute a
+/// panchang for Oslo. Push them far enough and the twenty-four hours being
+/// searched stop lining up with that place's own day, and you can get a sunset
+/// before the sunrise. Guarding against it would mean re-anchoring the scan,
+/// which would disturb behaviour checked against Hamro Patro for all 33 days of
+/// a month; the honest thing is to say what this function is for.
 Panchang panchangFor(
   DateTime date, {
   double latitude = kKathmanduLatitude,
   double longitude = kKathmanduLongitude,
 }) {
+  final String key = '${dayKey(date)}@$latitude,$longitude';
+  final Panchang? hit = _cache[key];
+  if (hit != null) {
+    return hit;
+  }
+  final Panchang computed = _computePanchang(date, latitude, longitude);
+  if (_cache.length >= _cacheLimit) {
+    _cache.remove(_cache.keys.first);
+  }
+  _cache[key] = computed;
+  return computed;
+}
+
+Panchang _computePanchang(DateTime date, double latitude, double longitude) {
   // Nepal time is UTC+05:45, so the local day starts 5h45m before UTC midnight.
   final DateTime localMidnightUtc = DateTime.utc(
     date.year,
@@ -525,6 +639,8 @@ Panchang panchangFor(
     ),
     moonSidereal: moonSidereal(jd),
     sunSidereal: sunSidereal(jd),
+    moonPhase: moonPhaseOf(elong),
+    moonIllumination: moonIlluminationOf(elong),
     lunarMonthIndex: lunarMonthIndex + 1,
     lunarMonthEn: _lunarMonthEn[lunarMonthIndex],
     lunarMonthNe: _lunarMonthNe[lunarMonthIndex],

@@ -13,6 +13,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/language_provider.dart';
 import 'providers/patro_providers.dart';
 import 'widgets/date_converter.dart';
+import 'widgets/day_hover_region.dart';
 import 'widgets/day_summary_card.dart';
 import 'widgets/event_dialog.dart';
 import 'widgets/festival_details.dart';
@@ -84,6 +85,30 @@ class _PatroPageState extends ConsumerState<PatroPage> {
     final bool? added = await showEventDialog(context, initialDate: _selected);
     if ((added ?? false) && mounted) {
       context.showSuccess('Event added');
+    }
+  }
+
+  /// From the hover card: open the editor already pointed at the day under the
+  /// cursor, so "Note" on the 25th does not open a form for today.
+  Future<void> _addNoteOn(DateTime day) async {
+    _openDate(day);
+    final bool? added = await showEventDialog(context, initialDate: day);
+    if ((added ?? false) && mounted) {
+      context.showSuccess('Note added');
+    }
+  }
+
+  /// The same editor, but with a reminder already asked for — which is the only
+  /// difference between a note and a reminder here.
+  Future<void> _addReminderOn(DateTime day) async {
+    _openDate(day);
+    final bool? added = await showEventDialog(
+      context,
+      initialDate: day,
+      remindByDefault: true,
+    );
+    if ((added ?? false) && mounted) {
+      context.showSuccess('Reminder set');
     }
   }
 
@@ -238,6 +263,8 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                     onOpenDate: _openDate,
                     onJump: (int year, int month) =>
                         setState(() => _month = BsDate(year, month, 1)),
+                    onAddNote: _addNoteOn,
+                    onSetReminder: _addReminderOn,
                   );
                   final Widget side = _SidePanel(
                     selected: _selected,
@@ -517,6 +544,8 @@ class _MonthCard extends StatelessWidget {
     required this.onNextYear,
     required this.onOpenDate,
     required this.onJump,
+    required this.onAddNote,
+    required this.onSetReminder,
   });
 
   final BsDate month;
@@ -535,6 +564,10 @@ class _MonthCard extends StatelessWidget {
 
   final ValueChanged<DateTime> onOpenDate;
   final void Function(int year, int month) onJump;
+
+  /// The hover card's quick actions, for whichever day is under the pointer.
+  final ValueChanged<DateTime> onAddNote;
+  final ValueChanged<DateTime> onSetReminder;
 
   @override
   Widget build(BuildContext context) {
@@ -698,6 +731,8 @@ class _MonthCard extends StatelessWidget {
                     events:
                         events[dayKey(cell.date)] ?? const <CalendarEvent>[],
                     onTap: () => onOpenDate(cell.date),
+                    onAddNote: () => onAddNote(cell.date),
+                    onSetReminder: () => onSetReminder(cell.date),
                   );
                 },
               ),
@@ -806,6 +841,8 @@ class _DayCell extends StatelessWidget {
     required this.isSelected,
     required this.events,
     required this.onTap,
+    required this.onAddNote,
+    required this.onSetReminder,
   });
 
   final DateTime date;
@@ -819,6 +856,10 @@ class _DayCell extends StatelessWidget {
   final bool isSelected;
   final List<CalendarEvent> events;
   final VoidCallback onTap;
+
+  /// The hover card's quick actions.
+  final VoidCallback onAddNote;
+  final VoidCallback onSetReminder;
 
   @override
   Widget build(BuildContext context) {
@@ -985,15 +1026,17 @@ class _DayCell extends StatelessWidget {
       ),
     );
 
-    if (events.isEmpty) {
-      return cell;
-    }
-    // A bare dot says nothing; hovering names everything on the day.
-    return Tooltip(
-      waitDuration: const Duration(milliseconds: 400),
-      message: <String>[
-        for (final CalendarEvent event in events) event.name(nepali: nepali),
-      ].join('\n'),
+    // Every day gets the card, not only the days that happen to carry an event.
+    // The tithi, the sunrise and the moon are worth reading on an ordinary
+    // Tuesday too, and a cell that answers only sometimes teaches the reader to
+    // stop asking.
+    return DayHoverRegion(
+      date: date,
+      nepali: nepali,
+      events: events,
+      onViewDetails: onTap,
+      onAddNote: onAddNote,
+      onSetReminder: onSetReminder,
       child: cell,
     );
   }

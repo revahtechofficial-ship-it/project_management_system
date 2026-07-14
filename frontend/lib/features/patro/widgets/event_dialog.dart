@@ -14,6 +14,7 @@ Future<bool?> showEventDialog(
   BuildContext context, {
   DateTime? initialDate,
   CalendarEntry? existing,
+  bool remindByDefault = false,
 }) {
   assert(
     initialDate != null || existing != null,
@@ -21,16 +22,27 @@ Future<bool?> showEventDialog(
   );
   return showDialog<bool>(
     context: context,
-    builder: (BuildContext _) =>
-        _EventDialog(initialDate: initialDate, existing: existing),
+    builder: (BuildContext _) => _EventDialog(
+      initialDate: initialDate,
+      existing: existing,
+      remindByDefault: remindByDefault,
+    ),
   );
 }
 
 class _EventDialog extends ConsumerStatefulWidget {
-  const _EventDialog({this.initialDate, this.existing});
+  const _EventDialog({
+    this.initialDate,
+    this.existing,
+    this.remindByDefault = false,
+  });
 
   final DateTime? initialDate;
   final CalendarEntry? existing;
+
+  /// Opened from the hover card's "Remind" button, which is the same form with
+  /// the reminder already asked for.
+  final bool remindByDefault;
 
   @override
   ConsumerState<_EventDialog> createState() => _EventDialogState();
@@ -53,7 +65,8 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
   late RepeatIn _repeat = _existing?.repeatIn ?? RepeatIn.none;
   late TimeOfDay? _start = _parse(_existing?.startTime);
   late TimeOfDay? _end = _parse(_existing?.endTime);
-  late int? _remindDays = _existing?.remindDays;
+  late int? _remindDays =
+      _existing?.remindDays ?? (widget.remindByDefault ? 0 : null);
   bool _busy = false;
 
   static TimeOfDay? _parse(String? hhmm) {
