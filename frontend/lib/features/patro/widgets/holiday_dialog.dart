@@ -154,7 +154,7 @@ class _HolidayDialogState extends ConsumerState<_HolidayDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
-        context.showError('Could not save: $e');
+        context.showError(e);
       }
     }
   }

@@ -139,9 +139,23 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
     remindDays: _remindDays,
   );
 
+  /// Minutes since midnight, for comparing two times of day.
+  static int _minutes(TimeOfDay t) => t.hour * 60 + t.minute;
+
+  /// True when the end is before the start — which the two pickers happily
+  /// allow, and which the server then rejects. Catching it here means the
+  /// reader is told what to change while the dialog is still in front of them,
+  /// instead of after a round trip.
+  bool get _endsBeforeItStarts =>
+      _start != null && _end != null && _minutes(_end!) < _minutes(_start!);
+
   Future<void> _save() async {
     if (_title.text.trim().isEmpty) {
       context.showError('A title is required');
+      return;
+    }
+    if (_endsBeforeItStarts) {
+      context.showError('The event cannot end before it starts');
       return;
     }
     setState(() => _busy = true);
@@ -162,7 +176,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
-        context.showError('Could not save: $e');
+        context.showError(e);
       }
     }
   }
@@ -252,6 +266,19 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
                   ),
                 ],
               ),
+              if (_endsBeforeItStarts) ...<Widget>[
+                const SizedBox(height: 6),
+                Row(
+                  children: <Widget>[
+                    Icon(Icons.error_outline, size: 14, color: scheme.error),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Ends before it starts',
+                      style: TextStyle(fontSize: 11.5, color: scheme.error),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 14),
               DropdownButtonFormField<RepeatIn>(
                 initialValue: _repeat,
@@ -325,7 +352,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _busy ? null : _save,
+          onPressed: _busy || _endsBeforeItStarts ? null : _save,
           child: Text(_existing == null ? 'Add' : 'Save'),
         ),
       ],

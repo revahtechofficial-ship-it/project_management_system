@@ -1143,7 +1143,7 @@ class _SelectedDayCard extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        context.showError('Could not remove: $e');
+        context.showError(e);
       }
     }
   }
@@ -1161,7 +1161,7 @@ class _SelectedDayCard extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        context.showError('Could not remove: $e');
+        context.showError(e);
       }
     }
   }

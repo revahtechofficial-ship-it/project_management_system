@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../constants/app_colors.dart';
+import 'api_exception.dart';
 
 /// Shared user-feedback helpers — one place for typed snackbars, clipboard
 /// feedback and confirmation dialogs so every page gives consistent feedback
@@ -14,7 +15,12 @@ extension FeedbackMessages on BuildContext {
   void showSuccess(String message) =>
       _showSnack(this, message, _SnackKind.success);
 
-  void showError(String message) => _showSnack(this, message, _SnackKind.error);
+  /// Takes anything you might have caught, not just a String — a `DioException`
+  /// carries the server's own explanation, and [describeError] digs it out.
+  /// `showError('Could not save: $e')` printed Dio's whole diagnostic instead;
+  /// `showError(e)` prints the sentence the server actually wrote.
+  void showError(Object? error) =>
+      _showSnack(this, describeError(error), _SnackKind.error);
 
   void showInfo(String message) => _showSnack(this, message, _SnackKind.info);
 

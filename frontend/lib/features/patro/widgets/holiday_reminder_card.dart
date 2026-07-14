@@ -38,7 +38,7 @@ class HolidayReminderCard extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        context.showError('Could not save: $e');
+        context.showError(e);
       }
     }
   }
