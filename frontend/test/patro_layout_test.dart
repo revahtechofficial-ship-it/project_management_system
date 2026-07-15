@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:revahms_web/core/utils/nepali_calendar.dart';
+import 'package:revahms_web/data/enums/calendar_event_kind.dart';
 import 'package:revahms_web/data/models/calendar_entry.dart';
 import 'package:revahms_web/data/models/daily_content.dart';
 import 'package:revahms_web/data/models/holiday.dart';
@@ -16,11 +18,31 @@ class _SignedOutController extends AuthController {
   Future<AuthState> build() async => const AuthState.signedOut();
 }
 
-/// The bento grid on [PatroPage] tiles many cards across the width. The one
-/// thing a Row of Expanded tiles can still get wrong is overflow, and an
-/// overflow is a test failure — so pumping the real page with real cards, at a
-/// wide width and a narrow one, is what proves the layout is sound. The
-/// analyzer cannot see a RenderFlex overflow; this can.
+/// A realistic run of upcoming events, so the events card carries the height it
+/// has in production — the events card is the tallest tile and the one most
+/// able to overflow its column, so an empty database would test the easy case.
+Map<String, List<CalendarEvent>> _events() {
+  final Map<String, List<CalendarEvent>> byDay = <String, List<CalendarEvent>>{};
+  for (int i = 0; i < 16; i++) {
+    final DateTime d = DateTime(2026, 8, 1 + i * 3);
+    byDay[dayKey(d)] = <CalendarEvent>[
+      CalendarEvent(
+        date: d,
+        kind: CalendarEventKind.holiday,
+        title: 'Festival number $i',
+        subtitle: 'Religious - Public holiday',
+        isPublicHoliday: true,
+      ),
+    ];
+  }
+  return byDay;
+}
+
+/// [PatroPage] packs many cards into a masonry across the width. The one thing
+/// a grid of tiles can still get wrong is overflow, and an overflow is a test
+/// failure — so pumping the real page with real cards, at a wide width and a
+/// narrow one, is what proves the layout is sound. The analyzer cannot see a
+/// RenderFlex overflow; this can.
 void main() {
   GoogleFonts.config.allowRuntimeFetching = false;
 
@@ -50,6 +72,7 @@ void main() {
           rashifalProvider.overrideWith(
             (Ref ref, DateTime on) async => const <Rashifal>[],
           ),
+          calendarEventsProvider.overrideWithValue(_events()),
         ],
         child: const MaterialApp(home: PatroPage()),
       ),

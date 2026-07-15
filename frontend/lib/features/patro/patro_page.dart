@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import '../../core/utils/date_format.dart';
 import '../../core/utils/date_search.dart';
@@ -999,65 +1000,43 @@ class _PatroBento extends StatelessWidget {
       );
     }
 
-    // Two columns, each a tight vertical stack, and the long run of events as a
-    // full-width band beneath them. This is the shape that has no open spaces:
-    // cards in a column butt against one another, so there is no ragged gap
-    // beside a short card the way a row of side-by-side tiles leaves. The month
-    // anchors the wide left; the day's readings run down the right. The two are
-    // packed to finish at close to the same height — the events are kept out of
-    // them precisely because a list that long would tower over one side and
-    // open a void beside the other.
-    return Column(
-      children: <Widget>[
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              flex: 8,
-              child: _CardColumn(
-                children: <Widget>[grid, panchang, muhurta, reminder],
-              ),
-            ),
-            const SizedBox(width: _gap),
-            Expanded(
-              flex: 5,
-              child: _CardColumn(
-                children: <Widget>[
-                  clock,
-                  dateInfo,
-                  aboutDay,
-                  converter,
-                  rashifal,
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: _gap),
-        upcoming,
-      ],
-    );
-  }
-}
-
-/// A vertical stack of cards, each stretched to the column's width, with the
-/// standard gap between them and none wasted around them. One of the two
-/// columns of the dashboard.
-class _CardColumn extends StatelessWidget {
-  const _CardColumn({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        for (int i = 0; i < children.length; i++) ...<Widget>[
-          if (i > 0) const SizedBox(height: _PatroBento._gap),
-          children[i],
-        ],
-      ],
+    // A true masonry over every card, events included: each drops into
+    // whichever column is *currently* shortest, so the two finish within one
+    // small card of each other whatever the day's content happens to weigh. The
+    // hand-placed columns before this could not — the imbalance was always
+    // smaller than any single card left to move, so moving one only flipped the
+    // gap to the other side.
+    //
+    // Two rules keep it both balanced and legible. The biggest cards go early,
+    // so they split across the two columns rather than piling on one; the two
+    // smallest go last, so they settle into whichever column is short and level
+    // the pair off. And the events — the tallest thing here — are *not* held
+    // out in a full-width band beneath, because any band sits below the taller
+    // column and reopens the very gap this is meant to close. In the masonry
+    // they simply take a column, and the only unevenness left is a few pixels
+    // at the foot of the page, where nothing draws the eye to it.
+    //
+    // The month still leads (top-left) and the day's detail follows (top-right).
+    final List<Widget> cards = <Widget>[
+      grid,
+      dateInfo,
+      upcoming,
+      rashifal,
+      converter,
+      panchang,
+      muhurta,
+      reminder,
+      aboutDay,
+      clock,
+    ];
+    return MasonryGridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: _gap,
+      crossAxisSpacing: _gap,
+      itemCount: cards.length,
+      itemBuilder: (BuildContext context, int index) => cards[index],
     );
   }
 }
@@ -1356,9 +1335,9 @@ class _UpcomingCardState extends State<_UpcomingCard> {
               // order.
               LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints c) {
-                  final int cols = c.maxWidth >= 1080
+                  final int cols = c.maxWidth >= 980
                       ? 3
-                      : c.maxWidth >= 640
+                      : c.maxWidth >= 460
                       ? 2
                       : 1;
                   final List<List<Widget>> columns = <List<Widget>>[
