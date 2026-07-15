@@ -263,7 +263,7 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                   },
                 ),
               ],
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
                   final Widget grid = _MonthCard(
@@ -288,32 +288,15 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                     onAddNote: _addNoteOn,
                     onSetReminder: _addReminderOn,
                   );
-                  final Widget side = _SidePanel(
-                    key: _panelKey,
+                  return _PatroBento(
+                    panelKey: _panelKey,
+                    grid: grid,
                     selected: _selected,
                     nepali: nepali,
                     events: events,
                     isAdmin: isAdmin,
+                    stacked: constraints.maxWidth < 900,
                     onOpenDate: _openDate,
-                  );
-                  if (constraints.maxWidth < 900) {
-                    return Column(
-                      children: <Widget>[
-                        grid,
-                        const SizedBox(height: 20),
-                        side,
-                      ],
-                    );
-                  }
-                  // The panel is a fixed column, so the grid keeps a sane width
-                  // instead of stretching its cells across the whole screen.
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Expanded(child: grid),
-                      const SizedBox(width: 20),
-                      SizedBox(width: 340, child: side),
-                    ],
                   );
                 },
               ),
@@ -928,50 +911,179 @@ class _Legend extends StatelessWidget {
   }
 }
 
-/// The selected day's detail plus what is coming up.
-class _SidePanel extends StatelessWidget {
-  const _SidePanel({
-    super.key,
+/// The whole almanac laid out as a bento grid, so the width does the work and
+/// the page barely scrolls — instead of a narrow 340px column stacking nine
+/// cards into a tall ribbon nobody reaches the bottom of.
+///
+/// The arrangement follows the owner's sketch: the clock and the converter
+/// share the top; the month sits large beside the selected day's detail and
+/// its story; the panchang and the muhurtas face the rashifal; the events run
+/// full width along the foot. On a narrow screen it all falls into one column,
+/// the month first.
+class _PatroBento extends StatelessWidget {
+  const _PatroBento({
+    required this.panelKey,
+    required this.grid,
     required this.selected,
     required this.nepali,
     required this.events,
     required this.isAdmin,
+    required this.stacked,
     required this.onOpenDate,
   });
 
+  /// Marks the selected-day card, so the popup's "Details" button can scroll
+  /// straight to it wherever the layout has put it.
+  final Key panelKey;
+  final Widget grid;
   final DateTime selected;
   final bool nepali;
   final Map<String, List<CalendarEvent>> events;
   final bool isAdmin;
+  final bool stacked;
   final ValueChanged<DateTime> onOpenDate;
+
+  static const double _gap = 16;
 
   @override
   Widget build(BuildContext context) {
+    final Widget clock = NepalClock(nepali: nepali);
+    final Widget converter = DateConverter(
+      nepali: nepali,
+      onOpenDate: onOpenDate,
+    );
+    final Widget dateInfo = KeyedSubtree(
+      key: panelKey,
+      child: _SelectedDayCard(
+        selected: selected,
+        nepali: nepali,
+        events: events[dayKey(selected)] ?? const <CalendarEvent>[],
+        isAdmin: isAdmin,
+      ),
+    );
+    final Widget aboutDay = DaySummaryCard(date: selected, nepali: nepali);
+    final Widget panchang = PanchangCard(date: selected, nepali: nepali);
+    final Widget muhurta = MuhurtaCard(date: selected, nepali: nepali);
+    final Widget rashifal = RashifalCard(date: selected, nepali: nepali);
+    final Widget reminder = HolidayReminderCard(nepali: nepali);
+    final Widget upcoming = _UpcomingCard(
+      nepali: nepali,
+      events: events,
+      onOpenDate: onOpenDate,
+    );
+
+    if (stacked) {
+      // One column, the calendar first, everything else beneath it in reading
+      // order. Still shorter than before, because there is no duplicate side
+      // rail — the same cards, once each.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          for (final Widget card in <Widget>[
+            clock,
+            converter,
+            grid,
+            dateInfo,
+            aboutDay,
+            panchang,
+            muhurta,
+            rashifal,
+            reminder,
+            upcoming,
+          ])
+            Padding(
+              padding: const EdgeInsets.only(bottom: _gap),
+              child: card,
+            ),
+        ],
+      );
+    }
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        NepalClock(nepali: nepali),
-        const SizedBox(height: 16),
-        _SelectedDayCard(
-          selected: selected,
-          nepali: nepali,
-          events: events[dayKey(selected)] ?? const <CalendarEvent>[],
-          isAdmin: isAdmin,
+        // Now @ Nepal, and the converter beside it. Top-aligned: the converter
+        // carries three dropdowns whose InputDecorator has no intrinsic height,
+        // so an IntrinsicHeight around this row would throw at runtime — a crash
+        // the analyzer never sees. Natural heights it is.
+        _TileRow(
+          children: <Widget>[
+            Expanded(flex: 2, child: clock),
+            Expanded(flex: 3, child: converter),
+          ],
         ),
-        const SizedBox(height: 16),
-        DaySummaryCard(date: selected, nepali: nepali),
-        const SizedBox(height: 16),
-        PanchangCard(date: selected, nepali: nepali),
-        const SizedBox(height: 16),
-        MuhurtaCard(date: selected, nepali: nepali),
-        const SizedBox(height: 16),
-        RashifalCard(date: selected, nepali: nepali),
-        const SizedBox(height: 16),
-        _UpcomingCard(nepali: nepali, events: events, onOpenDate: onOpenDate),
-        const SizedBox(height: 16),
-        HolidayReminderCard(nepali: nepali),
-        const SizedBox(height: 16),
-        DateConverter(nepali: nepali, onOpenDate: onOpenDate),
+        const SizedBox(height: _gap),
+        // The month, large, with the selected day's detail and its story
+        // stacked alongside.
+        _TileRow(
+          children: <Widget>[
+            Expanded(flex: 5, child: grid),
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  dateInfo,
+                  const SizedBox(height: _gap),
+                  aboutDay,
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: _gap),
+        // The almanac proper: panchang over the auspicious hours, facing the
+        // day's rashifal and the holiday reminder.
+        _TileRow(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  panchang,
+                  const SizedBox(height: _gap),
+                  muhurta,
+                ],
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  rashifal,
+                  const SizedBox(height: _gap),
+                  reminder,
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: _gap),
+        upcoming,
+      ],
+    );
+  }
+}
+
+/// A row of tiles, top-aligned, with the standard gap woven between them.
+///
+/// Deliberately not equal-height: some of these cards hold dropdowns and other
+/// inputs whose intrinsic height is undefined, so an IntrinsicHeight would be a
+/// runtime crash waiting for the wrong day. Top alignment costs a little
+/// polish at a ragged foot and never throws.
+class _TileRow extends StatelessWidget {
+  const _TileRow({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        for (int i = 0; i < children.length; i++) ...<Widget>[
+          if (i > 0) const SizedBox(width: _PatroBento._gap),
+          children[i],
+        ],
       ],
     );
   }
