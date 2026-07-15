@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
+import '../../core/constants/breakpoints.dart';
+
 import '../../core/utils/date_format.dart';
 import '../../core/utils/date_search.dart';
 import '../../core/utils/feedback.dart';
@@ -161,12 +163,17 @@ class _PatroPageState extends ConsumerState<PatroPage> {
         _month.year == bsNow.year &&
         _month.month == bsNow.month;
 
+    // Tighter margins on a phone, where every pixel of width counts; roomier
+    // on a laptop, where they would only crowd the centre.
+    final bool narrow = MediaQuery.sizeOf(context).width < AppBreakpoints.medium;
+    final double pad = narrow ? 12 : 24;
+
     return Scaffold(
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1240),
           child: ListView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(pad),
             children: <Widget>[
               PageHeader(
                 title: nepali ? 'पात्रो' : 'Calendar',
@@ -300,7 +307,10 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                     nepali: nepali,
                     events: events,
                     isAdmin: isAdmin,
-                    stacked: constraints.maxWidth < 900,
+                    // One column only on a phone. A tablet — even in portrait —
+                    // has the width for two, and two columns of real cards read
+                    // far better than one column of very wide, half-empty ones.
+                    stacked: constraints.maxWidth < 700,
                     onOpenDate: _openDate,
                   );
                 },
@@ -631,34 +641,47 @@ class _MonthCard extends StatelessWidget {
                     icon: const Icon(Icons.chevron_left),
                     tooltip: nepali ? 'अघिल्लो महिना' : 'Previous month',
                   ),
-                  Column(
-                    children: <Widget>[
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          _BsYearPicker(
-                            year: month.year,
-                            nepali: nepali,
-                            onChanged: (int year) => onJump(year, month.month),
-                          ),
-                          const SizedBox(width: 8),
-                          _BsMonthPicker(
-                            month: month.month,
-                            nepali: nepali,
-                            onChanged: (int m) => onJump(month.year, m),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        adRangeLabel(days),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: scheme.onSurfaceVariant,
+                  // Flexible, so on a phone the pickers share the width that is
+                  // left between the two chevrons instead of demanding their
+                  // natural size and pushing the row off the screen. The
+                  // pickers are isExpanded, so they fill that space and
+                  // ellipsize rather than overflow.
+                  Flexible(
+                    child: Column(
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: _BsYearPicker(
+                                year: month.year,
+                                nepali: nepali,
+                                onChanged: (int year) =>
+                                    onJump(year, month.month),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _BsMonthPicker(
+                                month: month.month,
+                                nepali: nepali,
+                                onChanged: (int m) => onJump(month.year, m),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          adRangeLabel(days),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   IconButton(
                     onPressed: onNext,
@@ -779,6 +802,7 @@ class _BsYearPicker extends StatelessWidget {
       value: year >= kBsPickerMinYear && year <= kBsPickerMaxYear
           ? year
           : current,
+      isExpanded: true,
       underline: const SizedBox.shrink(),
       borderRadius: BorderRadius.circular(10),
       menuMaxHeight: 320,
@@ -819,6 +843,7 @@ class _BsMonthPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButton<int>(
       value: month,
+      isExpanded: true,
       underline: const SizedBox.shrink(),
       borderRadius: BorderRadius.circular(10),
       style: TextStyle(
@@ -985,16 +1010,19 @@ class _PatroBento extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          // Reading order on a phone: the month first, then the day it has
+          // selected and that day's almanac, then the events, with the utility
+          // cards — the converter and the reminder setting — last.
           for (final Widget card in <Widget>[
-            converter,
             grid,
             dateInfo,
             aboutDay,
             panchang,
             muhurta,
             rashifal,
-            reminder,
             upcoming,
+            converter,
+            reminder,
           ])
             Padding(
               padding: const EdgeInsets.only(bottom: _gap),
@@ -1302,14 +1330,21 @@ class _UpcomingCardState extends State<_UpcomingCard> {
                   color: scheme.primary,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  nepali ? 'कार्यक्रमहरू' : 'Events',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
+                // Expanded, so the title takes the slack and pushes the toggle
+                // to the right — and yields to it on a phone instead of the two
+                // together shoving the row off the card's edge.
+                Expanded(
+                  child: Text(
+                    nepali ? 'कार्यक्रमहरू' : 'Events',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 PillToggle(
                   labels: <String>[
                     nepali ? 'आउँदा' : 'Upcoming',

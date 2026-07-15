@@ -12,15 +12,22 @@ class PillToggle extends StatelessWidget {
     required this.labels,
     required this.selected,
     required this.onChanged,
+    this.expand = false,
   });
 
-  /// Exactly two labels, in index order.
+  /// The labels, in index order. Usually two, but any number works.
   final List<String> labels;
 
   /// Index of the selected label.
   final int selected;
 
   final ValueChanged<int> onChanged;
+
+  /// When true the chips share the full available width equally, so the toggle
+  /// stretches to its parent instead of sizing to its labels. Use it where the
+  /// labels together might be wider than a narrow card — three of them on a
+  /// phone — so it fills the row rather than spilling past it.
+  final bool expand;
 
   @override
   Widget build(BuildContext context) {
@@ -33,14 +40,23 @@ class PillToggle extends StatelessWidget {
         border: Border.all(color: scheme.outlineVariant),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
         children: <Widget>[
           for (int i = 0; i < labels.length; i++)
-            _Chip(
-              label: labels[i],
-              selected: i == selected,
-              onTap: () => onChanged(i),
-            ),
+            if (expand)
+              Expanded(
+                child: _Chip(
+                  label: labels[i],
+                  selected: i == selected,
+                  onTap: () => onChanged(i),
+                ),
+              )
+            else
+              _Chip(
+                label: labels[i],
+                selected: i == selected,
+                onTap: () => onChanged(i),
+              ),
         ],
       ),
     );
@@ -72,7 +88,8 @@ class _Chip extends StatelessWidget {
           child: Text(
             label,
             softWrap: false,
-            overflow: TextOverflow.visible,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,

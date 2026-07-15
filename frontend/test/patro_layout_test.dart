@@ -84,22 +84,26 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
   }
 
-  testWidgets('the wide bento lays out without overflow', (
-    WidgetTester tester,
-  ) async {
-    await pumpAt(tester, const Size(1440, 1000));
+  // The three shapes the page takes. A phone is one column; a tablet and a
+  // laptop are two. Each must build without a single RenderFlex overflow — the
+  // thing that made the page unusable on a phone before, and the thing the
+  // analyzer never sees.
+  final Map<String, Size> viewports = <String, Size>{
+    'a phone, in one column': const Size(400, 2600),
+    'a tablet, in two columns': const Size(820, 2400),
+    'a laptop, in two columns': const Size(1440, 1400),
+  };
 
-    // The page built, and the calendar — the whole point of it — is on screen.
-    expect(tester.takeException(), isNull);
-    expect(find.text('Calendar'), findsWidgets);
-  });
+  viewports.forEach((String label, Size size) {
+    testWidgets('lays out on $label without overflow', (
+      WidgetTester tester,
+    ) async {
+      await pumpAt(tester, size);
 
-  testWidgets('the narrow layout falls into one column without overflow', (
-    WidgetTester tester,
-  ) async {
-    await pumpAt(tester, const Size(700, 1200));
-
-    expect(tester.takeException(), isNull);
-    expect(find.text('Calendar'), findsWidgets);
+      // The page built with no overflow, and the calendar — the whole point of
+      // it — is on screen.
+      expect(tester.takeException(), isNull);
+      expect(find.text('Calendar'), findsWidgets);
+    });
   });
 }

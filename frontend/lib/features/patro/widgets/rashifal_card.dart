@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/religious_days.dart';
 import '../../../data/models/daily_content.dart';
 import '../providers/patro_providers.dart';
+import 'pill_toggle.dart';
 
 /// The rashifal, and the moon's sign.
 ///
@@ -128,23 +129,22 @@ class _RashifalCardState extends ConsumerState<RashifalCard> {
             ),
             const SizedBox(height: 12),
 
-            SegmentedButton<String>(
-              showSelectedIcon: false,
-              style: const ButtonStyle(visualDensity: VisualDensity.compact),
-              segments: <ButtonSegment<String>>[
+            // A hand-rolled toggle, not a SegmentedButton: that widget lays its
+            // segments in a Row that will not shrink, so on a phone "Monthly"
+            // (or Devanagari that mismeasures on the web) spills past the card.
+            // PillToggle sizes to its labels and never overflows.
+            PillToggle(
+              expand: true,
+              labels: <String>[
                 for (final String p in _periods)
-                  ButtonSegment<String>(
-                    value: p,
-                    label: Text(switch (p) {
-                      'daily' => nepali ? 'दैनिक' : 'Daily',
-                      'weekly' => nepali ? 'साप्ताहिक' : 'Weekly',
-                      _ => nepali ? 'मासिक' : 'Monthly',
-                    }),
-                  ),
+                  switch (p) {
+                    'daily' => nepali ? 'दैनिक' : 'Daily',
+                    'weekly' => nepali ? 'साप्ताहिक' : 'Weekly',
+                    _ => nepali ? 'मासिक' : 'Monthly',
+                  },
               ],
-              selected: <String>{_period},
-              onSelectionChanged: (Set<String> v) =>
-                  setState(() => _period = v.first),
+              selected: _periods.indexOf(_period),
+              onChanged: (int i) => setState(() => _period = _periods[i]),
             ),
             const SizedBox(height: 12),
 

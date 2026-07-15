@@ -202,14 +202,24 @@ class _DayCellState extends State<DayCell> {
                       ),
                     ),
                   const Spacer(),
-                  Text(
-                    adLabel,
-                    style: TextStyle(
-                      fontSize: 10,
-                      height: 1,
-                      color: isSelected
-                          ? scheme.onPrimary.withValues(alpha: 0.85)
-                          : scheme.onSurfaceVariant.withValues(alpha: dim),
+                  // Flexible with a clip, because a phone's day cell is barely
+                  // 40px wide: on the 1st, "1 Jul" and a festival icon together
+                  // are wider than the cell, and this lets the label give way
+                  // rather than paint a red overflow bar across the grid.
+                  Flexible(
+                    child: Text(
+                      adLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                      softWrap: false,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontSize: 10,
+                        height: 1,
+                        color: isSelected
+                            ? scheme.onPrimary.withValues(alpha: 0.85)
+                            : scheme.onSurfaceVariant.withValues(alpha: dim),
+                      ),
                     ),
                   ),
                 ],
