@@ -221,6 +221,10 @@ class _PatroPageState extends ConsumerState<PatroPage> {
                   ],
                 ],
               ),
+              // The live Nepal time runs across the top as a slim bar, the
+              // first thing under the title — not buried among the day's cards.
+              const SizedBox(height: 16),
+              NepalClock(nepali: nepali),
               // Holidays are the point of this page, so a silent empty grid
               // would be worse than saying the fetch failed.
               if (holidaysFailed) ...<Widget>[
@@ -948,7 +952,8 @@ class _PatroBento extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget clock = NepalClock(nepali: nepali);
+    // The clock is not here — it runs as a bar across the top of the page,
+    // above this grid entirely.
     final Widget converter = DateConverter(
       nepali: nepali,
       onOpenDate: onOpenDate,
@@ -981,7 +986,6 @@ class _PatroBento extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           for (final Widget card in <Widget>[
-            clock,
             converter,
             grid,
             dateInfo,
@@ -1019,15 +1023,14 @@ class _PatroBento extends StatelessWidget {
     // The month still leads (top-left) and the day's detail follows (top-right).
     final List<Widget> cards = <Widget>[
       grid,
-      dateInfo,
       upcoming,
-      rashifal,
-      converter,
+      dateInfo,
       panchang,
+      rashifal,
       muhurta,
+      converter,
       reminder,
       aboutDay,
-      clock,
     ];
     return MasonryGridView.count(
       shrinkWrap: true,
