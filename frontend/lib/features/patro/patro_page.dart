@@ -999,59 +999,35 @@ class _PatroBento extends StatelessWidget {
       );
     }
 
+    // Two columns, each a tight vertical stack, and the long run of events as a
+    // full-width band beneath them. This is the shape that has no open spaces:
+    // cards in a column butt against one another, so there is no ragged gap
+    // beside a short card the way a row of side-by-side tiles leaves. The month
+    // anchors the wide left; the day's readings run down the right. The two are
+    // packed to finish at close to the same height — the events are kept out of
+    // them precisely because a list that long would tower over one side and
+    // open a void beside the other.
     return Column(
       children: <Widget>[
-        // Now @ Nepal, and the converter beside it. Top-aligned: the converter
-        // carries three dropdowns whose InputDecorator has no intrinsic height,
-        // so an IntrinsicHeight around this row would throw at runtime — a crash
-        // the analyzer never sees. Natural heights it is.
-        _TileRow(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Expanded(flex: 2, child: clock),
-            Expanded(flex: 3, child: converter),
-          ],
-        ),
-        const SizedBox(height: _gap),
-        // The month, large, with the selected day's detail and its story
-        // stacked alongside.
-        _TileRow(
-          children: <Widget>[
-            Expanded(flex: 5, child: grid),
             Expanded(
-              flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              flex: 8,
+              child: _CardColumn(
+                children: <Widget>[grid, panchang, muhurta, reminder],
+              ),
+            ),
+            const SizedBox(width: _gap),
+            Expanded(
+              flex: 5,
+              child: _CardColumn(
                 children: <Widget>[
+                  clock,
                   dateInfo,
-                  const SizedBox(height: _gap),
                   aboutDay,
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: _gap),
-        // The almanac proper: panchang over the auspicious hours, facing the
-        // day's rashifal and the holiday reminder.
-        _TileRow(
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  panchang,
-                  const SizedBox(height: _gap),
-                  muhurta,
-                ],
-              ),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
+                  converter,
                   rashifal,
-                  const SizedBox(height: _gap),
-                  reminder,
                 ],
               ),
             ),
@@ -1064,24 +1040,21 @@ class _PatroBento extends StatelessWidget {
   }
 }
 
-/// A row of tiles, top-aligned, with the standard gap woven between them.
-///
-/// Deliberately not equal-height: some of these cards hold dropdowns and other
-/// inputs whose intrinsic height is undefined, so an IntrinsicHeight would be a
-/// runtime crash waiting for the wrong day. Top alignment costs a little
-/// polish at a ragged foot and never throws.
-class _TileRow extends StatelessWidget {
-  const _TileRow({required this.children});
+/// A vertical stack of cards, each stretched to the column's width, with the
+/// standard gap between them and none wasted around them. One of the two
+/// columns of the dashboard.
+class _CardColumn extends StatelessWidget {
+  const _CardColumn({required this.children});
 
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         for (int i = 0; i < children.length; i++) ...<Widget>[
-          if (i > 0) const SizedBox(width: _PatroBento._gap),
+          if (i > 0) const SizedBox(height: _PatroBento._gap),
           children[i],
         ],
       ],
@@ -1336,33 +1309,94 @@ class _UpcomingCardState extends State<_UpcomingCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Align(
-              alignment: Alignment.centerLeft,
-              child: PillToggle(
-                labels: <String>[
-                  nepali ? 'आउँदा' : 'Upcoming',
-                  nepali ? 'बितेका' : 'Past',
-                ],
-                selected: _past ? 1 : 0,
-                onChanged: (int i) => setState(() => _past = i == 1),
-              ),
+            // A titled header with the toggle to its right, like the other
+            // cards, so the events band reads as a section rather than a loose
+            // list under a switch.
+            Row(
+              children: <Widget>[
+                Icon(
+                  Icons.event_note_outlined,
+                  size: 18,
+                  color: scheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  nepali ? 'कार्यक्रमहरू' : 'Events',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                PillToggle(
+                  labels: <String>[
+                    nepali ? 'आउँदा' : 'Upcoming',
+                    nepali ? 'बितेका' : 'Past',
+                  ],
+                  selected: _past ? 1 : 0,
+                  onChanged: (int i) => setState(() => _past = i == 1),
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             if (shown.isEmpty)
-              Text(
-                _past
-                    ? (nepali ? 'केही बितेको छैन।' : 'Nothing has passed.')
-                    : (nepali ? 'केही आउँदैछैन।' : 'Nothing coming up.'),
-                style: TextStyle(color: scheme.onSurfaceVariant),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  _past
+                      ? (nepali ? 'केही बितेको छैन।' : 'Nothing has passed.')
+                      : (nepali ? 'केही आउँदैछैन।' : 'Nothing coming up.'),
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
               )
             else
-              for (final CalendarEvent event in shown)
-                _EventTile(
-                  event: event,
-                  nepali: nepali,
-                  showDate: true,
-                  onTap: () => widget.onOpenDate(event.date),
-                ),
+              // Tiled across the width — two or three columns as it fits — so a
+              // full-width band is full, not a narrow list with an empty half
+              // beside it. Round-robin, so reading left to right stays in date
+              // order.
+              LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints c) {
+                  final int cols = c.maxWidth >= 1080
+                      ? 3
+                      : c.maxWidth >= 640
+                      ? 2
+                      : 1;
+                  final List<List<Widget>> columns = <List<Widget>>[
+                    for (int k = 0; k < cols; k++) <Widget>[],
+                  ];
+                  for (int i = 0; i < shown.length; i++) {
+                    final CalendarEvent event = shown[i];
+                    columns[i % cols].add(
+                      _EventTile(
+                        event: event,
+                        nepali: nepali,
+                        showDate: true,
+                        onTap: () => widget.onOpenDate(event.date),
+                      ),
+                    );
+                  }
+                  if (cols == 1) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: columns.first,
+                    );
+                  }
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      for (int k = 0; k < cols; k++) ...<Widget>[
+                        if (k > 0) const SizedBox(width: 24),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: columns[k],
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
+              ),
           ],
         ),
       ),
